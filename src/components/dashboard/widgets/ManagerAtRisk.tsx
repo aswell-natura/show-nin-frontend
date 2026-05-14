@@ -1,6 +1,11 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../context/AuthContext'
 import { useDataStore } from '../../../context/DataStoreContext'
+import { StandardWidget } from '../shared/StandardWidget'
+import { Button } from '@/components/ui/button'
+import { ChevronRight } from 'lucide-react'
+
+const referenceTime = new Date('2026-05-09T00:00:00').getTime()
 
 export default function ManagerAtRisk() {
   const { currentUser } = useAuth()
@@ -16,44 +21,45 @@ export default function ManagerAtRisk() {
       .filter((a) => a.project_id === p.id)
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
     if (!lastActivity) return true
-    const daysSince = (Date.now() - new Date(lastActivity.created_at).getTime()) / 1000 / 60 / 60 / 24
+    const daysSince = (referenceTime - new Date(lastActivity.created_at).getTime()) / 1000 / 60 / 60 / 24
     return daysSince >= 3
   })
 
   return (
-    <div className="h-full overflow-y-auto px-4 md:px-5 py-5">
-      <div className="flex items-center gap-2 mb-4">
-        <p className="text-sm font-semibold text-gray-900">要チェック案件</p>
-        {staleProjects.length > 0 && (
-          <span className="text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded-full font-medium">
-            {staleProjects.length}件
-          </span>
-        )}
-      </div>
-      <div className="flex flex-col gap-2">
-        {staleProjects.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-4">要フォロー案件はありません</p>
-        ) : (
-          staleProjects.map((p) => {
-            const customer = customers.find((c) => c.id === p.customer_id)
-            const owner = myTeam.find((m) => m.id === p.user_id)
-            return (
-              <button
-                key={p.id}
-                onClick={() => navigate(`/customers/${p.customer_id}`)}
-                className="flex items-center gap-3 p-2.5 rounded-lg border border-red-100 bg-red-50 hover:bg-red-100 transition-colors text-left"
-              >
-                <div className="w-2 h-2 rounded-full bg-red-400 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-gray-900 truncate">{customer?.name}</p>
-                  <p className="text-xs text-gray-500 truncate">{p.name}</p>
-                </div>
-                <span className="text-xs text-gray-400 shrink-0">{owner?.name.split(' ')[0]}</span>
-              </button>
-            )
-          })
-        )}
-      </div>
-    </div>
+    <StandardWidget
+      title="要チェック案件"
+      description="活動が停滞している案件の確認"
+      action={
+        <Button variant="ghost" size="sm" onClick={() => navigate('/risks')} className="font-bold text-muted-foreground hover:text-red-600 transition-colors">
+          詳細
+          <ChevronRight className="ml-1 h-3.5 w-3.5" />
+        </Button>
+      }
+      stats={[
+        { label: 'リスク案件', value: staleProjects.length, valueClassName: 'text-red-600', className: 'bg-red-50/50 border-red-100' },
+      ]}
+      items={staleProjects}
+      keyExtractor={(p) => p.id}
+      emptyMessage="要フォロー案件はありません"
+      renderItem={(p) => {
+        const customer = customers.find((c) => c.id === p.customer_id)
+        const owner = myTeam.find((m) => m.id === p.user_id)
+        return (
+          <button
+            onClick={() => navigate(`/customers/${p.customer_id}`)}
+            className="w-full text-left px-4 py-3 hover:bg-red-50/50 transition-colors group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-red-500 shrink-0 shadow-sm" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-foreground truncate group-hover:text-red-600 transition-colors">{customer?.name}</p>
+                <p className="text-[10px] font-bold text-muted-foreground truncate uppercase tracking-tight">{p.name}</p>
+              </div>
+              <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-bold text-muted-foreground shrink-0 uppercase tracking-wider">{owner?.name.split(' ')[0]}</span>
+            </div>
+          </button>
+        )
+      }}
+    />
   )
 }

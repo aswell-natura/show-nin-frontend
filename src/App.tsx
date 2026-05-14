@@ -17,6 +17,7 @@ import ManagerReviews from './pages/ManagerReviews'
 import ManagerRisks from './pages/ManagerRisks'
 import AudioMinuteList from './pages/AudioMinuteList'
 import AudioMinuteDetail from './pages/AudioMinuteDetail'
+import DesignShowcase from './pages/DesignShowcase'
 import type { ReactNode } from 'react'
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -43,6 +44,7 @@ function AppRoutes() {
       <Route path="/recording" element={<RecordingWindow />} />
       <Route path="/minutes" element={<ProtectedRoute><AudioMinuteList /></ProtectedRoute>} />
       <Route path="/minutes/:id" element={<AudioMinuteDetail />} />
+      <Route path="/design" element={<DesignShowcase />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   )

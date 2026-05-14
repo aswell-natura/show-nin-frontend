@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import AppLayout from '../components/layout/AppLayout'
 import { useDataStore } from '../context/DataStoreContext'
+import { StatusBadge } from '../components/dashboard/shared/StatusBadge'
+import { Button } from '@/components/ui/button'
 
 const hearingTemplate = [
   { category: '現状確認', items: ['現在の課題・痛み', '現状のシステム・プロセス', '課題が発生した背景・時期'] },
@@ -42,7 +44,7 @@ export default function ReportView() {
   if (!activity) {
     return (
       <AppLayout>
-        <div className="flex items-center justify-center h-full text-gray-400">
+        <div className="flex items-center justify-center h-full text-muted-foreground bg-background">
           レポートが見つかりません
         </div>
       </AppLayout>
@@ -51,22 +53,22 @@ export default function ReportView() {
 
   return (
     <AppLayout>
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col bg-background">
         {/* レポートヘッダー */}
-        <div className="bg-white border-b border-gray-200 px-4 md:px-6 py-3 flex items-center gap-3 shrink-0">
-          <button onClick={() => navigate(-1)} className="text-gray-400 hover:text-gray-600 transition-colors">
+        <div className="bg-card border-b border-border px-4 md:px-6 py-3 flex items-center gap-3 shrink-0 shadow-sm z-10">
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="text-muted-foreground hover:text-foreground p-2 -ml-2 shrink-0">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
             </svg>
-          </button>
+          </Button>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-base font-semibold text-gray-900 truncate">{activity.title}</h1>
+              <h1 className="text-base font-bold text-foreground truncate">{activity.title}</h1>
               {customer && (
-                <span className="text-xs text-gray-400 shrink-0">— {customer.name}</span>
+                <span className="text-xs text-muted-foreground shrink-0 hidden sm:inline">— {customer.name}</span>
               )}
             </div>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-[11px] text-muted-foreground mt-0.5">
               {new Date(activity.created_at).toLocaleDateString('ja-JP', {
                 year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
               })}
@@ -74,60 +76,55 @@ export default function ReportView() {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {activity.audio_url && (
-              <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors">
+              <Button variant="secondary" size="sm" className="hidden sm:flex gap-1.5 h-8">
                 🎙 音声を再生
-              </button>
+              </Button>
             )}
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={handleOpenNewWindow}
               title="別ウィンドウで開く"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
+              className="gap-1.5 h-8"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
-              別ウィンドウ
-            </button>
-            <button className="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium">
+              <span className="hidden sm:inline">別ウィンドウ</span>
+            </Button>
+            <Button variant="primary" size="sm" className="h-8 px-4 font-semibold">
               保存
-            </button>
+            </Button>
           </div>
         </div>
 
         {/* 2カラムコンテンツ：モバイルで縦積み / デスクトップで横並び */}
         <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto lg:overflow-hidden">
           {/* エディタ（モバイル: 固定高さ / デスクトップ: 2/3） */}
-          <div className="flex flex-col h-[55vh] lg:h-auto lg:flex-[2] overflow-hidden border-b lg:border-b-0 lg:border-r border-gray-200">
+          <div className="flex flex-col h-[55vh] lg:h-auto lg:flex-[2] overflow-hidden border-b lg:border-b-0 lg:border-r border-border bg-background">
             {/* AI要約バナー */}
-            <div className="bg-blue-50 border-b border-blue-100 px-5 py-3 shrink-0">
-              <div className="flex items-start gap-2">
-                <span className="text-blue-500 text-base shrink-0">✨</span>
+            <div className="bg-primary/5 border-b border-primary/20 px-5 py-3.5 shrink-0">
+              <div className="flex items-start gap-3">
+                <span className="text-primary text-lg shrink-0 mt-0.5">✨</span>
                 <div>
-                  <p className="text-xs font-semibold text-blue-700 mb-0.5">AI要約</p>
-                  <p className="text-sm text-blue-800 leading-relaxed">{activity.content_json.summary}</p>
+                  <p className="text-[11px] font-bold text-primary uppercase tracking-wider mb-1">AI要約</p>
+                  <p className="text-sm text-foreground/90 leading-relaxed font-medium">{activity.content_json.summary}</p>
                 </div>
               </div>
             </div>
 
             {/* 案件情報 */}
             {project && (
-              <div className="bg-white border-b border-gray-100 px-5 py-2.5 flex items-center gap-3 shrink-0">
-                <span className="text-xs text-gray-400">関連案件:</span>
-                <span className="text-xs font-medium text-gray-700">{project.name}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  project.status === 'negotiating' ? 'bg-yellow-100 text-yellow-700' :
-                  project.status === 'proposing' ? 'bg-blue-100 text-blue-700' :
-                  project.status === 'closed' ? 'bg-green-100 text-green-700' :
-                  'bg-gray-100 text-gray-600'
-                }`}>
-                  {({ lead: 'リード', proposing: '提案中', negotiating: '交渉中', closed: '成約' })[project.status]}
-                </span>
+              <div className="bg-muted/10 border-b border-border px-5 py-3 flex items-center gap-3 shrink-0">
+                <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">関連案件:</span>
+                <span className="text-sm font-bold text-foreground">{project.name}</span>
+                <StatusBadge status={project.status} />
               </div>
             )}
 
             {/* テキストエディタ */}
             <textarea
-              className="flex-1 resize-none p-5 text-sm text-gray-800 leading-relaxed outline-none font-mono bg-white"
+              className="flex-1 resize-none p-5 text-sm text-foreground leading-relaxed outline-none font-mono bg-background placeholder:text-muted-foreground/50"
               value={editContent}
               onChange={(e) => setEditContent(e.target.value)}
               placeholder="議事録・メモを入力してください..."
@@ -135,30 +132,32 @@ export default function ReportView() {
           </div>
 
           {/* ヒアリングテンプレート（モバイル: 下に展開 / デスクトップ: 1/3） */}
-          <div className="lg:flex-[1] lg:overflow-y-auto px-4 py-5 bg-gray-50 min-w-0">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">ヒアリング項目</p>
-              <span className="text-xs text-gray-400">
-                {Object.values(checkedItems).filter(Boolean).length} / {Object.keys(checkedItems).length} 確認済み
-              </span>
+          <div className="lg:flex-[1] lg:overflow-y-auto px-4 md:px-6 py-5 bg-muted/10 min-w-0">
+            <div className="flex items-center justify-between mb-5">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">ヒアリング項目</p>
+              <div className="text-xs font-medium text-muted-foreground bg-card px-2 py-1 rounded-md border border-border shadow-sm">
+                <span className="text-foreground">{Object.values(checkedItems).filter(Boolean).length}</span>
+                <span className="mx-1">/</span>
+                <span>{Object.keys(checkedItems).length}</span> 確認済み
+              </div>
             </div>
 
             {activity.content_json.checklist && activity.content_json.checklist.length > 0 && (
-              <div className="mb-5">
-                <p className="text-xs font-semibold text-gray-500 mb-2">今回の商談</p>
-                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div className="mb-6">
+                <p className="text-xs font-bold text-foreground mb-3 pl-1">今回の商談</p>
+                <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
                   {activity.content_json.checklist.map((item, i) => (
                     <label
                       key={i}
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0"
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 cursor-pointer border-b border-border last:border-0 transition-colors"
                     >
                       <input
                         type="checkbox"
                         checked={checkedItems[item.label] ?? item.checked}
                         onChange={() => toggleItem(item.label)}
-                        className="accent-blue-600 w-3.5 h-3.5 shrink-0"
+                        className="accent-primary w-4 h-4 shrink-0 rounded border-input"
                       />
-                      <span className={`text-sm ${checkedItems[item.label] ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
+                      <span className={`text-sm font-medium ${checkedItems[item.label] ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
                         {item.label}
                       </span>
                     </label>
@@ -168,21 +167,21 @@ export default function ReportView() {
             )}
 
             {hearingTemplate.map((section) => (
-              <div key={section.category} className="mb-4">
-                <p className="text-xs font-semibold text-gray-500 mb-2">{section.category}</p>
-                <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div key={section.category} className="mb-6">
+                <p className="text-xs font-bold text-foreground mb-3 pl-1">{section.category}</p>
+                <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
                   {section.items.map((item, i) => (
                     <label
                       key={i}
-                      className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer border-b border-gray-50 last:border-0"
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50 cursor-pointer border-b border-border last:border-0 transition-colors"
                     >
                       <input
                         type="checkbox"
                         checked={checkedItems[item] ?? false}
                         onChange={() => toggleItem(item)}
-                        className="accent-blue-600 w-3.5 h-3.5 shrink-0"
+                        className="accent-primary w-4 h-4 shrink-0 rounded border-input"
                       />
-                      <span className={`text-sm ${checkedItems[item] ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
+                      <span className={`text-sm font-medium ${checkedItems[item] ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
                         {item}
                       </span>
                     </label>

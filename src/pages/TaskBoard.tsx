@@ -4,6 +4,9 @@ import type { DragEndEvent } from '@dnd-kit/core'
 import AppLayout from '../components/layout/AppLayout'
 import { useDataStore } from '../context/DataStoreContext'
 import type { Task } from '../types'
+import { StatCard } from '../components/dashboard/shared/StatCard'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 
 type ViewMode = 'table' | 'cards' | 'kanban' | 'gantt'
 type KanbanStatus = '未処理' | '実行中' | '完了' | '保留'
@@ -30,28 +33,28 @@ const priorityOptions: Array<'all' | Priority> = ['all', 'High', 'Middle', 'Low'
 const progressOptions = Array.from({ length: 11 }, (_, index) => index * 10)
 
 const statusColor: Record<KanbanStatus, string> = {
-  未処理: 'bg-gray-100 text-gray-600',
-  実行中: 'bg-blue-50 text-blue-700',
-  完了: 'bg-green-50 text-green-700',
-  保留: 'bg-yellow-50 text-yellow-700',
+  未処理: 'bg-muted text-muted-foreground hover:bg-muted/80',
+  実行中: 'bg-primary/10 text-primary hover:bg-primary/20',
+  完了: 'bg-green-500/10 text-green-600 hover:bg-green-500/20',
+  保留: 'bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20',
 }
 
 const priorityColor: Record<Priority, string> = {
-  High: 'bg-red-50 text-red-700',
-  Middle: 'bg-yellow-50 text-yellow-700',
-  Low: 'bg-gray-100 text-gray-500',
+  High: 'bg-destructive/10 text-destructive hover:bg-destructive/20',
+  Middle: 'bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20',
+  Low: 'bg-muted text-muted-foreground hover:bg-muted/80',
 }
 
 const kanbanTone: Record<KanbanStatus, string> = {
-  未処理: 'border-gray-200 bg-gray-50',
-  実行中: 'border-blue-100 bg-blue-50',
-  完了: 'border-green-100 bg-green-50',
-  保留: 'border-yellow-100 bg-yellow-50',
+  未処理: 'border-border bg-muted/30',
+  実行中: 'border-primary/20 bg-primary/5',
+  完了: 'border-green-500/20 bg-green-500/5',
+  保留: 'border-yellow-500/20 bg-yellow-500/5',
 }
 
 const ganttBarColor: Record<KanbanStatus, string> = {
-  未処理: 'bg-gray-500',
-  実行中: 'bg-blue-500',
+  未処理: 'bg-muted-foreground',
+  実行中: 'bg-primary',
   完了: 'bg-green-500',
   保留: 'bg-yellow-500',
 }
@@ -86,7 +89,7 @@ function ViewButton({ active, label, icon, onClick }: { active: boolean; label: 
       onClick={onClick}
       title={label}
       className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm transition-colors ${
-        active ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-100'
+        active ? 'bg-gray-900 text-white' : 'text-muted-foreground hover:bg-gray-100'
       }`}
     >
       {icon}
@@ -96,45 +99,45 @@ function ViewButton({ active, label, icon, onClick }: { active: boolean; label: 
 
 function TaskCard({ task }: { task: TaskView }) {
   return (
-    <article className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+    <article className="bg-card border border-border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between gap-3">
-        <h3 className="text-sm font-semibold text-gray-900 leading-6">{task.title}</h3>
-        <span className={`shrink-0 px-2 py-1 rounded-full text-xs font-medium ${priorityColor[task.priority]}`}>
+        <h3 className="text-sm font-semibold text-foreground leading-6">{task.title}</h3>
+        <Badge variant="outline" className={`shrink-0 px-2 py-0.5 font-bold border-0 ${priorityColor[task.priority]}`}>
           {task.priority}
-        </span>
+        </Badge>
       </div>
-      <p className="mt-2 text-xs leading-5 text-gray-500 line-clamp-2">{task.description}</p>
+      <p className="mt-2 text-xs leading-5 text-muted-foreground line-clamp-2">{task.description}</p>
       <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
         <div>
-          <span className="text-gray-400">企業</span>
-          <p className="mt-0.5 text-gray-700 truncate">{task.customer}</p>
+          <span className="text-muted-foreground">企業</span>
+          <p className="mt-0.5 text-foreground/90 truncate">{task.customer}</p>
         </div>
         <div>
-          <span className="text-gray-400">案件</span>
-          <p className="mt-0.5 text-gray-700 truncate">{task.project}</p>
+          <span className="text-muted-foreground">案件</span>
+          <p className="mt-0.5 text-foreground/90 truncate">{task.project}</p>
         </div>
         <div>
-          <span className="text-gray-400">担当者</span>
-          <p className="mt-0.5 text-gray-700">{task.owner}</p>
+          <span className="text-muted-foreground">担当者</span>
+          <p className="mt-0.5 text-foreground/90">{task.owner}</p>
         </div>
         <div>
-          <span className="text-gray-400">期限</span>
-          <p className="mt-0.5 text-gray-700">{formatDate(task.endDate)}</p>
+          <span className="text-muted-foreground">期限</span>
+          <p className="mt-0.5 text-foreground/90">{formatDate(task.endDate)}</p>
         </div>
         <div>
-          <span className="text-gray-400">進捗率</span>
-          <p className="mt-0.5 text-gray-700">{task.progressPercent}%</p>
+          <span className="text-muted-foreground">進捗率</span>
+          <p className="mt-0.5 text-foreground/90">{task.progressPercent}%</p>
         </div>
         <div>
-          <span className="text-gray-400">進捗率更新日</span>
-          <p className="mt-0.5 text-gray-700">{task.progressUpdatedAt ?? '-'}</p>
+          <span className="text-muted-foreground">進捗率更新日</span>
+          <p className="mt-0.5 text-foreground/90">{task.progressUpdatedAt ?? '-'}</p>
         </div>
       </div>
       <div className="mt-4 flex items-center justify-between gap-2">
-        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${statusColor[task.status]}`}>
+        <Badge variant="outline" className={`px-2.5 py-0.5 text-[11px] font-bold border-0 ${statusColor[task.status]}`}>
           {task.status}
-        </span>
-        <span className="text-xs text-gray-400">
+        </Badge>
+        <span className="text-xs text-muted-foreground">
           {formatDate(task.startDate)} - {formatDate(task.endDate)}
         </span>
       </div>
@@ -162,18 +165,18 @@ function DroppableTaskColumn({ status, tasks }: { status: KanbanStatus; tasks: T
   return (
     <section
       ref={setNodeRef}
-      className={`min-h-[520px] rounded-lg border transition-all ${kanbanTone[status]} ${isOver ? 'ring-2 ring-blue-300 ring-inset' : ''}`}
+      className={`min-h-[520px] rounded-xl border transition-all ${kanbanTone[status]} ${isOver ? 'ring-2 ring-primary ring-inset shadow-md' : 'shadow-sm'}`}
     >
-      <div className="border-b border-black/5 px-4 py-3 flex items-center justify-between">
-        <h2 className="text-sm font-bold text-gray-900">{status}</h2>
-        <span className="rounded-full bg-white px-2 py-0.5 text-xs text-gray-500">{tasks.length}件</span>
+      <div className="border-b border-border/50 px-4 py-3 flex items-center justify-between bg-card/50 rounded-t-xl">
+        <h2 className="text-sm font-bold text-foreground">{status}</h2>
+        <span className="rounded-full bg-background px-2.5 py-0.5 text-xs font-medium text-muted-foreground shadow-sm">{tasks.length}件</span>
       </div>
       <div className="p-3 flex flex-col gap-3">
         {tasks.map((task) => (
           <DraggableTaskCard key={task.id} task={task} />
         ))}
         {tasks.length === 0 && (
-          <p className="py-12 text-center text-sm text-gray-400">タスクなし</p>
+          <p className="py-12 text-center text-sm text-muted-foreground">タスクなし</p>
         )}
       </div>
     </section>
@@ -269,23 +272,22 @@ export default function TaskBoard() {
 
   return (
     <AppLayout>
-      <div className="h-full flex flex-col bg-gray-50">
-        <div className="bg-white border-b border-gray-200 px-4 md:px-6 py-4 shrink-0">
+      <div className="h-full flex flex-col bg-background">
+        <div className="bg-card border-b border-border px-4 md:px-6 py-4 shrink-0 shadow-sm z-10">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="text-lg font-bold text-gray-900">タスク</h1>
-              <p className="mt-0.5 text-xs text-gray-400">AIが抽出したタスクを複数の形式で確認します</p>
+              <h1 className="text-lg font-bold text-foreground">タスク</h1>
+              <p className="mt-0.5 text-xs text-muted-foreground">AIが抽出したタスクを複数の形式で確認します</p>
             </div>
-            <div className="grid grid-cols-2 sm:flex gap-2">
+            <div className="grid grid-cols-2 sm:flex gap-3">
               {[
                 ['総数', summary.total],
                 ['未完了', summary.active],
                 ['高優先度', summary.high],
                 ['期限超過', summary.overdue],
               ].map(([label, value]) => (
-                <div key={label} className="rounded-lg bg-gray-50 px-3 py-2">
-                  <p className="text-[11px] text-gray-400">{label}</p>
-                  <p className="text-lg font-bold text-gray-900">{value}</p>
+                <div key={label as string} className="w-28">
+                  <StatCard label={label as string} value={value as number} />
                 </div>
               ))}
             </div>
@@ -296,7 +298,7 @@ export default function TaskBoard() {
               <select
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value as 'all' | KanbanStatus)}
-                className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-600 outline-none"
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
               >
                 {statusOptions.map((status) => (
                   <option key={status} value={status}>
@@ -307,7 +309,7 @@ export default function TaskBoard() {
               <select
                 value={priorityFilter}
                 onChange={(event) => setPriorityFilter(event.target.value as 'all' | Priority)}
-                className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-600 outline-none"
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
               >
                 {priorityOptions.map((priority) => (
                   <option key={priority} value={priority}>
@@ -319,7 +321,7 @@ export default function TaskBoard() {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="タスク・企業・案件で検索"
-                className="h-9 w-full sm:w-72 rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none placeholder-gray-400 focus:ring-2 focus:ring-blue-100"
+                className="h-9 w-full sm:w-72 rounded-lg border border-border bg-card px-3 text-sm outline-none placeholder-gray-400 focus:ring-2 focus:border-primary focus:ring-1 focus:ring-primary transition-colors border-input"
               />
             </div>
 
@@ -330,19 +332,19 @@ export default function TaskBoard() {
                 <ViewButton active={viewMode === 'kanban'} label="かんばん" icon="▤" onClick={() => setViewMode('kanban')} />
                 <ViewButton active={viewMode === 'gantt'} label="ガント" icon="▥" onClick={() => setViewMode('gantt')} />
               </div>
-              <button className="hidden sm:inline-flex h-9 items-center rounded-lg bg-blue-600 hover:bg-blue-700 px-3 text-sm font-medium text-white transition-colors">
-                + タスク追加
-              </button>
+              <Button variant="primary" className="hidden sm:inline-flex h-9 items-center px-4 font-medium shadow-sm gap-1.5">
+                <span className="text-base leading-none mb-0.5">+</span> タスク追加
+              </Button>
             </div>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
           {viewMode === 'table' && (
-            <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[1640px] table-fixed text-left">
-                  <thead className="bg-gray-50 text-xs font-medium text-gray-400">
+                  <thead className="bg-muted/30 text-xs font-medium text-muted-foreground">
                     <tr>
                       <th className="w-60 px-4 py-3 whitespace-nowrap">タスク名</th>
                       <th className="w-80 px-4 py-3 whitespace-nowrap">説明</th>
@@ -357,40 +359,40 @@ export default function TaskBoard() {
                       <th className="w-32 px-4 py-3 whitespace-nowrap">終了日</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 text-sm">
+                  <tbody className="divide-y divide-border text-sm">
                     {filteredTasks.map((task) => {
                       const s = getStatus(task)
                       return (
-                        <tr key={task.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 font-medium text-gray-900 truncate">{task.title}</td>
-                          <td className="px-4 py-3 text-gray-500 truncate">{task.description}</td>
-                          <td className="px-4 py-3 text-gray-600 truncate">{task.customer}</td>
-                          <td className="px-4 py-3 text-gray-600 truncate">{task.project}</td>
+                        <tr key={task.id} className="hover:bg-muted/30">
+                          <td className="px-4 py-3 font-medium text-foreground truncate">{task.title}</td>
+                          <td className="px-4 py-3 text-muted-foreground truncate">{task.description}</td>
+                          <td className="px-4 py-3 text-muted-foreground/80 truncate">{task.customer}</td>
+                          <td className="px-4 py-3 text-muted-foreground/80 truncate">{task.project}</td>
                           <td className="px-4 py-3">
-                            <span className={`inline-flex whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-medium ${statusColor[s]}`}>
+                            <Badge variant="outline" className={`inline-flex whitespace-nowrap px-2.5 py-0.5 text-[11px] font-bold border-0 ${statusColor[s]}`}>
                               {s}
-                            </span>
+                            </Badge>
                           </td>
                           <td className="px-4 py-3">
-                            <span className={`inline-flex whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-medium ${priorityColor[task.priority]}`}>
+                            <Badge variant="outline" className={`inline-flex whitespace-nowrap px-2.5 py-0.5 text-[11px] font-bold border-0 ${priorityColor[task.priority]}`}>
                               {task.priority}
-                            </span>
+                            </Badge>
                           </td>
-                          <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{task.owner}</td>
+                          <td className="px-4 py-3 text-muted-foreground/80 whitespace-nowrap">{task.owner}</td>
                           <td className="px-4 py-3">
                             <select
                               value={task.progressPercent}
                               onChange={(event) => handleProgressChange(task.id, Number(event.target.value))}
-                              className="h-8 w-24 rounded-lg border border-gray-200 bg-white px-2 text-sm text-gray-700 outline-none focus:ring-2 focus:ring-blue-100"
+                              className="h-8 w-24 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                             >
                               {progressOptions.map((value) => (
                                 <option key={value} value={value}>{value}%</option>
                               ))}
                             </select>
                           </td>
-                          <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{task.progressUpdatedAt ?? '-'}</td>
-                          <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{task.startDate}</td>
-                          <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{task.endDate}</td>
+                          <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{task.progressUpdatedAt ?? '-'}</td>
+                          <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{task.startDate}</td>
+                          <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{task.endDate}</td>
                         </tr>
                       )
                     })}
@@ -424,15 +426,15 @@ export default function TaskBoard() {
           )}
 
           {viewMode === 'gantt' && (
-            <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
               <div className="overflow-x-auto">
                 <div className="min-w-[1280px]">
-                  <div className="grid border-b border-gray-200 bg-gray-50" style={{ gridTemplateColumns: '320px repeat(31, 38px)' }}>
-                    <div className="px-4 py-3 text-sm font-medium text-gray-700">タスク名</div>
+                  <div className="grid border-b border-border bg-muted/30" style={{ gridTemplateColumns: '320px repeat(31, 38px)' }}>
+                    <div className="px-4 py-3 text-sm font-medium text-foreground/90">タスク名</div>
                     {ganttDays.map((day) => (
-                      <div key={day} className="border-l border-gray-200 px-1 py-2 text-center text-xs text-gray-500">
+                      <div key={day} className="border-l border-border px-1 py-2 text-center text-xs text-muted-foreground">
                         <div>{new Date(`${day}T00:00:00`).getDate()}</div>
-                        <div className="text-[10px] text-gray-400">
+                        <div className="text-[10px] text-muted-foreground">
                           {'日月火水木金土'[new Date(`${day}T00:00:00`).getDay()]}
                         </div>
                       </div>
@@ -444,8 +446,8 @@ export default function TaskBoard() {
                     return (
                       <div key={task.id} className="grid min-h-16 border-b border-gray-100" style={{ gridTemplateColumns: '320px repeat(31, 38px)' }}>
                         <div className="px-4 py-3">
-                          <p className="text-sm font-medium text-gray-900 truncate">{task.title}</p>
-                          <p className="mt-1 text-xs text-gray-400">{task.startDate} - {task.endDate}</p>
+                          <p className="text-sm font-medium text-foreground truncate">{task.title}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">{task.startDate} - {task.endDate}</p>
                         </div>
                         <div className="relative grid" style={{ gridColumn: '2 / span 31', gridTemplateColumns: 'repeat(31, 38px)' }}>
                           {ganttDays.map((day) => (

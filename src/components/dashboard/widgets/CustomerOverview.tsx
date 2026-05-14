@@ -1,12 +1,9 @@
 import { useNavigate } from 'react-router-dom'
 import { useDataStore } from '../../../context/DataStoreContext'
-import type { CustomerRank } from '../../../types'
-
-const rankColor: Record<CustomerRank, string> = {
-  A: 'bg-blue-100 text-blue-700',
-  B: 'bg-gray-100 text-gray-600',
-  C: 'bg-gray-100 text-gray-400',
-}
+import { Button } from '@/components/ui/button'
+import { StandardWidget } from '../shared/StandardWidget'
+import { ChevronRight } from 'lucide-react'
+import { RankBadge } from '../shared/StatusBadge'
 
 const referenceTime = new Date('2026-05-09T00:00:00').getTime()
 
@@ -31,83 +28,67 @@ export default function CustomerOverview() {
   ).length
 
   return (
-    <div className="h-full bg-white flex flex-col">
-      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-semibold text-gray-900">顧客一覧</h2>
-          <p className="text-xs text-gray-400 mt-0.5">企業別の案件・活動状況</p>
-        </div>
-        <button
-          onClick={() => navigate('/customers')}
-          className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition-colors"
-        >
-          開く
-        </button>
-      </div>
+    <StandardWidget
+      title="顧客一覧"
+      description="企業別の案件・活動状況"
+      action={
+        <Button variant="ghost" size="sm" onClick={() => navigate('/customers')} className="font-bold text-muted-foreground hover:text-primary transition-colors">
+          詳細
+          <ChevronRight className="ml-1 h-3.5 w-3.5" />
+        </Button>
+      }
+      stats={[
+        { label: '顧客数', value: customers.length },
+        { label: 'ランクA', value: rankACount, labelClassName: 'text-blue-600', valueClassName: 'text-blue-700' },
+        { label: '進行中', value: activeCustomerCount },
+      ]}
+      items={sortedCustomers}
+      keyExtractor={(c) => c.id}
+      maxItems={12}
+      onSeeMore={() => navigate('/customers')}
+      renderItem={(customer) => {
+        const activeProjects = projects.filter(
+          (project) => project.customer_id === customer.id && project.status !== 'closed',
+        )
+        const latestActivity = activities
+          .filter((activity) => activity.customer_id === customer.id)
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
 
-      <div className="grid grid-cols-3 gap-2 p-4 border-b border-gray-100">
-        <div className="rounded-lg bg-gray-50 px-3 py-2">
-          <p className="text-[11px] text-gray-400">顧客数</p>
-          <p className="text-lg font-bold text-gray-900">{customers.length}</p>
-        </div>
-        <div className="rounded-lg bg-blue-50 px-3 py-2">
-          <p className="text-[11px] text-blue-600">ランクA</p>
-          <p className="text-lg font-bold text-blue-700">{rankACount}</p>
-        </div>
-        <div className="rounded-lg bg-gray-50 px-3 py-2">
-          <p className="text-[11px] text-gray-400">進行中</p>
-          <p className="text-lg font-bold text-gray-900">{activeCustomerCount}</p>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-100 text-xs text-gray-400">
+        return (
+          <button
+            onClick={() => navigate(`/customers/${customer.id}`)}
+            className="w-full text-left px-4 py-3 hover:bg-muted/50 transition-colors group"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3 min-w-0">
+                <RankBadge rank={customer.rank} size="lg" className="shrink-0" />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <p className="text-sm font-bold text-foreground truncate group-hover:text-primary transition-colors">{customer.name}</p>
+                    {customer.is_pinned && <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-bold shrink-0">ピン</span>}
+                  </div>
+                  <p className="mt-0.5 text-[10px] font-bold text-muted-foreground truncate uppercase tracking-tight">{customer.industry}</p>
+                </div>
+              </div>
+              <span className="shrink-0 text-[10px] font-bold text-muted-foreground">{formatRelative(customer.last_accessed_at)}</span>
+            </div>
+            <div className="mt-2 flex items-center justify-between gap-2 text-[10px] font-medium">
+              <span className="text-muted-foreground truncate">
+                {latestActivity ? latestActivity.title : '活動なし'}
+              </span>
+              <span className="text-primary/80 shrink-0 font-bold">
+                {activeProjects.length > 0 ? `進行中 ${activeProjects.length}件` : '案件なし'}
+              </span>
+            </div>
+          </button>
+        )
+      }}
+    >
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-border text-[10px] font-bold text-muted-foreground bg-muted/10 uppercase tracking-widest">
         <span>ピン留め {pinnedCount}件</span>
         <span>・</span>
         <span>最終アクセス順</span>
       </div>
-
-      <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
-        {sortedCustomers.slice(0, 12).map((customer) => {
-          const activeProjects = projects.filter(
-            (project) => project.customer_id === customer.id && project.status !== 'closed',
-          )
-          const latestActivity = activities
-            .filter((activity) => activity.customer_id === customer.id)
-            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
-
-          return (
-            <button
-              key={customer.id}
-              onClick={() => navigate(`/customers/${customer.id}`)}
-              className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3 min-w-0">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 ${rankColor[customer.rank]}`}>
-                    {customer.rank}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{customer.name}</p>
-                      {customer.is_pinned && <span className="text-xs text-gray-400 shrink-0">ピン</span>}
-                    </div>
-                    <p className="mt-0.5 text-xs text-gray-400 truncate">{customer.industry}</p>
-                  </div>
-                </div>
-                <span className="shrink-0 text-xs text-gray-400">{formatRelative(customer.last_accessed_at)}</span>
-              </div>
-              <div className="mt-2 flex items-center justify-between gap-2 text-xs">
-                <span className="text-gray-500 truncate">
-                  {latestActivity ? latestActivity.title : '活動なし'}
-                </span>
-                <span className="text-gray-400 shrink-0">
-                  {activeProjects.length > 0 ? `進行中 ${activeProjects.length}件` : '案件なし'}
-                </span>
-              </div>
-            </button>
-          )
-        })}
-      </div>
-    </div>
+    </StandardWidget>
   )
 }

@@ -3,6 +3,9 @@ import AppLayout from '../components/layout/AppLayout'
 import { useAuth } from '../context/AuthContext'
 import { useDataStore } from '../context/DataStoreContext'
 import type { ProjectStatus } from '../types'
+import { StatCard } from '../components/dashboard/shared/StatCard'
+import { StatusBadge } from '../components/dashboard/shared/StatusBadge'
+import { Progress } from '@/components/ui/progress'
 
 type PeriodMode = 'month' | 'quarter' | 'half' | 'year'
 
@@ -58,13 +61,6 @@ function formatPeriod(period: string) {
 function projectDate(project: { close_date?: string; updated_at: string; created_at: string; status: ProjectStatus }) {
   if (project.status === 'closed') return project.close_date ?? project.updated_at
   return project.updated_at ?? project.created_at
-}
-
-function statusLabel(status: ProjectStatus) {
-  if (status === 'closed') return '成約'
-  if (status === 'negotiating') return '交渉中'
-  if (status === 'proposing') return '提案中'
-  return 'リード'
 }
 
 function grossProfit(amount: number) {
@@ -133,12 +129,12 @@ export default function PlayerBudget() {
 
   return (
     <AppLayout>
-      <div className="h-full flex flex-col bg-gray-50">
-        <div className="bg-white border-b border-gray-200 px-4 md:px-6 py-4 shrink-0">
+      <div className="h-full flex flex-col bg-background">
+        <div className="bg-card border-b border-border px-4 md:px-6 py-4 shrink-0 shadow-sm z-10">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="text-lg font-bold text-gray-900">予算・実績</h1>
-              <p className="mt-0.5 text-xs text-gray-400">マネージャーから配分された予算と案件実績を確認します</p>
+              <h1 className="text-lg font-bold text-foreground">予算・実績</h1>
+              <p className="mt-0.5 text-xs text-muted-foreground">マネージャーから配分された予算と案件実績を確認します</p>
             </div>
             <div className="flex gap-2">
               <select
@@ -148,7 +144,7 @@ export default function PlayerBudget() {
                   setPeriodMode(nextMode)
                   setSelectedPeriod(defaultPeriod(nextMode))
                 }}
-                className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-600 outline-none"
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
               >
                 <option value="month">月</option>
                 <option value="year">年</option>
@@ -158,7 +154,7 @@ export default function PlayerBudget() {
               <select
                 value={effectivePeriod}
                 onChange={(event) => setSelectedPeriod(event.target.value)}
-                className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-600 outline-none"
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
               >
                 {periodOptions.map((period) => (
                   <option key={period} value={period}>{formatPeriod(period)}</option>
@@ -177,24 +173,19 @@ export default function PlayerBudget() {
               ['成約数', `${closedProjects.length}件`],
               ['案件対応数', `${periodProjects.length}件`],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-lg bg-gray-50 px-3 py-2">
-                <p className="text-[11px] text-gray-400">{label}</p>
-                <p className="text-lg font-bold text-gray-900">{value}</p>
-              </div>
+              <StatCard key={label} label={label} value={value} />
             ))}
           </div>
 
-          <section className="mt-4 rounded-lg border border-gray-200 bg-white p-4">
+          <section className="mt-4 rounded-xl border border-border bg-card p-5 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-sm font-semibold text-gray-900">達成状況</h2>
-                <p className="mt-0.5 text-xs text-gray-400">配分者: {manager?.name ?? '未設定'} / 不足見込み {formatAmount(gap)}</p>
+                <h2 className="text-sm font-semibold text-foreground">達成状況</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">配分者: {manager?.name ?? '未設定'} / 不足見込み {formatAmount(gap)}</p>
               </div>
-              <span className="text-xs text-gray-400">実績 {actualProgress}% / 見込み {projectedProgress}%</span>
+              <span className="text-xs text-muted-foreground">実績 {actualProgress}% / 見込み {projectedProgress}%</span>
             </div>
-            <div className="mt-4 h-3 rounded-full bg-gray-100 overflow-hidden">
-              <div className="h-full rounded-full bg-blue-600" style={{ width: `${Math.min(projectedProgress, 100)}%` }} />
-            </div>
+            <Progress value={Math.min(projectedProgress, 100)} className="h-3 mt-4" />
           </section>
 
           <div className="mt-4 grid gap-3 md:grid-cols-4">
@@ -204,10 +195,7 @@ export default function PlayerBudget() {
               ['成約数', `${closedProjects.length}件`],
               ['リードタイム', `${averageLeadTime}日`],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-lg bg-gray-50 px-3 py-2">
-                <p className="text-[11px] text-gray-400">{label}</p>
-                <p className="text-lg font-bold text-gray-900">{value}</p>
-              </div>
+              <StatCard key={label} label={label} value={value} />
             ))}
           </div>
 
@@ -218,23 +206,20 @@ export default function PlayerBudget() {
               ['交渉中', `${statusCounts.negotiating}件`],
               ['平均受注単価', formatAmount(averageOrderAmount)],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-lg bg-gray-50 px-3 py-2">
-                <p className="text-[11px] text-gray-400">{label}</p>
-                <p className="text-lg font-bold text-gray-900">{value}</p>
-              </div>
+              <StatCard key={label} label={label} value={value} />
             ))}
           </div>
 
-          <section className="mt-4 rounded-lg border border-gray-200 bg-white overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
+          <section className="mt-4 rounded-xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+            <div className="px-4 py-3 border-b border-border/60 flex items-center justify-between gap-3">
               <div>
-                <h2 className="text-sm font-semibold text-gray-900">案件実績の内訳</h2>
-                <p className="mt-0.5 text-xs text-gray-400">案件一覧のステータス・金額から期間別に集計しています</p>
+                <h2 className="text-sm font-semibold text-foreground">案件実績の内訳</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">案件一覧のステータス・金額から期間別に集計しています</p>
               </div>
-              <span className="text-xs text-gray-400">見込み込み 売上 {formatAmount(projectedAmount)} / 粗利 {formatAmount(projectedGrossProfit)}</span>
+              <span className="text-xs text-muted-foreground">見込み込み 売上 {formatAmount(projectedAmount)} / 粗利 {formatAmount(projectedGrossProfit)}</span>
             </div>
-            <div className="divide-y divide-gray-100">
-              <div className="hidden md:grid px-4 py-2 grid-cols-[1fr_120px_120px_120px_120px] gap-3 bg-gray-50 text-xs font-medium text-gray-400">
+            <div className="divide-y divide-border">
+              <div className="hidden md:grid px-4 py-3 grid-cols-[1fr_120px_120px_120px_120px] gap-3 bg-muted/30 border-b border-border/60 text-xs font-medium text-muted-foreground">
                 <span>案件</span>
                 <span>ステータス</span>
                 <span>売上</span>
@@ -242,19 +227,19 @@ export default function PlayerBudget() {
                 <span>計上区分</span>
               </div>
               {periodProjects.map((project) => (
-                <div key={project.id} className="px-4 py-3 grid gap-3 md:grid-cols-[1fr_120px_120px_120px_120px] md:items-center">
+                <div key={project.id} className="px-4 py-4 grid gap-3 md:grid-cols-[1fr_120px_120px_120px_120px] md:items-center hover:bg-muted/50 transition-colors">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{project.name}</p>
-                    <p className="mt-0.5 text-xs text-gray-400">{project.close_date ?? project.updated_at.slice(0, 10)}</p>
+                    <p className="text-sm font-bold text-foreground truncate">{project.name}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{project.close_date ?? project.updated_at.slice(0, 10)}</p>
                   </div>
-                  <span className="text-sm text-gray-600">{statusLabel(project.status)}</span>
-                  <span className="text-sm font-bold text-gray-900">{formatAmount(project.amount)}</span>
-                  <span className="text-sm font-bold text-gray-900">{formatAmount(grossProfit(project.amount))}</span>
-                  <span className="text-xs text-gray-400">{project.status === 'closed' ? '受注計上' : '見込み計上'}</span>
+                  <StatusBadge status={project.status} className="w-fit" />
+                  <span className="text-sm font-bold text-foreground">{formatAmount(project.amount)}</span>
+                  <span className="text-sm font-bold text-foreground">{formatAmount(grossProfit(project.amount))}</span>
+                  <span className="text-xs text-muted-foreground">{project.status === 'closed' ? '受注計上' : '見込み計上'}</span>
                 </div>
               ))}
               {periodProjects.length === 0 && (
-                <p className="py-12 text-center text-sm text-gray-400">この期間の案件実績はありません</p>
+                <p className="py-12 text-center text-sm text-muted-foreground">この期間の案件実績はありません</p>
               )}
             </div>
           </section>

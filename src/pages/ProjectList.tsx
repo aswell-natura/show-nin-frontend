@@ -5,6 +5,9 @@ import AppLayout from '../components/layout/AppLayout'
 import { useAuth } from '../context/AuthContext'
 import { useDataStore } from '../context/DataStoreContext'
 import type { Project, ProjectStatus } from '../types'
+import { StatusBadge } from '../components/dashboard/shared/StatusBadge'
+import { StatCard } from '../components/dashboard/shared/StatCard'
+import { Button } from '@/components/ui/button'
 
 type SortKey = 'updated_at' | 'name' | 'customer' | 'labels' | 'status' | 'priority' | 'amount' | 'next_action_date' | 'source'
 type SortDirection = 'asc' | 'desc'
@@ -20,12 +23,7 @@ const statusLabel: Record<ProjectStatus, string> = {
   closed: '成約',
 }
 
-const statusColor: Record<ProjectStatus, string> = {
-  lead: 'bg-gray-100 text-gray-600',
-  proposing: 'bg-blue-100 text-blue-700',
-  negotiating: 'bg-yellow-100 text-yellow-700',
-  closed: 'bg-green-100 text-green-700',
-}
+// statusColor removed as we use StatusBadge directly
 
 const sourceLabel: Record<'recording' | 'manual', string> = {
   recording: '音声録音',
@@ -33,8 +31,8 @@ const sourceLabel: Record<'recording' | 'manual', string> = {
 }
 
 const sourceColor: Record<'recording' | 'manual', string> = {
-  recording: 'bg-purple-50 text-purple-700',
-  manual: 'bg-emerald-50 text-emerald-700',
+  recording: 'bg-primary/10 text-primary',
+  manual: 'bg-emerald-500/10 text-emerald-600 font-medium',
 }
 
 const priorityLabel: Record<Project['priority'], string> = {
@@ -44,18 +42,18 @@ const priorityLabel: Record<Project['priority'], string> = {
 }
 
 const priorityColor: Record<Project['priority'], string> = {
-  1: 'bg-red-50 text-red-700',
-  2: 'bg-yellow-50 text-yellow-700',
-  3: 'bg-gray-100 text-gray-500',
+  1: 'bg-destructive/10 text-destructive',
+  2: 'bg-yellow-500/10 text-yellow-600',
+  3: 'bg-muted text-muted-foreground',
 }
 
 const projectStatuses: ProjectStatus[] = ['lead', 'proposing', 'negotiating', 'closed']
 
 const kanbanTone: Record<ProjectStatus, string> = {
-  lead: 'border-gray-200 bg-gray-50',
-  proposing: 'border-blue-100 bg-blue-50',
-  negotiating: 'border-yellow-100 bg-yellow-50',
-  closed: 'border-green-100 bg-green-50',
+  lead: 'border-border bg-muted/30',
+  proposing: 'border-primary/20 bg-primary/5',
+  negotiating: 'border-yellow-500/20 bg-yellow-500/5',
+  closed: 'border-green-500/20 bg-green-500/5',
 }
 
 function DraggableProjectCard({
@@ -99,11 +97,11 @@ function DroppableProjectColumn({
   return (
     <section
       ref={setNodeRef}
-      className={`min-h-[520px] rounded-lg border transition-all ${kanbanTone[status]} ${isOver ? 'ring-2 ring-blue-300 ring-inset' : ''}`}
+      className={`min-h-[520px] rounded-xl border transition-all ${kanbanTone[status]} ${isOver ? 'ring-2 ring-primary ring-inset shadow-md' : 'shadow-sm'}`}
     >
-      <div className="border-b border-black/5 px-4 py-3 flex items-center justify-between">
-        <h2 className="text-sm font-bold text-gray-900">{statusLabel[status]}</h2>
-        <span className="rounded-full bg-white px-2 py-0.5 text-xs text-gray-500">{colProjects.length}件</span>
+      <div className="border-b border-border/50 px-4 py-3 flex items-center justify-between bg-card/50 rounded-t-xl">
+        <h2 className="text-sm font-bold text-foreground">{statusLabel[status]}</h2>
+        <span className="rounded-full bg-background px-2.5 py-0.5 text-xs font-medium text-muted-foreground shadow-sm">{colProjects.length}件</span>
       </div>
       <div className="p-3 flex flex-col gap-3">
         {colProjects.map((project) => {
@@ -120,7 +118,7 @@ function DroppableProjectColumn({
           )
         })}
         {colProjects.length === 0 && (
-          <p className="py-12 text-center text-sm text-gray-400">案件なし</p>
+          <p className="py-12 text-center text-sm text-muted-foreground">案件なし</p>
         )}
       </div>
     </section>
@@ -146,9 +144,9 @@ function formatAmount(value: number) {
 }
 
 function ProjectLabels({ labels, compact = false }: { labels?: string[]; compact?: boolean }) {
-  if (!labels?.length) return <span className="text-xs text-gray-300">-</span>
+  if (!labels?.length) return <span className="text-xs text-muted-foreground/50">-</span>
   return (
-    <span className={`block text-xs text-gray-600 ${compact ? 'truncate' : 'leading-5'}`}>
+    <span className={`block text-xs text-muted-foreground ${compact ? 'truncate' : 'leading-5'}`}>
       {labels.join('、')}
     </span>
   )
@@ -198,10 +196,10 @@ function SortButton({
       <button
         type="button"
         onClick={() => onSort(sortKey)}
-        className="inline-flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-900"
+        className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
       >
         <span>{label}</span>
-        <span className={`text-[10px] ${active ? 'text-gray-900' : 'text-gray-300'}`}>
+        <span className={`text-[10px] ${active ? 'text-foreground' : 'text-muted-foreground/30'}`}>
           {active ? (direction === 'asc' ? '▲' : '▼') : '↕'}
         </span>
       </button>
@@ -226,7 +224,7 @@ function ViewButton({
       onClick={onClick}
       title={label}
       className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm transition-colors ${
-        active ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-100'
+        active ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-muted/50'
       }`}
     >
       {icon}
@@ -249,36 +247,34 @@ function ProjectCard({
   const isUnlinked = !project.customer_id
 
   return (
-    <article className={`rounded-lg border border-gray-200 bg-white p-4 shadow-sm ${isUnlinked ? 'bg-red-50/35' : ''}`}>
+    <article className={`rounded-xl border border-border bg-card p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer ${isUnlinked ? 'bg-destructive/5 border-destructive/20' : ''}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 min-w-0">
             {isUnlinked && (
-              <span className="shrink-0 rounded-md bg-red-100 px-1.5 py-0.5 text-[11px] font-medium text-red-700">
+              <span className="shrink-0 rounded-md bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
                 要紐付け
               </span>
             )}
-            <h2 className="text-sm font-semibold text-gray-900 truncate">{project.name}</h2>
+            <h2 className="text-sm font-bold text-foreground truncate">{project.name}</h2>
           </div>
-          <p className={`mt-1 text-xs truncate ${isUnlinked ? 'text-red-500' : 'text-gray-400'}`}>
+          <p className={`mt-1 text-xs truncate ${isUnlinked ? 'text-destructive/80' : 'text-muted-foreground'}`}>
             {customerName}{customerIndustry ? ` / ${customerIndustry}` : ''}
           </p>
           <div className="mt-2">
             <ProjectLabels labels={project.labels} />
           </div>
         </div>
-        <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${statusColor[project.status]}`}>
-          {statusLabel[project.status]}
-        </span>
+        <StatusBadge status={project.status} />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
         <div>
-          <span className="text-gray-400">金額</span>
-          <p className="mt-0.5 text-gray-900 font-semibold">{formatAmount(project.amount)}</p>
+          <span className="text-muted-foreground">金額</span>
+          <p className="mt-0.5 text-foreground font-bold">{formatAmount(project.amount)}</p>
         </div>
         <div>
-          <span className="text-gray-400">優先度</span>
+          <span className="text-muted-foreground">優先度</span>
           <p className="mt-0.5">
             <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${priorityColor[project.priority]}`}>
               {priorityLabel[project.priority]}
@@ -286,12 +282,12 @@ function ProjectCard({
           </p>
         </div>
         <div>
-          <span className="text-gray-400">担当者</span>
-          <p className="mt-0.5 text-gray-700 truncate">{ownerName}</p>
+          <span className="text-muted-foreground">担当者</span>
+          <p className="mt-0.5 text-foreground/80 font-medium truncate">{ownerName}</p>
         </div>
         <div>
-          <span className="text-gray-400">ネクストアクション日</span>
-          <p className="mt-0.5 text-gray-700">{formatDate(project.next_action_date)}</p>
+          <span className="text-muted-foreground">ネクストアクション日</span>
+          <p className="mt-0.5 text-foreground/80 font-medium">{formatDate(project.next_action_date)}</p>
         </div>
       </div>
 
@@ -299,9 +295,9 @@ function ProjectCard({
         <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${sourceColor[source]}`}>
           {sourceLabel[source]}
         </span>
-        <span className="text-xs text-gray-400">{formatDate(project.updated_at)}</span>
+        <span className="text-[11px] text-muted-foreground font-medium">{formatDate(project.updated_at)}</span>
       </div>
-      {project.note && <p className="mt-3 text-xs leading-5 text-gray-500 line-clamp-2">{project.note}</p>}
+      {project.note && <p className="mt-4 text-xs leading-5 text-muted-foreground bg-muted/30 p-2 rounded-md line-clamp-2">{project.note}</p>}
     </article>
   )
 }
@@ -434,23 +430,22 @@ export default function ProjectList() {
 
   return (
     <AppLayout>
-      <div className="h-full flex flex-col bg-gray-50">
-        <div className="bg-white border-b border-gray-200 px-4 md:px-6 py-4 shrink-0">
+      <div className="h-full flex flex-col bg-background">
+        <div className="bg-card border-b border-border px-4 md:px-6 py-4 shrink-0 shadow-sm z-10">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <h1 className="text-lg font-bold text-gray-900">案件一覧</h1>
-              <p className="mt-0.5 text-xs text-gray-400">企業ごとの案件と、録音から生まれた未紐付け案件をまとめて管理します</p>
+              <h1 className="text-lg font-bold text-foreground">案件一覧</h1>
+              <p className="mt-0.5 text-xs text-muted-foreground">企業ごとの案件と、録音から生まれた未紐付け案件をまとめて管理します</p>
             </div>
-            <div className="grid grid-cols-2 sm:flex gap-2">
+            <div className="grid grid-cols-2 sm:flex gap-3">
               {[
                 ['全案件', summary.total],
                 ['企業紐付け', summary.linked],
                 ['未紐付け', summary.unlinked],
                 ['録音未紐付け', summary.recordingUnlinked],
               ].map(([label, value]) => (
-                <div key={label} className="rounded-lg bg-gray-50 px-3 py-2">
-                  <p className="text-[11px] text-gray-400">{label}</p>
-                  <p className="text-lg font-bold text-gray-900">{value}</p>
+                <div key={label as string} className="w-32">
+                  <StatCard label={label as string} value={value as number} />
                 </div>
               ))}
             </div>
@@ -459,20 +454,20 @@ export default function ProjectList() {
           <div className="mt-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="relative">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
                 </svg>
                 <input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="企業名・案件名・ラベル・メモ・担当者であいまい検索"
-                  className="h-9 w-full sm:w-80 rounded-lg border border-gray-200 bg-white pl-8 pr-3 text-sm outline-none placeholder-gray-400 focus:ring-2 focus:ring-blue-100"
+                  className="h-9 w-full sm:w-80 rounded-md border border-input bg-background pl-8 pr-3 text-sm outline-none placeholder:text-muted-foreground/50 focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                 />
               </div>
               <select
                 value={linkFilter}
                 onChange={(event) => setLinkFilter(event.target.value as LinkFilter)}
-                className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-600 outline-none"
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
               >
                 <option value="all">すべての紐付け状態</option>
                 <option value="linked">企業紐付け済み</option>
@@ -481,7 +476,7 @@ export default function ProjectList() {
               <select
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
-                className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-600 outline-none"
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
               >
                 <option value="all">すべてのステータス</option>
                 <option value="lead">リード</option>
@@ -492,7 +487,7 @@ export default function ProjectList() {
               <select
                 value={sourceFilter}
                 onChange={(event) => setSourceFilter(event.target.value as SourceFilter)}
-                className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-600 outline-none"
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
               >
                 <option value="all">すべての登録元</option>
                 <option value="recording">音声録音</option>
@@ -500,36 +495,37 @@ export default function ProjectList() {
               </select>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-1">
+              <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1 border border-border/50">
                 <ViewButton active={viewMode === 'table'} label="SFA表示" icon="☷" onClick={() => setViewMode('table')} />
                 <ViewButton active={viewMode === 'cards'} label="カード" icon="▦" onClick={() => setViewMode('cards')} />
                 <ViewButton active={viewMode === 'kanban'} label="かんばん" icon="▤" onClick={() => setViewMode('kanban')} />
                 <ViewButton active={viewMode === 'gantt'} label="ガント" icon="▥" onClick={() => setViewMode('gantt')} />
               </div>
-              <button
+              <Button
                 onClick={() => setIsFormOpen((current) => !current)}
-                className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 px-3 text-sm font-medium text-white transition-colors"
+                variant="primary"
+                className="h-9 px-4 gap-1.5 shadow-sm"
               >
-                <span className="text-base leading-none">+</span>
+                <span className="text-base leading-none mb-0.5">+</span>
                 <span>案件を登録</span>
-              </button>
+              </Button>
             </div>
           </div>
 
           {isFormOpen && (
-            <form onSubmit={handleSubmit} className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <form onSubmit={handleSubmit} className="mt-4 rounded-xl border border-border bg-muted/10 p-4 shadow-sm">
               <div className="grid gap-3 lg:grid-cols-[minmax(220px,1.4fr)_220px_140px_120px_140px_150px]">
                 <input
                   value={form.name}
                   onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
                   placeholder="案件名"
-                  className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-blue-100"
+                  className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                   required
                 />
                 <select
                   value={form.customer_id}
                   onChange={(event) => setForm((current) => ({ ...current, customer_id: event.target.value }))}
-                  className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-600 outline-none"
+                  className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                 >
                   <option value="">企業未紐付け</option>
                   {customers.map((customer) => (
@@ -539,7 +535,7 @@ export default function ProjectList() {
                 <select
                   value={form.status}
                   onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as ProjectStatus }))}
-                  className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-600 outline-none"
+                  className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                 >
                   <option value="lead">リード</option>
                   <option value="proposing">提案中</option>
@@ -549,7 +545,7 @@ export default function ProjectList() {
                 <select
                   value={form.priority}
                   onChange={(event) => setForm((current) => ({ ...current, priority: Number(event.target.value) as Project['priority'] }))}
-                  className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-600 outline-none"
+                  className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                 >
                   <option value={1}>優先度 高</option>
                   <option value={2}>優先度 中</option>
@@ -560,13 +556,13 @@ export default function ProjectList() {
                   onChange={(event) => setForm((current) => ({ ...current, amount: event.target.value }))}
                   inputMode="numeric"
                   placeholder="金額"
-                  className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-blue-100"
+                  className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                 />
                 <input
                   type="date"
                   value={form.close_date}
                   onChange={(event) => setForm((current) => ({ ...current, close_date: event.target.value }))}
-                  className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-600 outline-none"
+                  className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                 />
               </div>
               <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_auto]">
@@ -574,15 +570,15 @@ export default function ProjectList() {
                   value={form.note}
                   onChange={(event) => setForm((current) => ({ ...current, note: event.target.value }))}
                   placeholder="メモ"
-                  className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-blue-100"
+                  className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                 />
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => setIsFormOpen(false)} className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-600">
+                  <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} className="h-9 px-4">
                     キャンセル
-                  </button>
-                  <button type="submit" className="h-9 rounded-lg bg-blue-600 px-3 text-sm font-medium text-white">
+                  </Button>
+                  <Button type="submit" variant="primary" className="h-9 px-6 shadow-sm">
                     登録
-                  </button>
+                  </Button>
                 </div>
               </div>
             </form>
@@ -591,10 +587,10 @@ export default function ProjectList() {
 
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
           {viewMode === 'table' && (
-          <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+          <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[1520px] table-fixed text-left">
-                <thead className="bg-gray-50">
+                <thead className="bg-muted/30 border-b border-border">
                   <tr>
                     <SortButton label="案件名" sortKey="name" activeKey={sortKey} direction={sortDirection} onSort={handleSort} className="w-72" />
                     <SortButton label="企業" sortKey="customer" activeKey={sortKey} direction={sortDirection} onSort={handleSort} className="w-72" />
@@ -609,7 +605,7 @@ export default function ProjectList() {
                     <th className="w-80 px-4 py-3 whitespace-nowrap text-xs font-medium text-gray-500">メモ</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 text-sm">
+                <tbody className="divide-y divide-border text-sm">
                   {filteredProjects.map((project) => {
                     const source = project.source ?? 'manual'
                     const customer = project.customer_id
@@ -618,15 +614,15 @@ export default function ProjectList() {
                     const owner = profiles.find((profile) => profile.id === project.user_id)
                     const isUnlinked = !project.customer_id
                     return (
-                      <tr key={project.id} className={`hover:bg-gray-50 ${isUnlinked ? 'bg-red-50/35' : ''}`}>
+                      <tr key={project.id} className={`hover:bg-muted/50 transition-colors ${isUnlinked ? 'bg-destructive/5' : ''}`}>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2 min-w-0">
                             {isUnlinked && (
-                              <span className="shrink-0 rounded-md bg-red-100 px-1.5 py-0.5 text-[11px] font-medium text-red-700">
+                              <span className="shrink-0 rounded-md bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
                                 要紐付け
                               </span>
                             )}
-                            <span className="font-medium text-gray-900 truncate">
+                            <span className="font-bold text-foreground truncate">
                               {project.name || '録音メモ（案件名未設定）'}
                             </span>
                           </div>
@@ -634,15 +630,15 @@ export default function ProjectList() {
                         <td className="px-4 py-3">
                           {customer ? (
                             <div className="min-w-0">
-                              <p className="font-medium text-gray-700 truncate">{customer.name}</p>
-                              <p className="mt-0.5 text-xs text-gray-400 truncate">{customer.industry}</p>
+                              <p className="font-semibold text-foreground/90 truncate">{customer.name}</p>
+                              <p className="mt-0.5 text-[11px] text-muted-foreground truncate">{customer.industry}</p>
                             </div>
                           ) : (
                             <div className="inline-flex flex-col gap-1">
-                              <span className="inline-flex w-fit rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">
+                              <span className="inline-flex w-fit rounded-full bg-destructive/10 px-2.5 py-1 text-[11px] font-bold text-destructive">
                                 企業未紐付け
                               </span>
-                              <span className="text-xs text-red-500">録音後の確認待ち</span>
+                              <span className="text-[11px] text-destructive/80 font-medium">録音後の確認待ち</span>
                             </div>
                           )}
                         </td>
@@ -655,20 +651,18 @@ export default function ProjectList() {
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${statusColor[project.status]}`}>
-                            {statusLabel[project.status]}
-                          </span>
+                          <StatusBadge status={project.status} />
                         </td>
                         <td className="px-4 py-3">
                           <span className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium ${priorityColor[project.priority]}`}>
                             {priorityLabel[project.priority]}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{formatAmount(project.amount)}</td>
-                        <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{owner?.name ?? '未担当'}</td>
-                        <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{formatDate(project.next_action_date)}</td>
-                        <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{formatDate(project.updated_at)}</td>
-                        <td className="px-4 py-3 text-gray-500 truncate">{project.note ?? '-'}</td>
+                        <td className="px-4 py-3 text-foreground/90 font-medium whitespace-nowrap">{formatAmount(project.amount)}</td>
+                        <td className="px-4 py-3 text-foreground/90 font-medium whitespace-nowrap">{owner?.name ?? '未担当'}</td>
+                        <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{formatDate(project.next_action_date)}</td>
+                        <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{formatDate(project.updated_at)}</td>
+                        <td className="px-4 py-3 text-muted-foreground text-xs truncate">{project.note ?? '-'}</td>
                       </tr>
                     )
                   })}
@@ -676,7 +670,7 @@ export default function ProjectList() {
               </table>
               {filteredProjects.length === 0 && (
                 <div className="py-14 text-center">
-                  <p className="text-sm text-gray-400">条件に一致する案件がありません</p>
+                  <p className="text-sm text-muted-foreground font-medium">条件に一致する案件がありません</p>
                 </div>
               )}
             </div>
@@ -703,7 +697,7 @@ export default function ProjectList() {
               })}
               {filteredProjects.length === 0 && (
                 <div className="col-span-full py-14 text-center">
-                  <p className="text-sm text-gray-400">条件に一致する案件がありません</p>
+                  <p className="text-sm text-muted-foreground font-medium">条件に一致する案件がありません</p>
                 </div>
               )}
             </div>
@@ -728,15 +722,15 @@ export default function ProjectList() {
           )}
 
           {viewMode === 'gantt' && (
-            <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
               <div className="overflow-x-auto">
                 <div className="min-w-[1320px]">
-                  <div className="grid border-b border-gray-200 bg-gray-50" style={{ gridTemplateColumns: '360px repeat(31, 38px)' }}>
-                    <div className="px-4 py-3 text-sm font-medium text-gray-700">案件名</div>
+                  <div className="grid border-b border-border bg-muted/30" style={{ gridTemplateColumns: '360px repeat(31, 38px)' }}>
+                    <div className="px-4 py-3 text-sm font-bold text-foreground">案件名</div>
                     {ganttDays.map((day) => (
-                      <div key={day} className="border-l border-gray-200 px-1 py-2 text-center text-xs text-gray-500">
+                      <div key={day} className="border-l border-border px-1 py-2 text-center text-xs text-muted-foreground">
                         <div>{new Date(`${day}T00:00:00`).getDate()}</div>
-                        <div className="text-[10px] text-gray-400">
+                        <div className="text-[10px] text-muted-foreground/60">
                           {'日月火水木金土'[new Date(`${day}T00:00:00`).getDay()]}
                         </div>
                       </div>
@@ -752,11 +746,11 @@ export default function ProjectList() {
                     const width = Math.max(1, Math.min(31 - offset, daysBetween(startDate, endDate)))
 
                     return (
-                      <div key={project.id} className="grid min-h-16 border-b border-gray-100" style={{ gridTemplateColumns: '360px repeat(31, 38px)' }}>
+                      <div key={project.id} className="grid min-h-16 border-b border-border/60 hover:bg-muted/30 transition-colors" style={{ gridTemplateColumns: '360px repeat(31, 38px)' }}>
                         <div className="px-4 py-3 min-w-0">
                           <div className="flex items-center gap-2 min-w-0">
                             {!project.customer_id && (
-                              <span className="shrink-0 rounded-md bg-red-100 px-1.5 py-0.5 text-[11px] font-medium text-red-700">
+                              <span className="shrink-0 rounded-md bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
                                 要紐付け
                               </span>
                             )}
@@ -771,7 +765,7 @@ export default function ProjectList() {
                         </div>
                         <div className="relative grid" style={{ gridColumn: '2 / span 31', gridTemplateColumns: 'repeat(31, 38px)' }}>
                           {ganttDays.map((day) => (
-                            <div key={day} className="border-l border-gray-100" />
+                            <div key={day} className="border-l border-border/60" />
                           ))}
                           <div
                             className={`absolute top-4 h-8 rounded-lg px-3 text-xs font-medium flex items-center overflow-hidden ${
@@ -781,7 +775,7 @@ export default function ProjectList() {
                                   ? 'bg-yellow-400 text-white'
                                   : project.status === 'proposing'
                                     ? 'bg-blue-500 text-white'
-                                    : 'bg-gray-900 text-white'
+                                    : 'bg-primary text-primary-foreground'
                             }`}
                             style={{ left: `${Math.min(offset, 30) * 38 + 6}px`, width: `${Math.max(1, width) * 38 - 12}px` }}
                           >
@@ -793,7 +787,7 @@ export default function ProjectList() {
                   })}
                   {filteredProjects.length === 0 && (
                     <div className="py-14 text-center">
-                      <p className="text-sm text-gray-400">条件に一致する案件がありません</p>
+                      <p className="text-sm text-muted-foreground font-medium">条件に一致する案件がありません</p>
                     </div>
                   )}
                 </div>

@@ -1,44 +1,72 @@
+import React from "react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-interface StatCardProps {
+export interface StatCardProps extends React.HTMLAttributes<HTMLDivElement> {
   label: string;
   value: string | number;
+  unit?: string;
+  icon?: React.ReactNode;
   labelClassName?: string;
   valueClassName?: string;
-  className?: string;
 }
 
-export function StatCard({
-  label,
-  value,
-  labelClassName,
-  valueClassName,
-  className,
-}: StatCardProps) {
-  return (
-    <Card
-      className={cn(
-        "rounded-lg bg-muted/50 border border-border/50 px-3 py-2 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5",
-        className,
-      )}
-    >
-      <p
+export const StatCard = React.forwardRef<HTMLDivElement, StatCardProps>(
+  (
+    {
+      label,
+      value,
+      unit,
+      icon,
+      labelClassName,
+      valueClassName,
+      className,
+      ...props
+    },
+    ref,
+  ) => {
+    return (
+      <Card
+        ref={ref}
         className={cn(
-          "text-[11px] font-medium text-muted-foreground uppercase tracking-wider",
-          labelClassName,
+          "rounded-lg p-3.5 flex flex-col justify-center transition-all duration-150 relative border-[0.5] shadow-none hover:shadow-md hover:bg-accent/50",
+          className,
         )}
+        {...props}
       >
-        {label}
-      </p>
-      <p
-        className={cn(
-          "text-lg font-bold text-foreground mt-0.5 tracking-tight",
-          valueClassName,
+        {icon && (
+          <div className="absolute top-2 right-2 text-muted-foreground/30 pointer-events-none">
+            {icon}
+          </div>
         )}
-      >
-        {value}
-      </p>
-    </Card>
-  );
-}
+        <div className="min-w-0 w-full text-left">
+          <p
+            className={cn(
+              "text-[11px] font-medium text-muted-foreground uppercase tracking-wider truncate mb-1.5",
+              labelClassName,
+            )}
+          >
+            {label}
+          </p>
+          <div className="flex items-baseline gap-1">
+            <span
+              className={cn(
+                "text-xl font-bold text-foreground",
+                valueClassName,
+              )}
+            >
+              {value}
+            </span>
+            {unit && (
+              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">
+                {unit}
+              </span>
+            )}
+          </div>
+        </div>
+      </Card>
+    );
+  },
+);
+
+StatCard.displayName = "StatCard";

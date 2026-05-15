@@ -79,8 +79,8 @@ export function BudgetSummaryWidget() {
         </Button>
       }
       stats={[
-        { label: 'チーム目標', value: formatAmount(targetAmount) },
-        { label: '配分済み', value: formatAmount(allocated) },
+        { label: 'チーム目標', value: (targetAmount / 10000).toLocaleString(), unit: '万円' },
+        { label: '配分済み', value: (allocated / 10000).toLocaleString(), unit: '万円' },
       ]}
       items={[]}
       keyExtractor={() => ''}

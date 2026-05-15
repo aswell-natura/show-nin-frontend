@@ -15,26 +15,50 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "../ui/popover";
-import Icon from "../ui/Icon";
+import {
+  History,
+  CalendarCheck,
+  Building2,
+  Briefcase,
+  CheckSquare,
+  PieChart,
+  Users,
+  Calculator,
+  ClipboardCheck,
+  AlertTriangle,
+  FileText,
+  GitPullRequest,
+  ShieldAlert,
+  Activity,
+  Calendar,
+  Minus,
+  Square,
+  Columns2,
+  Columns3,
+  LayoutGrid,
+  X,
+  LayoutDashboard,
+  type LucideIcon,
+} from "lucide-react";
 import { cn } from "../../lib/utils";
 
-const widgetIcons: Record<WidgetType, string> = {
-  timeline: "history",
-  "next-actions": "calendar-check",
-  customers: "building-2",
-  projects: "briefcase",
-  tasks: "check-square",
-  "my-budget": "pie-chart",
-  members: "users",
-  budget: "calculator",
-  reviews: "clipboard-check",
-  risks: "alert-triangle",
-  reports: "file-text",
-  "team-pipeline": "git-pull-request",
-  "at-risk": "shield-alert",
-  "team-activity": "activity",
-  calendar: "calendar",
-  empty: "minus",
+const widgetIcons: Record<WidgetType, LucideIcon> = {
+  timeline: History,
+  "next-actions": CalendarCheck,
+  customers: Building2,
+  projects: Briefcase,
+  tasks: CheckSquare,
+  "my-budget": PieChart,
+  members: Users,
+  budget: Calculator,
+  reviews: ClipboardCheck,
+  risks: AlertTriangle,
+  reports: FileText,
+  "team-pipeline": GitPullRequest,
+  "at-risk": ShieldAlert,
+  "team-activity": Activity,
+  calendar: Calendar,
+  empty: Minus,
 };
 
 export default function DashboardLayoutSettings() {
@@ -79,11 +103,11 @@ export default function DashboardLayoutSettings() {
     updateConfig({ panels });
   }
 
-  const layoutIcons: Record<number, string> = {
-    1: "square",
-    2: "columns-2",
-    3: "columns-3",
-    4: "layout-grid",
+  const layoutIcons: Record<number, LucideIcon> = {
+    1: Square,
+    2: Columns2,
+    3: Columns3,
+    4: LayoutGrid,
   };
 
   const usedWidgets = config.panels.slice(0, panelCount).filter((_, idx) => idx !== activePanelIndex);
@@ -91,11 +115,12 @@ export default function DashboardLayoutSettings() {
   return (
     <Popover onOpenChange={(open) => !open && setActivePanelIndex(null)}>
       <PopoverTrigger asChild>
-        <Button variant="secondary" size="icon" className="h-8 w-8">
-          <Icon name="layout-dashboard" className="w-4 h-4" />
+        <Button variant="secondary" className="h-8 gap-1.5 px-3 rounded-lg text-[11px] font-bold">
+          <LayoutDashboard className="w-3.5 h-3.5" />
+          <span>レイアウト設定</span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0 overflow-hidden shadow-2xl border-border/40 flex flex-col max-h-[85vh]" align="end">
+      <PopoverContent className="w-80 p-0 overflow-hidden shadow-2xl border-border/40 flex flex-col max-h-[450px]" align="end">
         <div className="bg-muted/30 p-4 border-b border-border shrink-0">
           <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
             ダッシュボード設定
@@ -126,7 +151,10 @@ export default function DashboardLayoutSettings() {
                         : "border-border/60 hover:border-primary/40 hover:bg-muted/50"
                     )}
                   >
-                    <Icon name={layoutIcons[n]} className="w-4 h-4" />
+                    {(() => {
+                      const LayoutIcon = layoutIcons[n];
+                      return <LayoutIcon className="w-4 h-4" />;
+                    })()}
                     <span className="text-[9px] font-bold">{n}分割</span>
                   </Button>
                 );
@@ -159,13 +187,17 @@ export default function DashboardLayoutSettings() {
                         : "bg-background border-border hover:border-primary/60 hover:bg-muted/50 text-foreground"
                     )}
                   >
-                    <Icon 
-                      name={widgetIcons[widget]} 
-                      className={cn(
-                        "w-4 h-4", 
-                        isActive ? "text-primary-foreground" : "text-primary/70"
-                      )} 
-                    />
+                    {(() => {
+                      const WidgetIcon = widgetIcons[widget];
+                      return (
+                        <WidgetIcon 
+                          className={cn(
+                            "w-4 h-4", 
+                            isActive ? "text-primary-foreground" : "text-primary/70"
+                          )} 
+                        />
+                      );
+                    })()}
                     <span className={cn(
                       "text-[9px] font-bold truncate px-1 w-full text-center tracking-tight",
                       isActive ? "text-primary-foreground" : "text-muted-foreground"
@@ -186,7 +218,7 @@ export default function DashboardLayoutSettings() {
                   {panelLabels[activePanelIndex]}パネル の内容
                 </p>
                 <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setActivePanelIndex(null)}>
-                  <Icon name="x" className="w-3 h-3" />
+                  <X className="w-3 h-3" />
                 </Button>
               </div>
               <div className="grid grid-cols-3 gap-1.5">
@@ -208,7 +240,10 @@ export default function DashboardLayoutSettings() {
                             : "bg-background border-border hover:border-primary hover:bg-primary/5 text-foreground"
                       )}
                     >
-                      <Icon name={widgetIcons[w]} className={cn("w-4 h-4", isSelectedInCurrent ? "text-primary" : "text-muted-foreground")} />
+                      {(() => {
+                        const WIcon = widgetIcons[w];
+                        return <WIcon className={cn("w-4 h-4", isSelectedInCurrent ? "text-primary" : "text-muted-foreground")} />;
+                      })()}
                       <span className="text-[8px] font-bold leading-tight text-center px-0.5 line-clamp-2">
                         {widgetLabels[w]}
                       </span>

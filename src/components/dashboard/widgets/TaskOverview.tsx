@@ -22,9 +22,9 @@ export default function TaskOverview() {
         </Button>
       }
       stats={[
-        { label: '未完了', value: openTasks.length },
-        { label: '期限超過', value: overdue.length, valueClassName: 'text-red-600 dark:text-red-400', className: 'bg-red-50/50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30' },
-        { label: '総数', value: tasks.length },
+        { label: '未完了', value: openTasks.length, unit: '件' },
+        { label: '期限超過', value: overdue.length, unit: '件', valueClassName: 'text-red-600 dark:text-red-400', className: 'bg-red-50/50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30' },
+        { label: '総数', value: tasks.length, unit: '件' },
       ]}
       items={openTasks}
       keyExtractor={(t) => t.id}

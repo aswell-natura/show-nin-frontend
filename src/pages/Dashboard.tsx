@@ -27,8 +27,8 @@ import {
 import CalendarWidget from "../components/dashboard/widgets/CalendarWidget";
 import DashboardLayoutSettings from "../components/dashboard/DashboardLayoutSettings";
 import type { ActiveMode } from "../types";
-import Icon from "../components/ui/Icon";
 import { cn } from "../lib/utils";
+import { LayoutDashboard, ChevronUp, ChevronDown } from "lucide-react";
 
 const tabLabel: Record<WidgetType, string> = {
   timeline: "活動",
@@ -92,26 +92,53 @@ function WidgetPanel({ widget }: { widget: WidgetType }) {
 
 function EmptyDashboard({ compact = false }: { compact?: boolean }) {
   return (
-    <div className={cn(
-      "flex-1 flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-300",
-      compact ? "min-h-0 py-12" : "min-h-[500px]"
-    )}>
+    <div
+      className={cn(
+        "flex-1 flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-300",
+        compact ? "min-h-0 py-12" : "min-h-[500px]",
+      )}
+    >
       <div className={cn("relative group", compact ? "mb-4" : "mb-8")}>
-        <img 
-          src="/src/assets/show-nin.png" 
-          alt="show-nin" 
-          className={cn(
-            "h-auto opacity-10 grayscale transition-opacity duration-300 group-hover:opacity-30",
-            compact ? "w-32" : "w-48"
-          )}
-        />
+        <>
+          <img
+            src="/src/assets/show-nin.svg"
+            alt="show-nin"
+            className={cn(
+              "h-auto opacity-10 grayscale transition-opacity duration-300 group-hover:opacity-30 dark:hidden",
+              compact ? "w-32" : "w-48",
+            )}
+          />
+          <img
+            src="/src/assets/show-nin-white.svg"
+            alt="show-nin"
+            className={cn(
+              "h-auto opacity-10 grayscale transition-opacity duration-300 group-hover:opacity-30 hidden dark:block",
+              compact ? "w-32" : "w-48",
+            )}
+          />
+        </>
         <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
       </div>
-      <h2 className={cn("font-bold text-foreground mb-3 tracking-tight", compact ? "text-base" : "text-xl")}>
+      <h2
+        className={cn(
+          "font-bold text-foreground mb-3 tracking-tight",
+          compact ? "text-base" : "text-xl",
+        )}
+      >
         ダッシュボードが未設定です
       </h2>
-      <p className={cn("text-muted-foreground leading-relaxed mb-8 font-medium", compact ? "text-[11px] max-w-[240px]" : "text-sm max-w-[320px]")}>
-        右上の設定ボタン（<span className="inline-flex items-center align-middle bg-muted px-1.5 py-0.5 rounded mx-1"><Icon name="layout-dashboard" className="w-3 h-3 text-primary" /></span>）から、パネルを配置しましょう。
+      <p
+        className={cn(
+          "text-muted-foreground leading-relaxed mb-8 font-medium",
+          compact ? "text-[12px] max-w-md" : "text-sm max-w-lg",
+        )}
+      >
+        右上の設定ボタン
+        <span className="inline-flex items-center gap-1 mx-1.5 px-2 py-0.5 rounded bg-muted text-primary align-middle">
+          <LayoutDashboard className="w-3 h-3" />
+          <span className="text-[10px] font-bold tracking-wider">レイアウト設定</span>
+        </span>
+        からパネルを配置しましょう
       </p>
     </div>
   );
@@ -122,18 +149,35 @@ function EmptyDashboard({ compact = false }: { compact?: boolean }) {
 function DashboardContent({ config }: { config: LayoutConfig }) {
   const { columns, panels } = config;
   const [mobileTab, setMobileTab] = useState(0);
+  const [isVisible, setIsVisible] = useState(true);
 
   const activePanels = panels.slice(0, columns);
-  const isAllEmpty = activePanels.every(p => p === 'empty' || !p);
-
-  if (isAllEmpty) {
-    return <EmptyDashboard />;
-  }
+  const isAllEmpty = activePanels.every((p) => p === "empty" || !p);
 
   const w = (i: number) => activePanels[i] ?? "empty";
 
   return (
     <>
+      <div className="flex items-center justify-between px-4 pt-4 shrink-0">
+        <button
+          onClick={() => setIsVisible(!isVisible)}
+          className="flex items-center gap-1.5 text-foreground hover:opacity-70 transition-opacity"
+        >
+          {isVisible ? (
+            <ChevronUp className="w-5 h-5 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-muted-foreground" />
+          )}
+          <h1 className="text-lg font-bold">パネル</h1>
+        </button>
+        {isVisible && <DashboardLayoutSettings />}
+      </div>
+
+      {isVisible && (
+        isAllEmpty ? (
+          <EmptyDashboard />
+        ) : (
+          <>
       {/* モバイルビュー：1パネルならそのまま、複数ならタブ表示 */}
       <div className="md:hidden flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
         {activePanels.length > 1 && (
@@ -143,10 +187,10 @@ function DashboardContent({ config }: { config: LayoutConfig }) {
                 key={i}
                 onClick={() => setMobileTab(i)}
                 className={cn(
-                  "flex-1 min-w-[70px] py-3 text-[10px] font-bold uppercase tracking-wider transition-colors truncate px-1",
+                  "flex-1 min-w-[80px] py-3.5 text-[10px] font-bold uppercase tracking-wider transition-colors truncate px-1",
                   mobileTab === i
                     ? "border-b-2 border-primary text-primary"
-                    : "text-muted-foreground hover:text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 {tabLabel[p]}
@@ -155,7 +199,9 @@ function DashboardContent({ config }: { config: LayoutConfig }) {
           </div>
         )}
         <div className="flex-1 min-h-0 p-4 flex flex-col">
-          {WidgetPanel({ widget: activePanels[mobileTab] }) || <EmptyDashboard compact />}
+          {WidgetPanel({ widget: activePanels[mobileTab] }) || (
+            <EmptyDashboard compact />
+          )}
         </div>
       </div>
 
@@ -181,7 +227,10 @@ function DashboardContent({ config }: { config: LayoutConfig }) {
         {columns === 3 && (
           <div className="flex flex-row flex-1 min-w-0 gap-4">
             {[0, 1, 2].map((i) => (
-              <div key={i} className="flex-1 min-w-0 flex flex-col rounded-xl bg-muted/5 border border-dashed border-border/40">
+              <div
+                key={i}
+                className="flex-1 min-w-0 flex flex-col rounded-xl bg-muted/5 border border-dashed border-border/40"
+              >
                 {WidgetPanel({ widget: w(i) })}
               </div>
             ))}
@@ -209,6 +258,9 @@ function DashboardContent({ config }: { config: LayoutConfig }) {
           </>
         )}
       </div>
+          </>
+        )
+      )}
     </>
   );
 }
@@ -220,11 +272,7 @@ function PlayerDashboard() {
   const [cardOrder, setCardOrder] = useState([1, 2, 3, 4, 5]);
 
   return (
-    <div className="flex flex-col py-3">
-      <div className="flex items-center justify-between px-4 pb-3 shrink-0">
-        <h1 className="text-lg font-bold text-foreground">ダッシュボード</h1>
-        <DashboardLayoutSettings />
-      </div>
+    <div className="flex flex-col">
       <SummaryCards
         mode="player"
         cardOrder={cardOrder}
@@ -241,12 +289,6 @@ function ManagerDashboard() {
 
   return (
     <div className="flex flex-col">
-      <div className="flex items-center justify-between px-4 pt-3 shrink-0">
-        <h1 className="text-lg font-bold text-foreground">
-          マネージャーダッシュボード
-        </h1>
-        <DashboardLayoutSettings />
-      </div>
       <SummaryCards
         mode="manager"
         cardOrder={cardOrder}

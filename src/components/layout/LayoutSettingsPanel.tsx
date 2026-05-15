@@ -6,7 +6,7 @@ import {
   type ColorMode,
 } from "../../context/LayoutConfigContext";
 import type { ActiveMode } from "../../types";
-import Icon from "../ui/Icon";
+import { Layout, Minimize, Maximize, Type, Palette, Sun, Moon } from "lucide-react";
 
 export default function LayoutSettingsPanel() {
   const { currentUser, activeMode } = useAuth();
@@ -81,16 +81,16 @@ export default function LayoutSettingsPanel() {
           {/* ① ヘッダーサイズ */}
           <section>
             <div className="flex items-center gap-2 mb-3">
-              <Icon name="layout" className="w-4 h-4 text-primary" />
+              <Layout className="w-4 h-4 text-primary" />
               <p className="text-xs font-bold text-foreground uppercase tracking-wider">
                 ヘッダーサイズ
               </p>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { id: "compact", label: "小", icon: "minimize" },
-                { id: "normal", label: "標準", icon: "layout" },
-                { id: "large", label: "大", icon: "maximize" },
+                { id: "compact", label: "小", icon: Minimize },
+                { id: "normal", label: "標準", icon: Layout },
+                { id: "large", label: "大", icon: Maximize },
               ].map((item) => (
                 <button
                   key={item.id}
@@ -103,7 +103,7 @@ export default function LayoutSettingsPanel() {
                       : "bg-background border-border text-muted-foreground hover:border-primary/30 hover:bg-muted/30"
                   }`}
                 >
-                  <Icon name={item.icon} className="w-5 h-5" />
+                  <item.icon className="w-5 h-5" />
                   <span className="text-xs font-medium">{item.label}</span>
                 </button>
               ))}
@@ -114,7 +114,7 @@ export default function LayoutSettingsPanel() {
           <section className="flex flex-col gap-6">
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <Icon name="type" className="w-4 h-4 text-primary" />
+                <Type className="w-4 h-4 text-primary" />
                 <p className="text-xs font-bold text-foreground uppercase tracking-wider">
                   文字サイズ
                 </p>
@@ -142,7 +142,7 @@ export default function LayoutSettingsPanel() {
 
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <Icon name="palette" className="w-4 h-4 text-primary" />
+                <Palette className="w-4 h-4 text-primary" />
                 <p className="text-xs font-bold text-foreground uppercase tracking-wider">
                   カラーモード
                 </p>
@@ -156,7 +156,7 @@ export default function LayoutSettingsPanel() {
                       : "bg-background border-border text-muted-foreground hover:bg-muted/50"
                   }`}
                 >
-                  <Icon name="sun" className="w-4 h-4" />
+                  <Sun className="w-4 h-4" />
                   <span className="text-xs font-medium">ライト</span>
                 </button>
                 <button
@@ -167,7 +167,7 @@ export default function LayoutSettingsPanel() {
                       : "bg-background border-border text-muted-foreground hover:bg-muted/50"
                   }`}
                 >
-                  <Icon name="moon" className="w-4 h-4" />
+                  <Moon className="w-4 h-4" />
                   <span className="text-xs font-medium">ダーク</span>
                 </button>
               </div>

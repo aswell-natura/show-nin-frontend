@@ -14,9 +14,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Kbd } from "../ui/kbd";
-import Icon from "../ui/Icon";
-import logoUrl from "../../assets/show-nin.png";
+import {
+  Search,
+  Settings,
+  User,
+  Lock,
+  Building,
+  CreditCard,
+  CircleDollarSign,
+  History,
+  BarChart,
+  HelpCircle,
+  Database,
+  LogOut,
+  Bell,
+} from "lucide-react";
+import logoUrlLight from "../../assets/show-nin.svg";
+import logoUrlDark from "../../assets/show-nin-white.svg";
 import { RecordButton } from "./RecordButton";
 
 interface HeaderProps {
@@ -30,7 +46,6 @@ export default function Header({ onMenuToggle }: HeaderProps) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
 
   if (!currentUser) return null;
 
@@ -100,12 +115,22 @@ export default function Header({ onMenuToggle }: HeaderProps) {
       <div
         className={`hidden md:block ${isCompact ? "text-sm" : isLarge ? "text-lg" : "text-base"} font-semibold text-foreground tracking-tight shrink-0`}
       >
-        <img
-          src={logoUrl}
-          alt="SHOW-NIN"
-          width={isCompact ? "26" : isLarge ? "36" : "32"}
-          height={isCompact ? "26" : isLarge ? "36" : "32"}
-        />
+        <>
+          <img
+            src={logoUrlLight}
+            alt="SHOW-NIN"
+            className="dark:hidden"
+            width={isCompact ? "26" : isLarge ? "36" : "32"}
+            height={isCompact ? "26" : isLarge ? "36" : "32"}
+          />
+          <img
+            src={logoUrlDark}
+            alt="SHOW-NIN"
+            className="hidden dark:block"
+            width={isCompact ? "26" : isLarge ? "36" : "32"}
+            height={isCompact ? "26" : isLarge ? "36" : "32"}
+          />
+        </>
       </div>
 
       {/* 顧客検索（コンパクト時は非表示） */}
@@ -115,8 +140,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
             className={`flex items-center gap-2 ${isCompact ? "h-8" : "h-10"} px-3 bg-secondary/80 backdrop-blur-sm border border-border/50 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/30 rounded-xl cursor-text transition-all duration-200`}
             onClick={() => setShowSearch(true)}
           >
-            <Icon
-              name="search"
+            <Search
               className="w-3.5 h-3.5 text-muted-foreground shrink-0"
             />
             {showSearch ? (
@@ -212,39 +236,29 @@ export default function Header({ onMenuToggle }: HeaderProps) {
           title="表示設定"
           className={`${iconSize} flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors`}
         >
-          <Icon name="settings" className="w-4.5 h-4.5" />
+          <Settings className="w-4.5 h-4.5" />
         </button>
 
         {/* 通知 */}
-        <div className="relative">
-          <button
-            onClick={() => {
-              setShowNotifications(!showNotifications);
-            }}
-            className={`relative ${iconSize} flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors`}
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.75}
+        <div className="relative flex items-center justify-center">
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                className={`relative ${iconSize} flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors outline-none`}
+              >
+                <Bell className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 w-4 h-4 bg-destructive text-background text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-72 sm:w-80 p-0 overflow-hidden"
+              align="end"
+              sideOffset={10}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-              />
-            </svg>
-            {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 w-4 h-4 bg-destructive text-background text-[10px] font-bold rounded-full flex items-center justify-center">
-                {unreadCount}
-              </span>
-            )}
-          </button>
-
-          {showNotifications && (
-            <div className="absolute right-0 top-10 w-72 sm:w-80 bg-background border border-border rounded-xl shadow-md overflow-hidden z-50">
               <div className="px-4 py-3 border-b border-border">
                 <p className="text-sm font-semibold text-foreground">通知</p>
               </div>
@@ -272,8 +286,8 @@ export default function Header({ onMenuToggle }: HeaderProps) {
                   ))
                 )}
               </div>
-            </div>
-          )}
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* プロフィール */}
@@ -311,11 +325,11 @@ export default function Header({ onMenuToggle }: HeaderProps) {
               <DropdownMenuGroup>
                 <DropdownMenuLabel>アカウント</DropdownMenuLabel>
                 <DropdownMenuItem>
-                  <Icon name="user" className="mr-2 h-4 w-4" />
+                  <User className="mr-2 h-4 w-4" />
                   <span>プロフィール編集</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
-                  <Icon name="lock" className="mr-2 h-4 w-4" />
+                  <Lock className="mr-2 h-4 w-4" />
                   <span>パスワード変更</span>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
@@ -325,12 +339,12 @@ export default function Header({ onMenuToggle }: HeaderProps) {
               <DropdownMenuGroup>
                 <DropdownMenuLabel>設定</DropdownMenuLabel>
                 <DropdownMenuItem>
-                  <Icon name="settings" className="mr-2 h-4 w-4" />
+                  <Settings className="mr-2 h-4 w-4" />
                   <span>基本設定 機能選択</span>
                 </DropdownMenuItem>
                 {effectiveMode === "manager" && (
                   <DropdownMenuItem>
-                    <Icon name="settings" className="mr-2 h-4 w-4" />
+                    <Settings className="mr-2 h-4 w-4" />
                     <span>詳細設定</span>
                   </DropdownMenuItem>
                 )}
@@ -342,27 +356,27 @@ export default function Header({ onMenuToggle }: HeaderProps) {
                   <DropdownMenuGroup>
                     <DropdownMenuLabel>支払い・利用状況</DropdownMenuLabel>
                     <DropdownMenuItem>
-                      <Icon name="building" className="mr-2 h-4 w-4" />
+                      <Building className="mr-2 h-4 w-4" />
                       <span>課金プラン</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem>
-                      <Icon name="credit" className="mr-2 h-4 w-4" />
+                      <CreditCard className="mr-2 h-4 w-4" />
                       <span>カード情報変更</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem className="text-primary font-medium">
-                      <Icon name="coin" className="mr-2 h-4 w-4" />
+                      <CircleDollarSign className="mr-2 h-4 w-4" />
                       <span>AIパケット追加</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem>
-                      <Icon name="history" className="mr-2 h-4 w-4" />
+                      <History className="mr-2 h-4 w-4" />
                       <span>決済履歴</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem className="text-primary font-medium">
-                      <Icon name="history" className="mr-2 h-4 w-4" />
+                      <History className="mr-2 h-4 w-4" />
                       <span>AIパケット履歴</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem>
-                      <Icon name="bar-chart" className="mr-2 h-4 w-4" />
+                      <BarChart className="mr-2 h-4 w-4" />
                       <span>利用状況</span>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
@@ -373,11 +387,11 @@ export default function Header({ onMenuToggle }: HeaderProps) {
 
               <DropdownMenuGroup>
                 <DropdownMenuItem>
-                  <Icon name="help-circle" className="mr-2 h-4 w-4" />
+                  <HelpCircle className="mr-2 h-4 w-4" />
                   <span>使い方</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={resetToDefaults}>
-                  <Icon name="database" className="mr-2 h-4 w-4" />
+                  <Database className="mr-2 h-4 w-4" />
                   <span>データをリセット</span>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
@@ -385,7 +399,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
               <DropdownMenuSeparator />
 
               <DropdownMenuItem onClick={handleLogout} variant="destructive">
-                <Icon name="logout" className="mr-2 h-4 w-4" />
+                <LogOut className="mr-2 h-4 w-4" />
                 <span>ログアウト</span>
               </DropdownMenuItem>
             </DropdownMenuContent>

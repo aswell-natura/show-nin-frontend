@@ -1523,6 +1523,38 @@ export const dashboardCardDefs: DashboardCardDef[] = [
     unit: "件",
     color: "blue",
   },
+  {
+    id: 13,
+    label: "売上",
+    role_visibility: "both",
+    icon: "trending-up",
+    unit: "万円",
+    color: "green",
+  },
+  {
+    id: 14,
+    label: "粗利",
+    role_visibility: "both",
+    icon: "coins",
+    unit: "万円",
+    color: "green",
+  },
+  {
+    id: 15,
+    label: "成約数",
+    role_visibility: "both",
+    icon: "check-circle",
+    unit: "件",
+    color: "blue",
+  },
+  {
+    id: 16,
+    label: "案件対応数",
+    role_visibility: "both",
+    icon: "folder",
+    unit: "件",
+    color: "blue",
+  },
 ];
 
 // ─── Sidebar Menu Items ───────────────────────────────────────────────────────

@@ -38,9 +38,9 @@ export default function CustomerOverview() {
         </Button>
       }
       stats={[
-        { label: '顧客数', value: customers.length },
-        { label: 'ランクA', value: rankACount, labelClassName: 'text-blue-600', valueClassName: 'text-blue-700' },
-        { label: '進行中', value: activeCustomerCount },
+        { label: '顧客数', value: customers.length, unit: '社' },
+        { label: 'ランクA', value: rankACount, unit: '社', labelClassName: 'text-blue-600', valueClassName: 'text-blue-700' },
+        { label: '進行中', value: activeCustomerCount, unit: '社' },
       ]}
       items={sortedCustomers}
       keyExtractor={(c) => c.id}

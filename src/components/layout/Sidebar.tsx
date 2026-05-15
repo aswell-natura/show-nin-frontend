@@ -17,9 +17,38 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useAuth } from "../../context/AuthContext";
 import { managerSidebarMenuItems, sidebarMenuItems } from "../../data/mock";
-import Icon from "../ui/Icon";
+import {
+  Home,
+  Building,
+  Folder,
+  Mic,
+  Check,
+  Target,
+  Users,
+  FileText,
+  AlertTriangle,
+  GripVertical,
+  Unlock,
+  Lock,
+  ChevronLeft,
+  ChevronRight,
+  type LucideIcon
+} from "lucide-react";
+
+const sidebarIconMap: Record<string, LucideIcon> = {
+  home: Home,
+  building: Building,
+  folder: Folder,
+  mic: Mic,
+  check: Check,
+  target: Target,
+  users: Users,
+  "file-text": FileText,
+  alert: AlertTriangle,
+};
 import { Button } from "../ui/button";
-import logoUrl from "../../assets/show-nin.png";
+import logoUrlLight from "../../assets/show-nin.svg";
+import logoUrlDark from "../../assets/show-nin-white.svg";
 
 interface SidebarProps {
   isMobileOpen: boolean;
@@ -81,10 +110,13 @@ function SortableItem({
           {...listeners}
           className="text-sidebar-foreground/40 hover:text-sidebar-foreground/80 cursor-grab active:cursor-grabbing shrink-0"
         >
-          <Icon name="grip" className="w-3.5 h-3.5" />
+          <GripVertical className="w-3.5 h-3.5" />
         </div>
       )}
-      <Icon name={icon} className="w-4 h-4 shrink-0" />
+      {(() => {
+        const MappedIcon = sidebarIconMap[icon];
+        return MappedIcon ? <MappedIcon className="w-4 h-4 shrink-0" /> : null;
+      })()}
       {!isCollapsed && <span className="truncate">{label}</span>}
     </div>
   );
@@ -165,10 +197,11 @@ function NavContent({
                 : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
             }`}
           >
-            <Icon
-              name={isUnlocked ? "unlock" : "lock"}
-              className="w-3.5 h-3.5 shrink-0"
-            />
+            {isUnlocked ? (
+              <Unlock className="w-3.5 h-3.5 shrink-0" />
+            ) : (
+              <Lock className="w-3.5 h-3.5 shrink-0" />
+            )}
             <span>{isUnlocked ? "並び替えモード" : "メニューを並び替え"}</span>
           </Button>
         </div>
@@ -270,7 +303,10 @@ export default function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
           {/* 閉じるボタン */}
           <div className="flex items-center justify-between px-4 mb-3">
             <div className="flex items-center gap-2">
-              <img src={logoUrl} alt="SHOW-NIN" className="w-8 h-8" />
+              <>
+                <img src={logoUrlLight} alt="SHOW-NIN" className="w-8 h-8 dark:hidden" />
+                <img src={logoUrlDark} alt="SHOW-NIN" className="w-8 h-8 hidden dark:block" />
+              </>
               <span className="text-sm font-semibold text-sidebar-foreground">
                 SHOW-NIN
               </span>
@@ -279,7 +315,7 @@ export default function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
               onClick={onMobileClose}
               className="w-7 h-7 flex items-center justify-center rounded-md text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
             >
-              <Icon name="chevron-left" className="w-4 h-4" />
+              <ChevronLeft className="w-4 h-4" />
             </button>
           </div>
           <NavContent {...sharedProps} />
@@ -306,10 +342,11 @@ export default function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
             title={isCollapsed ? "サイドバーを開く" : "サイドバーを閉じる"}
             className="w-7 h-7 flex items-center justify-center rounded-md text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
           >
-            <Icon
-              name={isCollapsed ? "chevron-right" : "chevron-left"}
-              className="w-3.5 h-3.5"
-            />
+            {isCollapsed ? (
+              <ChevronRight className="w-3.5 h-3.5" />
+            ) : (
+              <ChevronLeft className="w-3.5 h-3.5" />
+            )}
           </button>
         </div>
         <NavContent {...sharedProps} isCollapsed={isCollapsed} />

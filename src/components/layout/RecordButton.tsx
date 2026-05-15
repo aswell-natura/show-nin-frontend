@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { Button } from "../ui/button";
-import Icon from "../ui/Icon";
+import { Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface RecordButtonProps {
@@ -64,7 +64,7 @@ export function RecordButton({
         compact ? "h-4 w-4" : fab ? "h-9 w-9" : "h-5 w-5",
         (extended || (showLabel && !fab)) && "mr-2"
       )}>
-        <Icon name="mic" className={compact ? "w-3 h-3" : fab ? "w-5 h-5" : "w-3.5 h-3.5"} />
+        <Mic className={compact ? "w-3 h-3" : fab ? "w-5 h-5" : "w-3.5 h-3.5"} />
       </span>
       {(showLabel || extended) && !fab && (
         <span className={cn(

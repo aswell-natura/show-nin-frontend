@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 interface Stat {
   label: string
   value: string | number
+  unit?: string
   className?: string
   labelClassName?: string
   valueClassName?: string
@@ -57,6 +58,7 @@ export function StandardWidget<T>({
               key={i}
               label={stat.label}
               value={stat.value}
+              unit={stat.unit}
               className={stat.className}
               labelClassName={stat.labelClassName}
               valueClassName={stat.valueClassName}

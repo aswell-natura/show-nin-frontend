@@ -34,9 +34,9 @@ export default function PlayerBudgetOverview() {
         </Button>
       }
       stats={[
-        { label: '配分予算', value: formatAmount(targetAmount) },
-        { label: '成約実績', value: formatAmount(closedAmount) },
-        { label: '見込み率', value: `${projectedProgress}%`, valueClassName: 'text-blue-600', className: 'bg-blue-50/50 border-blue-100' },
+        { label: '配分予算', value: (targetAmount / 10000).toLocaleString(), unit: '万円' },
+        { label: '成約実績', value: (closedAmount / 10000).toLocaleString(), unit: '万円' },
+        { label: '見込み率', value: projectedProgress, unit: '%', valueClassName: 'text-blue-600', className: 'bg-blue-50/50 border-blue-100' },
       ]}
       items={myProjects}
       keyExtractor={(p) => p.id}

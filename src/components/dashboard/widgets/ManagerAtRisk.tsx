@@ -36,7 +36,7 @@ export default function ManagerAtRisk() {
         </Button>
       }
       stats={[
-        { label: 'リスク案件', value: staleProjects.length, valueClassName: 'text-red-600', className: 'bg-red-50/50 border-red-100' },
+        { label: 'リスク案件', value: staleProjects.length, unit: '件', valueClassName: 'text-red-600', className: 'bg-red-50/50 border-red-100' },
       ]}
       items={staleProjects}
       keyExtractor={(p) => p.id}

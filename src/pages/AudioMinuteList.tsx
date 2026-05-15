@@ -240,7 +240,7 @@ export default function AudioMinuteList() {
                         </td>
                         <td className="px-4 py-3 text-right">
                           <Button
-                            variant="outline"
+                            variant="secondary"
                             size="sm"
                             onClick={() => openDetailWindow(m.id)}
                             className="gap-1.5 h-8 text-xs font-medium"

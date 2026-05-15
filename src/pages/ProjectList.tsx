@@ -573,7 +573,7 @@ export default function ProjectList() {
                   className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
                 />
                 <div className="flex gap-2">
-                  <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} className="h-9 px-4">
+                  <Button type="button" variant="secondary" onClick={() => setIsFormOpen(false)} className="h-9 px-4">
                     キャンセル
                   </Button>
                   <Button type="submit" variant="primary" className="h-9 px-6 shadow-sm">

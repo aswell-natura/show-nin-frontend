@@ -872,56 +872,62 @@ export default function CustomerDetail() {
               return (
                 <Card
                   key={act.id}
-                  className="w-full text-left p-4 rounded-xl border border-border bg-card py-4 shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200"
+                  className="w-full text-left p-4 rounded-xl border border-border bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200"
                 >
-                  <div className="flex items-start justify-between gap-3 flex-1 min-w-0">
-                    <div className="flex items-start gap-3.5 flex-1 min-w-0">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors bg-primary/10 text-primary dark:bg-primary/20 shadow-sm mt-0.5">
-                        <ActivityTypeIcon type={act.type} />
+                  <div className="flex flex-col gap-2.5">
+                    {/* Header: Icon, Title, Date, Details Button */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1 flex items-center gap-2">
+                        <span className="p-1.5 rounded-lg bg-primary/10 text-primary dark:bg-primary/20 shrink-0">
+                          <ActivityTypeIcon type={act.type} className="w-4 h-4 text-primary" />
+                        </span>
+                        <h4 className="text-sm font-bold text-foreground leading-snug truncate">
+                          {act.title}
+                        </h4>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2 mb-1">
-                          <h4 className="text-sm font-bold text-foreground flex-1 leading-tight truncate">
-                            {act.title}
-                          </h4>
-                          <span className="text-[10px] text-muted-foreground shrink-0 font-medium flex items-center gap-1">
-                            <Clock className="w-3 h-3" />{" "}
-                            {formatDate(act.created_at)}
-                          </span>
-                        </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5" />{" "}
+                          {formatDate(act.created_at)}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/reports/${act.id}`)}
+                          className="h-7 text-[11px] font-bold text-muted-foreground hover:text-primary hover:bg-primary/10 gap-1 px-2 transition-colors shrink-0"
+                        >
+                          <span>詳細</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
 
+                    {/* Combined Metadata Row */}
+                    {(actProject || act.audio_url) && (
+                      <div className="flex items-center gap-2 flex-wrap">
                         {actProject && (
                           <Badge
                             variant="secondary"
-                            className="mb-2 text-[10px] bg-muted text-muted-foreground font-medium border-0"
+                            className="text-[10px] bg-muted text-muted-foreground font-medium border-0 px-2 py-0.5"
                           >
                             案件: {actProject.name}
                           </Badge>
                         )}
-
-                        <p className="text-xs text-muted-foreground leading-relaxed mt-1 line-clamp-2">
-                          {act.content_json.summary}
-                        </p>
-
                         {act.audio_url && (
                           <Badge
                             variant="secondary"
-                            className="mt-3 gap-1 text-xs font-medium bg-primary/10 text-primary border border-primary/20 shadow-2xs"
+                            className="gap-1 text-[10px] font-medium bg-primary/10 text-primary border border-primary/20 shadow-2xs px-2 py-0.5"
                           >
                             <Mic className="w-3 h-3" /> 音声あり
                           </Badge>
                         )}
                       </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => navigate(`/reports/${act.id}`)}
-                      className="h-8 text-xs font-bold text-muted-foreground hover:text-primary hover:bg-primary/10 gap-1 px-2.5 transition-colors shrink-0 self-center"
-                    >
-                      <span>詳細</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </Button>
+                    )}
+
+                    {/* Summary text */}
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                      {act.content_json.summary}
+                    </p>
                   </div>
                 </Card>
               );
@@ -949,57 +955,63 @@ export default function CustomerDetail() {
               return (
                 <Card
                   key={m.id}
-                  className="w-full text-left p-4 rounded-xl border border-border bg-card py-4 shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200"
+                  className="w-full text-left p-4 rounded-xl border border-border bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200"
                 >
-                  <div className="flex items-start justify-between gap-3 flex-1 min-w-0">
-                    <div className="flex items-start gap-3.5 flex-1 min-w-0">
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors bg-primary/10 text-primary dark:bg-primary/20 shadow-sm mt-0.5">
-                        <Mic className="w-5 h-5" />
+                  <div className="flex flex-col gap-2.5">
+                    {/* Header: Icon, Title, Date, Details Button */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1 flex items-center gap-2">
+                        <span className="p-1.5 rounded-lg bg-primary/10 text-primary dark:bg-primary/20 shrink-0">
+                          <Mic className="w-4 h-4 text-primary" />
+                        </span>
+                        <h4 className="text-sm font-bold text-foreground leading-snug truncate">
+                          {m.title}
+                        </h4>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2 mb-1">
-                          <h4 className="text-sm font-bold text-foreground flex-1 leading-tight truncate">
-                            {m.title}
-                          </h4>
-                          <span className="text-[10px] text-muted-foreground shrink-0 font-medium flex items-center gap-1">
-                            <Calendar className="w-3 h-3" /> {m.recording_date}{" "}
-                            ({m.start_time}〜{m.end_time})
-                          </span>
-                        </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5" /> {m.recording_date}{" "}
+                          ({m.start_time}〜{m.end_time})
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openDetailWindow(m.id)}
+                          className="h-7 text-[11px] font-bold text-muted-foreground hover:text-primary hover:bg-primary/10 gap-1 px-2 transition-colors shrink-0"
+                        >
+                          <span>詳細</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
 
+                    {/* Combined Metadata Row */}
+                    {(minProject || m.checklist.length > 0) && (
+                      <div className="flex items-center gap-2 flex-wrap">
                         {minProject && (
                           <Badge
                             variant="secondary"
-                            className="mb-2 text-[10px] bg-muted text-muted-foreground font-medium border-0"
+                            className="text-[10px] bg-muted text-muted-foreground font-medium border-0 px-2 py-0.5"
                           >
                             案件: {minProject.name}
                           </Badge>
                         )}
-
-                        <p className="text-xs text-muted-foreground leading-relaxed mt-1 line-clamp-2">
-                          {m.summary}
-                        </p>
-
                         {m.checklist.length > 0 && (
                           <Badge
                             variant="outline"
-                            className="mt-3 gap-1 text-[10px] font-medium border-border"
+                            className="gap-1 text-[10px] font-medium border-border px-2 py-0.5"
                           >
                             <CheckSquare className="w-3 h-3 text-primary" />{" "}
                             チェックリスト {doneCount}/{m.checklist.length} 完了
                           </Badge>
                         )}
                       </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openDetailWindow(m.id)}
-                      className="h-8 text-xs font-bold text-muted-foreground hover:text-primary hover:bg-primary/10 gap-1 px-2.5 transition-colors shrink-0 self-center"
-                    >
-                      <span>詳細</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </Button>
+                    )}
+
+                    {/* Summary text */}
+                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                      {m.summary}
+                    </p>
                   </div>
                 </Card>
               );
@@ -1090,7 +1102,7 @@ export default function CustomerDetail() {
                 <Card
                   key={task.id}
                   className={cn(
-                    "group p-4 rounded-xl border shadow-sm flex flex-col gap-3 transition-all duration-500 hover:shadow-md py-4 text-left",
+                    "group p-4 rounded-xl border shadow-sm flex flex-col gap-2.5 transition-all duration-500 hover:shadow-md text-left",
                     isCompleting
                       ? "opacity-40 scale-[0.98] bg-muted/40 border-primary/40"
                       : isOverdue
@@ -1098,14 +1110,15 @@ export default function CustomerDetail() {
                         : "border-border bg-card hover:border-primary/30 hover:bg-accent/5",
                   )}
                 >
-                  <div className="flex items-start justify-between gap-3 flex-1 min-w-0">
-                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                  {/* Header: Checkbox + Title on the left, Date + Details Button on the right */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1 flex items-center gap-3">
                       <div
                         onClick={() =>
                           handleCompleteTask(task.id, task.is_completed)
                         }
                         className={cn(
-                          "mt-0.5 w-4.5 h-4.5 rounded border flex items-center justify-center shrink-0 transition-all duration-300 shadow-2xs cursor-pointer",
+                          "w-4.5 h-4.5 rounded border flex items-center justify-center shrink-0 transition-all duration-300 shadow-2xs cursor-pointer",
                           task.is_completed || isCompleting
                             ? "bg-primary border-primary text-primary-foreground scale-110"
                             : isOverdue
@@ -1117,81 +1130,79 @@ export default function CustomerDetail() {
                           <Check className="w-3.5 h-3.5 text-background stroke-3 animate-in zoom-in duration-200" />
                         )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className={cn(
-                            "text-sm font-bold leading-snug transition-all duration-500 truncate",
-                            task.is_completed || isCompleting
-                              ? "line-through text-muted-foreground"
-                              : "text-foreground/90",
-                          )}
-                        >
-                          {task.title}
-                        </p>
-
-                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                          {taskProject && (
-                            <Badge
-                              variant="secondary"
-                              className="text-[10px] bg-muted text-muted-foreground font-medium border-0"
-                            >
-                              案件: {taskProject.name}
-                            </Badge>
-                          )}
-                          {isOverdue && !task.is_completed && !isCompleting && (
-                            <Badge
-                              variant="destructive"
-                              className="text-[10px] px-1.5 py-0.2 rounded font-bold uppercase tracking-wider"
-                            >
-                              期限切れ
-                            </Badge>
-                          )}
-                          <span
-                            className={cn(
-                              "text-[11px] font-medium flex items-center gap-1",
-                              isOverdue && !task.is_completed && !isCompleting
-                                ? "text-destructive"
-                                : "text-muted-foreground",
-                            )}
-                          >
-                            <Calendar className="w-3 h-3" /> 期限:{" "}
-                            {task.due_date}
-                          </span>
-                          {task.progress_updated_at && (
-                            <span className="text-[11px] text-muted-foreground font-medium flex items-center gap-1 ml-2">
-                              <Clock className="w-3 h-3" /> 進捗更新:{" "}
-                              {task.progress_updated_at}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                      <p
+                        className={cn(
+                          "text-sm font-bold leading-snug transition-all duration-500 truncate",
+                          task.is_completed || isCompleting
+                            ? "line-through text-muted-foreground"
+                            : "text-foreground/90",
+                        )}
+                      >
+                        {task.title}
+                      </p>
                     </div>
-
-                    {/* タスク詳細へリダイレクトするボタン (ユーザー要望) */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => navigate("/tasks")}
-                      className="h-8 text-xs font-bold text-muted-foreground hover:text-primary hover:bg-primary/10 gap-1 px-2.5 transition-colors shrink-0 self-center"
-                    >
-                      <span>詳細</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </Button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span
+                        className={cn(
+                          "text-[10px] font-medium flex items-center gap-1",
+                          isOverdue && !task.is_completed && !isCompleting
+                            ? "text-destructive"
+                            : "text-muted-foreground",
+                        )}
+                      >
+                        <Calendar className="w-3.5 h-3.5" /> 期限: {task.due_date}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => navigate("/tasks")}
+                        className="h-7 text-[11px] font-bold text-muted-foreground hover:text-primary hover:bg-primary/10 gap-1 px-2 transition-colors shrink-0"
+                      >
+                        <span>詳細</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </div>
 
-                  {/* 進捗プログレスバー */}
-                  <div className="flex items-center gap-3 pt-2 border-t border-border/40 mt-1">
-                    <span className="text-[11px] font-bold text-muted-foreground w-12 shrink-0">
-                      進捗{" "}
-                      {task.progress_percent ?? (task.is_completed ? 100 : 0)}%
+                  {/* Metadata Row */}
+                  {(taskProject || (isOverdue && !task.is_completed && !isCompleting) || task.progress_updated_at) && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {taskProject && (
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] bg-muted text-muted-foreground font-medium border-0 px-2 py-0.5"
+                        >
+                          案件: {taskProject.name}
+                        </Badge>
+                      )}
+                      {isOverdue && !task.is_completed && !isCompleting && (
+                        <Badge
+                          variant="destructive"
+                          className="text-[10px] px-1.5 py-0.2 rounded font-bold uppercase tracking-wider"
+                        >
+                          期限切れ
+                        </Badge>
+                      )}
+                      {task.progress_updated_at && (
+                        <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5" /> 進捗更新: {task.progress_updated_at}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Tightened Progress Bar */}
+                  <div className="flex items-center gap-3 pt-1">
+                    <span className="text-[10px] font-bold text-muted-foreground w-12 shrink-0">
+                      進捗 {task.progress_percent ?? (task.is_completed ? 100 : 0)}%
                     </span>
-                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                    <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                       <div
                         className={cn(
                           "h-full transition-all duration-500 rounded-full",
                           task.is_completed ||
                             (task.progress_percent ?? 0) === 100
-                            ? "bg-emerald-50"
+                            ? "bg-emerald-500"
                             : "bg-primary",
                         )}
                         style={{

@@ -11,7 +11,6 @@ import {
   Edit,
   Plus,
   Briefcase,
-  Check,
   Mic,
   ChevronRight,
   Users,
@@ -22,12 +21,12 @@ import {
   ArrowLeft,
   ExternalLink,
   Info,
+  ListFilter,
 } from "lucide-react";
 import AppLayout from "../components/layout/AppLayout";
 import { useDataStore } from "../context/DataStoreContext";
 import { useGlobalDialog } from "../context/GlobalDialogContext";
 import CustomerDialogForm from "@/components/customers/CustomerDialogForm";
-import ActivityTypeIcon from "../components/dashboard/widgets/ActivityTypeIcon";
 import {
   RankBadge,
   StatusBadge,
@@ -35,6 +34,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipTrigger,
@@ -55,7 +60,7 @@ type Tab = "projects" | "details" | "profile";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "projects", label: "案件一覧" },
-  { id: "details", label: "活動・タスク" },
+  { id: "details", label: "議事録・タスク" },
   { id: "profile", label: "企業概要" },
 ];
 
@@ -114,10 +119,8 @@ export default function CustomerDetail() {
   const {
     customers,
     projects: allProjects,
-    activities: allActivities,
     tasks: allTasks,
     profiles,
-    updateTask,
     updateCustomer,
   } = useDataStore();
   const { openDialog, closeDialog } = useGlobalDialog();
@@ -135,26 +138,11 @@ export default function CustomerDetail() {
 
   // 詳細タブ & タスクサブフィルター
   const [detailsTab, setDetailsTab] = useState<
-    "activities" | "minutes" | "tasks"
-  >("activities");
+    "minutes" | "tasks"
+  >("minutes");
   const [taskFilter, setTaskFilter] = useState<
     "incomplete" | "completed" | "all"
   >("incomplete");
-
-  // タスク完了アニメーションステート
-  const [completingTaskIds, setCompletingTaskIds] = useState<string[]>([]);
-
-  const handleCompleteTask = (taskId: string, currentCompleted: boolean) => {
-    if (completingTaskIds.includes(taskId)) return;
-    setCompletingTaskIds((prev) => [...prev, taskId]);
-    setTimeout(() => {
-      updateTask(taskId, {
-        is_completed: !currentCompleted,
-        progress_percent: !currentCompleted ? 100 : 0,
-      });
-      setCompletingTaskIds((prev) => prev.filter((id) => id !== taskId));
-    }, 600);
-  };
 
   const customer = customers.find((c) => c.id === id);
 
@@ -241,16 +229,7 @@ export default function CustomerDetail() {
     customerProjects.some((p) => p.id === selectedProjectId);
   const effectiveProjectId = isValidSelectedProject ? selectedProjectId : "all";
 
-  const activities = allActivities
-    .filter(
-      (a) =>
-        a.customer_id === id &&
-        (effectiveProjectId === "all" || a.project_id === effectiveProjectId),
-    )
-    .sort(
-      (a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-    );
+
 
   const audioMinutes = mockAudioMinutes
     .filter(
@@ -417,7 +396,7 @@ export default function CustomerDetail() {
             <Briefcase className="w-4 h-4" />
           </div>
           <h3 className="text-base font-bold text-foreground tracking-tight flex items-center gap-2">
-            <span>案件・活動フィルター</span>
+            <span>案件フィルター</span>
             <TooltipProvider delayDuration={200}>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -439,56 +418,68 @@ export default function CustomerDetail() {
             </TooltipProvider>
           </h3>
         </div>
-        <Badge
-          variant="secondary"
-          className="text-[10px] font-bold px-2 py-0.5 bg-muted text-muted-foreground border-0 shadow-none"
-        >
-          {customerProjects.length} 案件
-        </Badge>
-      </div>
-
-      {/* 進行中 / 完了 / すべて のセグメントコントロール */}
-      <div className="flex bg-muted/40 dark:bg-muted/20 p-1 rounded-xl mb-4 border border-border/50 shadow-2xs">
-        {(["active", "closed", "all"] as const).map((filter) => {
-          const label =
-            filter === "active"
-              ? "進行中"
-              : filter === "closed"
-                ? "完了"
-                : "すべて";
-          const count = customerProjects.filter((p) =>
-            filter === "active"
-              ? p.status !== "closed"
-              : filter === "closed"
-                ? p.status === "closed"
-                : true,
-          ).length;
-          const isActive = projectFilter === filter;
-          return (
-            <button
-              key={filter}
-              onClick={() => setProjectFilter(filter)}
-              className={cn(
-                "flex-1 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 flex items-center justify-center gap-1.5",
-                isActive
-                  ? "bg-background text-foreground shadow-xs border border-border/50"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <span>{label}</span>
-              <span
-                className={cn(
-                  "text-[10px] px-1.5 py-0.2 rounded-full font-semibold leading-none",
-                  isActive
-                    ? "bg-primary/10 text-primary"
-                    : "bg-muted-foreground/15 text-muted-foreground",
-                )}
+        <div className="flex items-center gap-2 shrink-0">
+          <Badge
+            variant="secondary"
+            className="text-[10px] font-bold px-2 py-0.5 bg-muted text-muted-foreground border-0 shadow-none"
+          >
+            {customerProjects.length} 案件
+          </Badge>
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground relative"
+                title="案件フィルター"
               >
-                {count}
-              </span>
-            </button>
-          );
-        })}
+                <ListFilter className="w-4 h-4" />
+                {projectFilter !== "all" && (
+                  <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-primary rounded-full animate-in zoom-in duration-200" />
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40 bg-background/95 backdrop-blur-md border border-border/60 shadow-lg rounded-xl">
+              {(["active", "closed", "all"] as const).map((filter) => {
+                const label =
+                  filter === "active"
+                    ? "進行中"
+                    : filter === "closed"
+                      ? "完了"
+                      : "すべて";
+                const count = customerProjects.filter((p) =>
+                  filter === "active"
+                    ? p.status !== "closed"
+                    : filter === "closed"
+                      ? p.status === "closed"
+                      : true,
+                ).length;
+                const isActive = projectFilter === filter;
+                return (
+                  <DropdownMenuItem
+                    key={filter}
+                    onClick={() => setProjectFilter(filter)}
+                    className={cn(
+                      "text-xs font-bold py-2 px-3 flex items-center justify-between cursor-pointer rounded-lg transition-colors hover:bg-primary/5",
+                      isActive
+                        ? "text-primary bg-primary/10 hover:bg-primary/15"
+                        : "text-foreground/80 hover:text-foreground"
+                    )}
+                  >
+                    <span>{label}</span>
+                    <Badge variant="secondary" className={cn(
+                      "text-[9px] px-1.5 py-0.2 rounded-full font-bold border-0 shadow-none leading-none scale-90 origin-right",
+                      isActive ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+                    )}>
+                      {count}
+                    </Badge>
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 mb-8">
@@ -657,17 +648,6 @@ export default function CustomerDetail() {
               <SelectValue placeholder="表示切替" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="activities" className="text-xs font-bold">
-                <div className="flex items-center justify-between w-full min-w-[120px]">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-3.5 h-3.5 text-primary" />
-                    <span>活動履歴</span>
-                  </div>
-                  <span className="text-[10px] text-muted-foreground ml-2">
-                    {activities.length}
-                  </span>
-                </div>
-              </SelectItem>
               <SelectItem value="minutes" className="text-xs font-bold">
                 <div className="flex items-center justify-between w-full min-w-[120px]">
                   <div className="flex items-center gap-2">
@@ -696,39 +676,6 @@ export default function CustomerDetail() {
 
         {/* デスクトップ用タブリスト (hidden md:flex) */}
         <div className="hidden md:flex items-end gap-1 md:gap-1.5 overflow-hidden -mb-px">
-          <button
-            onClick={() => setDetailsTab("activities")}
-            className={cn(
-              "flex items-center justify-center gap-1.5 border-b-2 py-3 text-xs font-bold tracking-wide transition-colors whitespace-nowrap",
-              isProfilePanelOpen ? "px-2" : "px-2.5 md:px-3",
-              detailsTab === "activities"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground",
-            )}
-          >
-            <FileText className="w-3.5 h-3.5 shrink-0" />
-            <span
-              className={cn(
-                isProfilePanelOpen ? "hidden xl:inline" : "hidden md:inline",
-              )}
-            >
-              活動履歴
-            </span>
-            <span
-              className={cn(
-                isProfilePanelOpen ? "inline xl:hidden" : "inline md:hidden",
-              )}
-            >
-              活動
-            </span>
-            <Badge
-              variant="secondary"
-              className="min-w-5 h-5 px-1.5 rounded-full flex items-center justify-center text-[10px] font-bold leading-none bg-muted-foreground/15 text-muted-foreground border-0 shadow-none"
-            >
-              {activities.length}
-            </Badge>
-          </button>
-
           <button
             onClick={() => setDetailsTab("minutes")}
             className={cn(
@@ -792,27 +739,6 @@ export default function CustomerDetail() {
         {/* タブに応じたアクションボタン */}
         <div className="shrink-0 pb-2.5 flex items-center">
           <TooltipProvider delayDuration={200}>
-            {detailsTab === "activities" && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    className="h-8 md:w-8 px-3 md:px-0 md:justify-center gap-1.5 shrink-0 shadow-sm rounded-md md:rounded-full"
-                  >
-                    <Plus className="w-4 h-4 shrink-0" />
-                    <span className="md:hidden text-xs">記録</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent
-                  side="bottom"
-                  align="end"
-                  className="hidden md:block px-3 py-1.5 backdrop-blur-xl bg-background/90 border border-border/60 shadow-xl rounded-full text-xs font-bold text-foreground/90 animate-in zoom-in-95 duration-200 z-50"
-                >
-                  活動を記録
-                </TooltipContent>
-              </Tooltip>
-            )}
             {detailsTab === "minutes" && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -862,90 +788,6 @@ export default function CustomerDetail() {
 
       {/* タブコンテンツエリア */}
       <div className="flex-1 px-4 py-5">
-        {detailsTab === "activities" && (
-          <div className="flex flex-col gap-3 animate-in fade-in duration-200 outline-none">
-            {activities.map((act) => {
-              const actProject = allProjects.find(
-                (p) => p.id === act.project_id,
-              );
-
-              return (
-                <Card
-                  key={act.id}
-                  className="w-full text-left p-4 rounded-xl border border-border bg-card shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200"
-                >
-                  <div className="flex flex-col gap-2.5">
-                    {/* Header: Icon, Title, Date, Details Button */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1 flex items-center gap-2">
-                        <span className="p-1.5 rounded-lg bg-primary/10 text-primary dark:bg-primary/20 shrink-0">
-                          <ActivityTypeIcon type={act.type} className="w-4 h-4 text-primary" />
-                        </span>
-                        <h4 className="text-sm font-bold text-foreground leading-snug truncate">
-                          {act.title}
-                        </h4>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5" />{" "}
-                          {formatDate(act.created_at)}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => navigate(`/reports/${act.id}`)}
-                          className="h-7 text-[11px] font-bold text-muted-foreground hover:text-primary hover:bg-primary/10 gap-1 px-2 transition-colors shrink-0"
-                        >
-                          <span>詳細</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Combined Metadata Row */}
-                    {(actProject || act.audio_url) && (
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {actProject && (
-                          <Badge
-                            variant="secondary"
-                            className="text-[10px] bg-muted text-muted-foreground font-medium border-0 px-2 py-0.5"
-                          >
-                            案件: {actProject.name}
-                          </Badge>
-                        )}
-                        {act.audio_url && (
-                          <Badge
-                            variant="secondary"
-                            className="gap-1 text-[10px] font-medium bg-primary/10 text-primary border border-primary/20 shadow-2xs px-2 py-0.5"
-                          >
-                            <Mic className="w-3 h-3" /> 音声あり
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Summary text */}
-                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
-                      {act.content_json.summary}
-                    </p>
-                  </div>
-                </Card>
-              );
-            })}
-
-            {activities.length === 0 && (
-              <Card className="p-8 border border-dashed border-border rounded-xl text-center bg-card/50 shadow-none py-8">
-                <p className="text-sm font-bold text-foreground/70 mb-1">
-                  活動履歴がありません
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  この条件に一致する活動履歴はまだ記録されていません。
-                </p>
-              </Card>
-            )}
-          </div>
-        )}
-
         {detailsTab === "minutes" && (
           <div className="flex flex-col gap-3 animate-in fade-in duration-200 outline-none">
             {audioMinutes.map((m) => {
@@ -1034,47 +876,66 @@ export default function CustomerDetail() {
           <div className="flex flex-col gap-3 animate-in fade-in duration-200 outline-none">
             {/* 未完了 / 完了 / すべて のサブフィルター */}
             <div className="flex items-center justify-between bg-muted/30 dark:bg-muted/10 p-1.5 rounded-xl border border-border/50 mb-2">
-              <div className="flex gap-1">
-                {(["incomplete", "completed", "all"] as const).map((filter) => {
-                  const label =
-                    filter === "incomplete"
-                      ? "未完了"
-                      : filter === "completed"
-                        ? "完了済み"
-                        : "すべて";
-                  const count = allCustomerTasks.filter((t) =>
-                    filter === "incomplete"
-                      ? !t.is_completed
-                      : filter === "completed"
-                        ? t.is_completed
-                        : true,
-                  ).length;
-                  const isActive = taskFilter === filter;
-                  return (
-                    <button
-                      key={filter}
-                      onClick={() => setTaskFilter(filter)}
-                      className={cn(
-                        "px-3 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 flex items-center gap-1.5",
-                        isActive
-                          ? "bg-background text-foreground shadow-2xs border border-border/50"
-                          : "text-muted-foreground hover:text-foreground",
-                      )}
+              <div className="flex items-center gap-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs font-bold text-muted-foreground hover:text-foreground bg-background gap-1.5 shadow-2xs border-border/50 relative"
                     >
-                      <span>{label}</span>
-                      <span
-                        className={cn(
-                          "text-[10px] px-1.5 py-0.2 rounded-full font-semibold leading-none",
-                          isActive
-                            ? "bg-primary/10 text-primary"
-                            : "bg-muted-foreground/15 text-muted-foreground",
-                        )}
-                      >
-                        {count}
+                      <ListFilter className="w-4 h-4" />
+                      <span>
+                        {taskFilter === "incomplete"
+                          ? "未完了"
+                          : taskFilter === "completed"
+                            ? "完了済み"
+                            : "すべてのタスク"}
                       </span>
-                    </button>
-                  );
-                })}
+                      {taskFilter !== "all" && (
+                        <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-primary rounded-full animate-in zoom-in duration-200" />
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-40 bg-background/95 backdrop-blur-md border border-border/60 shadow-lg rounded-xl">
+                    {(["incomplete", "completed", "all"] as const).map((filter) => {
+                      const label =
+                        filter === "incomplete"
+                          ? "未完了"
+                          : filter === "completed"
+                            ? "完了済み"
+                            : "すべて";
+                      const count = allCustomerTasks.filter((t) =>
+                        filter === "incomplete"
+                          ? !t.is_completed
+                          : filter === "completed"
+                            ? t.is_completed
+                            : true,
+                      ).length;
+                      const isActive = taskFilter === filter;
+                      return (
+                        <DropdownMenuItem
+                          key={filter}
+                          onClick={() => setTaskFilter(filter)}
+                          className={cn(
+                            "text-xs font-bold py-2 px-3 flex items-center justify-between cursor-pointer rounded-lg transition-colors hover:bg-primary/5",
+                            isActive
+                              ? "text-primary bg-primary/10 hover:bg-primary/15"
+                              : "text-foreground/80 hover:text-foreground"
+                          )}
+                        >
+                          <span>{label}</span>
+                          <Badge variant="secondary" className={cn(
+                            "text-[9px] px-1.5 py-0.2 rounded-full font-bold border-0 shadow-none leading-none scale-90 origin-right",
+                            isActive ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+                          )}>
+                            {count}
+                          </Badge>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
               {/* タスクボードへリダイレクトするボタン (ユーザー要望) */}
@@ -1093,7 +954,6 @@ export default function CustomerDetail() {
             {tasks.map((task) => {
               const isOverdue =
                 !task.is_completed && new Date(task.due_date) < new Date();
-              const isCompleting = completingTaskIds.includes(task.id);
               const taskProject = allProjects.find(
                 (p) => p.id === task.project_id,
               );
@@ -1103,37 +963,18 @@ export default function CustomerDetail() {
                   key={task.id}
                   className={cn(
                     "group p-4 rounded-xl border shadow-sm flex flex-col gap-2.5 transition-all duration-500 hover:shadow-md text-left",
-                    isCompleting
-                      ? "opacity-40 scale-[0.98] bg-muted/40 border-primary/40"
-                      : isOverdue
-                        ? "border-destructive/40 bg-destructive/5 dark:bg-destructive/10"
-                        : "border-border bg-card hover:border-primary/30 hover:bg-accent/5",
+                    isOverdue
+                      ? "border-destructive/40 bg-destructive/5 dark:bg-destructive/10"
+                      : "border-border bg-card hover:border-primary/30 hover:bg-accent/5",
                   )}
                 >
-                  {/* Header: Checkbox + Title on the left, Date + Details Button on the right */}
+                  {/* Header: Title on the left, Date + Details Button on the right */}
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1 flex items-center gap-3">
-                      <div
-                        onClick={() =>
-                          handleCompleteTask(task.id, task.is_completed)
-                        }
-                        className={cn(
-                          "w-4.5 h-4.5 rounded border flex items-center justify-center shrink-0 transition-all duration-300 shadow-2xs cursor-pointer",
-                          task.is_completed || isCompleting
-                            ? "bg-primary border-primary text-primary-foreground scale-110"
-                            : isOverdue
-                              ? "border-destructive text-destructive bg-background"
-                              : "border-muted-foreground/50 hover:border-primary bg-background",
-                        )}
-                      >
-                        {(task.is_completed || isCompleting) && (
-                          <Check className="w-3.5 h-3.5 text-background stroke-3 animate-in zoom-in duration-200" />
-                        )}
-                      </div>
+                    <div className="min-w-0 flex-1 flex items-center">
                       <p
                         className={cn(
                           "text-sm font-bold leading-snug transition-all duration-500 truncate",
-                          task.is_completed || isCompleting
+                          task.is_completed
                             ? "line-through text-muted-foreground"
                             : "text-foreground/90",
                         )}
@@ -1145,7 +986,7 @@ export default function CustomerDetail() {
                       <span
                         className={cn(
                           "text-[10px] font-medium flex items-center gap-1",
-                          isOverdue && !task.is_completed && !isCompleting
+                          isOverdue && !task.is_completed
                             ? "text-destructive"
                             : "text-muted-foreground",
                         )}
@@ -1165,7 +1006,7 @@ export default function CustomerDetail() {
                   </div>
 
                   {/* Metadata Row */}
-                  {(taskProject || (isOverdue && !task.is_completed && !isCompleting) || task.progress_updated_at) && (
+                  {(taskProject || (isOverdue && !task.is_completed) || task.progress_updated_at) && (
                     <div className="flex items-center gap-2 flex-wrap">
                       {taskProject && (
                         <Badge
@@ -1175,7 +1016,7 @@ export default function CustomerDetail() {
                           案件: {taskProject.name}
                         </Badge>
                       )}
-                      {isOverdue && !task.is_completed && !isCompleting && (
+                      {isOverdue && !task.is_completed && (
                         <Badge
                           variant="destructive"
                           className="text-[10px] px-1.5 py-0.2 rounded font-bold uppercase tracking-wider"

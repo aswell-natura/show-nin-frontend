@@ -4,7 +4,6 @@ import type { DragEndEvent } from '@dnd-kit/core'
 import AppLayout from '../../components/layout/AppLayout'
 import { useDataStore } from '../../context/DataStoreContext'
 import type { Task } from '../../types'
-import { StatCard } from '../../components/dashboard/shared/StatCard'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 
@@ -81,20 +80,6 @@ function daysBetween(start: string, end: string) {
   const startTime = new Date(`${start}T00:00:00`).getTime()
   const endTime = new Date(`${end}T00:00:00`).getTime()
   return Math.max(1, Math.round((endTime - startTime) / 86400000) + 1)
-}
-
-function ViewButton({ active, label, icon, onClick }: { active: boolean; label: string; icon: string; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      title={label}
-      className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm transition-colors ${
-        active ? 'bg-gray-900 text-white' : 'text-muted-foreground hover:bg-gray-100'
-      }`}
-    >
-      {icon}
-    </button>
-  )
 }
 
 function TaskCard({ task }: { task: TaskView }) {
@@ -185,7 +170,7 @@ function DroppableTaskColumn({ status, tasks }: { status: KanbanStatus; tasks: T
 
 export default function TaskBoard() {
   const { tasks, customers, projects, profiles, updateTask } = useDataStore()
-  const [viewMode, setViewMode] = useState<ViewMode>('table')
+  const [viewMode] = useState<ViewMode>('table')
   const [statusFilter, setStatusFilter] = useState<'all' | KanbanStatus>('all')
   const [priorityFilter, setPriorityFilter] = useState<'all' | Priority>('all')
   const [search, setSearch] = useState('')
@@ -247,13 +232,6 @@ export default function TaskBoard() {
     [priorityFilter, search, statusFilter, taskViews, kanbanOverrides],
   )
 
-  const summary = {
-    total: filteredTasks.length,
-    active: filteredTasks.filter((task) => getStatus(task) !== '完了').length,
-    high: filteredTasks.filter((task) => task.priority === 'High').length,
-    overdue: filteredTasks.filter((task) => getStatus(task) !== '完了' && task.endDate < '2026-05-09').length,
-  }
-
   const ganttStart = '2026-05-01'
   const ganttDays = Array.from({ length: 31 }, (_, index) => addDays(ganttStart, index))
   const ganttStartTime = new Date(`${ganttStart}T00:00:00`).getTime()
@@ -279,18 +257,6 @@ export default function TaskBoard() {
             <div>
               <h1 className="text-lg font-bold text-foreground">タスク</h1>
               <p className="mt-0.5 text-xs text-muted-foreground">AIが抽出したタスクを複数の形式で確認します</p>
-            </div>
-            <div className="grid grid-cols-2 sm:flex gap-3">
-              {[
-                ['総数', summary.total],
-                ['未完了', summary.active],
-                ['高優先度', summary.high],
-                ['期限超過', summary.overdue],
-              ].map(([label, value]) => (
-                <div key={label as string} className="w-28">
-                  <StatCard label={label as string} value={value as number} />
-                </div>
-              ))}
             </div>
           </div>
 
@@ -327,12 +293,6 @@ export default function TaskBoard() {
             </div>
 
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-1">
-                <ViewButton active={viewMode === 'table'} label="一覧" icon="☷" onClick={() => setViewMode('table')} />
-                <ViewButton active={viewMode === 'cards'} label="カード" icon="▦" onClick={() => setViewMode('cards')} />
-                <ViewButton active={viewMode === 'kanban'} label="かんばん" icon="▤" onClick={() => setViewMode('kanban')} />
-                <ViewButton active={viewMode === 'gantt'} label="ガント" icon="▥" onClick={() => setViewMode('gantt')} />
-              </div>
               <Button variant="primary" className="hidden sm:inline-flex h-9 items-center px-4 font-medium shadow-sm gap-1.5">
                 <span className="text-base leading-none mb-0.5">+</span> タスク追加
               </Button>

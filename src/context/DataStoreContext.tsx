@@ -52,9 +52,25 @@ function loadCustomers() {
   const seedById = new Map(mockCustomers.map((customer) => [customer.id, customer]))
   return loaded.map((customer) => {
     const seed = seedById.get(customer.id)
-    if (!seed) return customer
+    
+    let normalizedIndustry: string[] = []
+    if (Array.isArray(customer.industry)) {
+      normalizedIndustry = customer.industry
+    } else if (typeof customer.industry === 'string') {
+      normalizedIndustry = [customer.industry]
+    } else if (seed?.industry) {
+      normalizedIndustry = seed.industry
+    }
+
+    if (!seed) {
+      return {
+        ...customer,
+        industry: normalizedIndustry,
+      }
+    }
     return {
       ...customer,
+      industry: normalizedIndustry,
       company_code: customer.company_code ?? seed.company_code,
       email: customer.email ?? seed.email,
       status: customer.status ?? seed.status,

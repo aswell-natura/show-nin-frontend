@@ -78,7 +78,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
     searchQuery.length > 0
       ? customers.filter(
           (c) =>
-            c.name.includes(searchQuery) || c.industry.includes(searchQuery),
+            c.name.includes(searchQuery) || c.industry?.some(i => i.includes(searchQuery)),
         )
       : [];
 
@@ -160,7 +160,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
                       {c.name}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {c.industry}
+                      {c.industry?.join("、")}
                     </p>
                   </div>
                   <span className="ml-auto text-xs text-muted-foreground">

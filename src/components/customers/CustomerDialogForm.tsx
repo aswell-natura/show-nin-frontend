@@ -24,11 +24,12 @@ import type { CustomerRank, CustomerStatus } from "@/types";
 
 export interface CustomerDialogValues {
   name: string;
-  industry: string;
+  industry: string[];
   rank: CustomerRank;
   status?: CustomerStatus;
   is_pinned: boolean;
   company_code?: string;
+  business_number?: string;
   email?: string;
   address?: string;
   phone?: string;
@@ -57,11 +58,12 @@ export default function CustomerDialogForm({
 
   const [values, setValues] = useState({
     name: initialValues?.name ?? "",
-    industry: initialValues?.industry ?? "",
+    industry: initialValues?.industry?.join("、") ?? "",
     rank: (initialValues?.rank ?? "B") as CustomerRank,
     status: initialValues?.status ?? ("lead" as CustomerStatus),
     is_pinned: initialValues?.is_pinned ?? false,
     company_code: initialValues?.company_code ?? "",
+    business_number: initialValues?.business_number ?? "",
     email: initialValues?.email ?? "",
     address: initialValues?.address ?? "",
     phone: initialValues?.phone ?? "",
@@ -80,6 +82,7 @@ export default function CustomerDialogForm({
   const [tempLabels, setTempLabels] = useState(values.labels);
   const [tagInput, setTagInput] = useState("");
   const [tempIndustry, setTempIndustry] = useState(values.industry);
+  const [tagInputIndustry, setTagInputIndustry] = useState("");
   const [isIndustryExpanded, setIsIndustryExpanded] = useState(false);
   const [isLabelsExpanded, setIsLabelsExpanded] = useState(false);
 
@@ -91,8 +94,12 @@ export default function CustomerDialogForm({
     event.preventDefault();
 
     const name = values.name.trim();
-    const industry = values.industry.trim();
     if (!name) return;
+
+    const industry = values.industry
+      .split(/[、,]/)
+      .map((ind) => ind.trim())
+      .filter(Boolean);
 
     const employeeCount = Number(values.employee_count);
     const labels = values.labels
@@ -102,11 +109,12 @@ export default function CustomerDialogForm({
 
     onSubmit({
       name,
-      industry,
+      industry: industry.length > 0 ? industry : ["未設定"],
       rank: values.rank,
       status: values.status,
       is_pinned: values.is_pinned,
       company_code: values.company_code.trim() || undefined,
+      business_number: values.business_number.trim() || undefined,
       email: values.email.trim() || undefined,
       address: values.address.trim() || undefined,
       phone: values.phone.trim() || undefined,
@@ -124,17 +132,32 @@ export default function CustomerDialogForm({
 
   // 既存データからユニークな業種リストを取得
   const existingIndustries = useMemo(() => {
-    const baseList = Array.from(
-      new Set(customers.map((c) => c.industry?.trim()).filter(Boolean)),
+    return Array.from(
+      new Set(
+        customers
+          .flatMap((c) => c.industry || [])
+          .map((i) => i.trim())
+          .filter(Boolean),
+      ),
     );
-    if (values.industry && baseList.includes(values.industry)) {
-      return [
-        values.industry,
-        ...baseList.filter((ind) => ind !== values.industry),
-      ];
+  }, [customers]);
+
+  // 現在の業種一覧 (配列化)
+  const currentIndustryList = useMemo(() => {
+    return tempIndustry
+      .split(/[、,]/)
+      .map((i) => i.trim())
+      .filter(Boolean);
+  }, [tempIndustry]);
+
+  // tagInputIndustry の入力値に応じて既存業種候補をフィルタリング
+  const filteredIndustries = useMemo(() => {
+    const trimmed = tagInputIndustry.trim().toLowerCase();
+    if (!trimmed) {
+      return isIndustryExpanded ? existingIndustries : existingIndustries.slice(0, 5);
     }
-    return baseList;
-  }, [customers, values.industry]);
+    return existingIndustries.filter((ind) => ind.toLowerCase().includes(trimmed));
+  }, [existingIndustries, tagInputIndustry, isIndustryExpanded]);
 
   // 既存データからユニークなラベルリストを取得
   const existingLabels = useMemo(() => {
@@ -155,16 +178,6 @@ export default function CustomerDialogForm({
       .map((l) => l.trim())
       .filter(Boolean);
   }, [tempLabels]);
-
-  // tempIndustry の入力値に応じて既存業種候補をフィルタリング
-  const filteredIndustries = useMemo(() => {
-    const isUnchanged = tempIndustry.trim() === values.industry.trim();
-    const trimmed = isUnchanged ? "" : tempIndustry.trim().toLowerCase();
-    if (!trimmed) {
-      return isIndustryExpanded ? existingIndustries : existingIndustries.slice(0, 5);
-    }
-    return existingIndustries.filter((ind) => ind.toLowerCase().includes(trimmed));
-  }, [existingIndustries, tempIndustry, values.industry, isIndustryExpanded]);
 
   // tagInput の入力値に応じて既存ラベル候補をフィルタリング
   const filteredLabels = useMemo(() => {
@@ -197,6 +210,7 @@ export default function CustomerDialogForm({
           onOpenChange={(open) => {
             if (open) {
               setTempIndustry(values.industry);
+              setTagInputIndustry("");
               setIsIndustryExpanded(false);
             }
             setOpenPopover(open ? "industry" : null);
@@ -207,99 +221,160 @@ export default function CustomerDialogForm({
               <p className="text-xs font-bold text-muted-foreground">
                 業種の設定
               </p>
-              <div className="flex items-center gap-2 p-1.5 rounded-lg border border-input bg-background shadow-2xs focus-within:ring-2 focus-within:ring-ring/20 focus-within:border-ring transition-all">
-                <input
-                  type="text"
-                  value={tempIndustry}
-                  onChange={(e) => setTempIndustry(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      if (tempIndustry.trim()) {
-                        updateValue("industry", tempIndustry.trim());
-                        setOpenPopover(null);
-                      }
-                    }
-                  }}
-                  placeholder="業種を入力..."
-                  className="w-full border-none bg-transparent px-2 py-1 text-xs font-semibold text-foreground placeholder:text-muted-foreground/50 outline-none focus:ring-0"
-                />
-                {tempIndustry.trim() && (
-                  <span className="text-[10px] text-muted-foreground flex items-center gap-1 pointer-events-none select-none bg-muted/50 border border-border/60 px-1.5 py-0.5 rounded-md shadow-2xs shrink-0">
-                    確定: <kbd className="font-mono text-[9px] font-bold">Enter</kbd>
+              
+              <div className="flex flex-wrap items-center gap-1.5 p-2 rounded-lg border border-input bg-background min-h-10 shadow-2xs focus-within:ring-2 focus-within:ring-ring/20 focus-within:border-ring transition-all relative">
+                {currentIndustryList.map((ind, i) => (
+                  <span
+                    key={`${ind}-${i}`}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 text-primary font-bold text-xs border border-primary/20 shadow-2xs animate-in zoom-in-95 duration-100"
+                  >
+                    <span>{ind}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = currentIndustryList.filter(
+                          (_, idx) => idx !== i,
+                        );
+                        setTempIndustry(updated.join("、"));
+                      }}
+                      className="hover:bg-primary/20 rounded-full p-0.5 transition-colors text-primary cursor-pointer"
+                    >
+                      <X className="size-3" />
+                    </button>
                   </span>
-                )}
+                ))}
+                <div className="flex-1 flex items-center flex-wrap gap-1.5 min-w-[200px] max-w-full">
+                  <input
+                    type="text"
+                    value={tagInputIndustry}
+                    onChange={(e) => setTagInputIndustry(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (
+                        e.key === "Enter" ||
+                        e.key === "、" ||
+                        e.key === ","
+                      ) {
+                        e.preventDefault();
+                        if (tagInputIndustry.trim()) {
+                          const nextList = [
+                            ...currentIndustryList,
+                            tagInputIndustry.trim(),
+                          ];
+                          setTempIndustry(nextList.join("、"));
+                          setTagInputIndustry("");
+                        }
+                      } else if (
+                        e.key === "Backspace" &&
+                        !tagInputIndustry &&
+                        currentIndustryList.length > 0
+                      ) {
+                        const nextList = currentIndustryList.slice(0, -1);
+                        setTempIndustry(nextList.join("、"));
+                      }
+                    }}
+                    placeholder={
+                      currentIndustryList.length === 0
+                        ? "業種を入力..."
+                        : "追加..."
+                    }
+                    style={{
+                      width: tagInputIndustry
+                        ? `${Math.max(10, tagInputIndustry.length * 1.8 + 3)}ch`
+                        : "100%",
+                    }}
+                    className="border-none bg-transparent px-1 text-xs outline-none focus:ring-0 font-semibold text-foreground placeholder:text-muted-foreground/50 max-w-full truncate"
+                  />
+                  {tagInputIndustry.trim() && (
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-1 pointer-events-none select-none animate-in fade-in zoom-in-95 duration-100 bg-muted/50 border border-border/60 px-1.5 py-0.5 rounded-md shadow-2xs shrink-0">
+                      確定:{" "}
+                      <kbd className="pointer-events-none inline-flex h-4 select-none items-center gap-1 rounded border border-border bg-muted px-1 font-mono text-[9px] font-bold text-muted-foreground shadow-2xs">
+                        Enter
+                      </kbd>
+                    </span>
+                  )}
+                </div>
               </div>
 
-              {existingIndustries.length > 0 && (
-                <div className="animate-in fade-in-50 duration-150 flex flex-col gap-1.5">
-                  <p className="text-[11px] text-muted-foreground font-semibold">
-                    既存の業種から選択:
-                  </p>
-                  <div
-                    className={cn(
-                      "flex flex-wrap items-center gap-1.5 transition-all duration-200",
-                      isIndustryExpanded && "max-h-36 overflow-y-auto pr-1 pb-1",
-                    )}
-                  >
-                    {filteredIndustries.length > 0 ? (
-                      <>
-                        {filteredIndustries.map((ind) => {
-                          const isSelected = values.industry === ind;
-                          return (
-                            <button
-                              key={ind}
-                              type="button"
-                              onClick={() => {
-                                updateValue("industry", ind);
-                                setOpenPopover(null);
-                              }}
-                              className={cn(
-                                "rounded-full px-2.5 py-1 text-xs font-semibold border transition-colors cursor-pointer shadow-2xs flex items-center gap-1",
-                                isSelected
-                                  ? "bg-primary text-primary-foreground border-primary"
-                                  : "bg-muted/50 hover:bg-muted text-foreground border-border/60",
-                              )}
-                            >
-                              <span>{ind}</span>
-                              {isSelected && (
-                                <span className="text-[10px] opacity-70">✓</span>
-                              )}
-                            </button>
-                          );
-                        })}
-                        {(tempIndustry.trim() === values.industry.trim() ||
-                          !tempIndustry.trim()) &&
-                          existingIndustries.length > 5 && (
-                            <button
-                              type="button"
-                              onClick={() => setIsIndustryExpanded((v) => !v)}
-                              className="group inline-flex items-center gap-1 rounded-full bg-primary/10 hover:bg-primary/20 px-2.5 py-1 text-xs font-bold text-primary transition-colors border border-primary/25 shadow-2xs cursor-pointer animate-in fade-in zoom-in-95 duration-100"
-                            >
-                              <span>
-                                {isIndustryExpanded
-                                  ? "一部を表示"
-                                  : `+ 他 ${existingIndustries.length - 5} 件を表示`}
-                              </span>
-                            </button>
-                          )}
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          updateValue("industry", tempIndustry.trim());
-                          setOpenPopover(null);
-                        }}
-                        className="group inline-flex items-center gap-1 rounded-full bg-primary/10 hover:bg-primary/20 px-3 py-1 text-xs font-bold text-primary transition-colors border border-primary/20 shadow-2xs cursor-pointer animate-in fade-in zoom-in-95 duration-100"
-                      >
-                        <Plus className="size-3.5" />
-                        <span>「{tempIndustry.trim()}」を新しく追加</span>
-                      </button>
-                    )}
-                  </div>
+              <div className="animate-in fade-in-50 duration-150 flex flex-col gap-1.5">
+                <p className="text-[11px] text-muted-foreground font-semibold">
+                  既存の業種から選択 (クリックで追加/解除):
+                </p>
+                <div
+                  className={cn(
+                    "flex flex-wrap items-center gap-1.5 transition-all duration-200",
+                    isIndustryExpanded && "max-h-36 overflow-y-auto pr-1 pb-1",
+                  )}
+                >
+                  {filteredIndustries.length > 0 ? (
+                    <>
+                      {filteredIndustries.map((ind) => {
+                        const isSelected = currentIndustryList.includes(ind);
+                        return (
+                          <button
+                            key={ind}
+                            type="button"
+                            onClick={() => {
+                              if (isSelected) {
+                                const updated = currentIndustryList.filter(
+                                  (i) => i !== ind,
+                                );
+                                setTempIndustry(updated.join("、"));
+                              } else {
+                                const updated = [...currentIndustryList, ind];
+                                setTempIndustry(updated.join("、"));
+                              }
+                              setTagInputIndustry("");
+                            }}
+                            className={cn(
+                              "group rounded-full px-2.5 py-1 text-xs font-semibold border transition-colors cursor-pointer shadow-2xs flex items-center gap-1",
+                              isSelected
+                                ? "bg-primary text-primary-foreground border-primary"
+                                : "bg-muted/50 hover:bg-muted text-foreground border-border/60",
+                            )}
+                          >
+                            {!isSelected && (
+                              <Plus className="size-3 text-muted-foreground/60 group-hover:text-foreground transition-colors" />
+                            )}
+                            <span>{ind}</span>
+                            {isSelected && (
+                              <span className="text-[10px] opacity-70">✓</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                      {!tagInputIndustry.trim() && existingIndustries.length > 5 && (
+                        <button
+                          type="button"
+                          onClick={() => setIsIndustryExpanded((v) => !v)}
+                          className="group inline-flex items-center gap-1 rounded-full bg-primary/10 hover:bg-primary/20 px-2.5 py-1 text-xs font-bold text-primary transition-colors border border-primary/25 shadow-2xs cursor-pointer animate-in fade-in zoom-in-95 duration-100"
+                        >
+                          <span>
+                            {isIndustryExpanded
+                              ? "一部を表示"
+                              : `+ 他 ${existingIndustries.length - 5} 件を表示`}
+                          </span>
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextList = [
+                          ...currentIndustryList,
+                          tagInputIndustry.trim(),
+                        ];
+                        setTempIndustry(nextList.join("、"));
+                        setTagInputIndustry("");
+                      }}
+                      className="group inline-flex items-center gap-1 rounded-full bg-primary/10 hover:bg-primary/20 px-3 py-1 text-xs font-bold text-primary transition-colors border border-primary/20 shadow-2xs cursor-pointer animate-in fade-in zoom-in-95 duration-100"
+                    >
+                      <Plus className="size-3.5" />
+                      <span>「{tagInputIndustry.trim()}」を新しく追加</span>
+                    </button>
+                  )}
                 </div>
-              )}
+              </div>
 
               <div className="flex justify-end gap-2 pt-1 border-t border-border/60 mt-1">
                 <Button
@@ -314,7 +389,15 @@ export default function CustomerDialogForm({
                   size="sm"
                   variant="primary"
                   onClick={() => {
-                    updateValue("industry", tempIndustry.trim());
+                    if (tagInputIndustry.trim()) {
+                      const finalIndustries = [
+                        ...currentIndustryList,
+                        tagInputIndustry.trim(),
+                      ].join("、");
+                      updateValue("industry", finalIndustries);
+                    } else {
+                      updateValue("industry", tempIndustry);
+                    }
                     setOpenPopover(null);
                   }}
                   className="h-7 text-xs px-2.5 font-bold"
@@ -646,18 +729,33 @@ export default function CustomerDialogForm({
             <Building2 className="size-4 text-primary" /> 基本情報
           </h4>
           <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="company_code" className="text-xs font-bold text-foreground/90">
-                企業コード
-              </label>
-              <input
-                id="company_code"
-                type="text"
-                value={values.company_code}
-                onChange={(e) => updateValue("company_code", e.target.value)}
-                placeholder="例: CUST-001"
-                className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-all shadow-2xs"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="company_code" className="text-xs font-bold text-foreground/90">
+                  企業コード
+                </label>
+                <input
+                  id="company_code"
+                  type="text"
+                  value={values.company_code}
+                  onChange={(e) => updateValue("company_code", e.target.value)}
+                  placeholder="例: CUST-001"
+                  className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-all shadow-2xs"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="business_number" className="text-xs font-bold text-foreground/90">
+                  事業者番号
+                </label>
+                <input
+                  id="business_number"
+                  type="text"
+                  value={values.business_number}
+                  onChange={(e) => updateValue("business_number", e.target.value)}
+                  placeholder="例: T1234567890123"
+                  className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-all shadow-2xs"
+                />
+              </div>
             </div>
             <div className="flex flex-col gap-1.5">
               <label htmlFor="employee_count" className="text-xs font-bold text-foreground/90">

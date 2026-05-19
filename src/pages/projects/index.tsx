@@ -302,7 +302,7 @@ export default function ProjectList() {
         [
           project.name,
           customer?.name ?? "未紐付け",
-          customer?.industry ?? "",
+          customer?.industry?.join("、") ?? "",
           project.labels?.join(" ") ?? "",
           project.note ?? "",
           statusLabel[project.status],
@@ -803,7 +803,7 @@ export default function ProjectList() {
                                             {customer.name}
                                           </span>
                                           <span className="text-xs text-muted-foreground">
-                                            {customer.industry}
+                                            {customer.industry?.join("、")}
                                           </span>
                                         </div>
                                       ) : (

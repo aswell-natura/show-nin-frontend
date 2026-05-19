@@ -67,7 +67,7 @@ export default function CustomerOverview() {
                     <p className="text-sm font-bold text-foreground truncate group-hover:text-primary transition-colors">{customer.name}</p>
                     {customer.is_pinned && <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-bold shrink-0">ピン</span>}
                   </div>
-                  <p className="mt-0.5 text-[10px] font-bold text-muted-foreground truncate uppercase tracking-tight">{customer.industry}</p>
+                  <p className="mt-0.5 text-[10px] font-bold text-muted-foreground truncate uppercase tracking-tight">{customer.industry?.join("、")}</p>
                 </div>
               </div>
               <span className="shrink-0 text-[10px] font-bold text-muted-foreground">{formatRelative(customer.last_accessed_at)}</span>

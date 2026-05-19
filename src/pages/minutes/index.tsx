@@ -207,7 +207,7 @@ export default function AudioMinuteList() {
                           {customer ? (
                             <div className="min-w-0">
                               <p className="font-semibold text-foreground/90 truncate">{customer.name}</p>
-                              <p className="mt-0.5 text-xs text-muted-foreground truncate">{customer.industry}</p>
+                              <p className="mt-0.5 text-xs text-muted-foreground truncate">{customer.industry?.join("、")}</p>
                             </div>
                           ) : (
                             <span className="inline-flex rounded-full bg-destructive/10 px-2.5 py-1 text-xs font-semibold text-destructive font-bold">

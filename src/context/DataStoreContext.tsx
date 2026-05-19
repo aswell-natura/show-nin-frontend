@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import {
   mockProfiles, mockCustomers, mockProjects, mockActivities,
@@ -19,7 +20,9 @@ function load<T>(key: string, seed: T[]): T[] {
   try {
     const stored = localStorage.getItem(key)
     if (stored) return JSON.parse(stored) as T[]
-  } catch {}
+  } catch {
+    // ignore
+  }
   return seed
 }
 

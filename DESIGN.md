@@ -112,6 +112,33 @@ Inline helpful text and micro-copy should use the `Tooltip` component from `src/
 - Style `<TooltipContent>` with `backdrop-blur-xl bg-background/90 border border-border/60 shadow-xl rounded-xl text-xs text-foreground/90 leading-relaxed animate-in zoom-in-95 duration-200 z-50`.
 - Reserve `Popover` from `src/components/ui/popover.tsx` for complex interactive metrics (like project counts) or click-driven dropdown menus.
 
+### High-Density Tables & Column Reordering
+
+For CRUD/table-intensive interfaces like `CustomerList`, implement high-density data tables:
+- **Interactive Drag-and-Drop Columns:** Use `@dnd-kit/core` with `SortableContext` and `horizontalListSortingStrategy` to enable users to drag and reorder columns dynamically.
+- **Hover-Activated Navigation Cues:** Add class-based hover styles that shift backgrounds (`bg-muted/40`) and smoothly fade/slide in a right-pointing chevron on the rightmost cell (`group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300`).
+- **Inline Actions & Metric Popovers:** Standardize inline toggle-actions (e.g. Pin/Unpin) using button components with `e.stopPropagation()` to prevent triggering parent row click handlers. Embed interactive mouse-hover metrics using Popovers to display descriptive breakdowns without leaving the page.
+
+### Responsive Multi-Column Layouts & Collapsible Drawers
+
+For object detail interfaces, structure the page into a 3-column architecture for desktop, collapsing gracefully to a single tab-bar column on mobile viewports:
+- **Navigation/Filters (Left Column):** Focus on sidebar-nested search query parameters and quick list filtering.
+- **Dynamic Content Feed (Center Column):** Keep checklists, audio transcripts, activity summaries, and progress widgets in the primary middle view.
+- **Collapsible Context Panel (Right Column):** Utilize a toggleable right drawer (`PanelRightClose`/`PanelRightOpen`) that collapses to a compact `w-13` sidebar when closed. Display vertical writing-mode titles (`[writing-mode:vertical-rl]`) on the collapsed sidebar to save screen real estate.
+
+### Checklist & Task Progress Cards
+
+Feed items and task listings must adopt visual cards (`Card`) using standardized, high-density elements:
+- **Checklist Summary Badges:** Use thin borders and primary colored iconography (e.g. `CheckSquare`) displaying completion states (e.g. `チェックリスト 2/5 完了`).
+- **Progress Tracking Bars:** Include high-contrast linear progress bars matching entity states (e.g., emerald backgrounds for completed, primary brand colors for active progress).
+- **Time/Alert Bounds:** For overdue objects, use a muted alert tint (`bg-destructive/5 border-destructive/40`) and add semantic tags like `期限切れ`.
+
+### URL State Synchronization
+
+All search, pagination, and multi-filter configurations must synchronize state with the browser's address bar using `useSearchParams`:
+- Maintain clear and intuitive URL state variables (e.g., `q` for search query, `sort` / `order` for sorting, `page` for paging).
+- Ensure state parameters are cleanly restored on page refresh or direct bookmark access.
+
 ## Living Style Guide
 
 The visual reference page is available at `/design` and implemented in `src/pages/DesignShowcase.tsx`.

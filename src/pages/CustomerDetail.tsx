@@ -642,7 +642,7 @@ export default function CustomerDetail() {
         <div className="md:hidden flex-1 max-w-[180px] pb-2.5">
           <Select
             value={detailsTab}
-            onValueChange={(val: any) => setDetailsTab(val)}
+            onValueChange={(val: string) => setDetailsTab(val as "minutes" | "tasks")}
           >
             <SelectTrigger className="h-9 bg-muted/40 font-bold shadow-2xs border-border/50 text-xs">
               <SelectValue placeholder="表示切替" />

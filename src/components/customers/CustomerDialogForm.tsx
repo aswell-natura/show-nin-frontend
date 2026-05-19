@@ -83,7 +83,7 @@ export default function CustomerDialogForm({
   const [isIndustryExpanded, setIsIndustryExpanded] = useState(false);
   const [isLabelsExpanded, setIsLabelsExpanded] = useState(false);
 
-  const updateValue = (key: keyof typeof values, value: any) => {
+  const updateValue = <K extends keyof typeof values>(key: K, value: typeof values[K]) => {
     setValues((current) => ({ ...current, [key]: value }));
   };
 

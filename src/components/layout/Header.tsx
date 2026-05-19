@@ -15,9 +15,8 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { Kbd } from "../ui/kbd";
+import { SearchBar } from "../ui/search-bar";
 import {
-  Search,
   Settings,
   User,
   Lock,
@@ -45,7 +44,6 @@ export default function Header({ onMenuToggle }: HeaderProps) {
   const { notifications, customers, resetToDefaults } = useDataStore();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
 
   if (!currentUser) return null;
 
@@ -136,34 +134,12 @@ export default function Header({ onMenuToggle }: HeaderProps) {
       {/* 顧客検索（コンパクト時は非表示） */}
       {!isCompact && (
         <div className="absolute left-1/2 -translate-x-1/2 hidden sm:block w-full max-w-sm">
-          <div
-            className={`flex items-center gap-2 ${isCompact ? "h-8" : "h-10"} px-3 bg-secondary/80 backdrop-blur-sm border border-border/50 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/30 rounded-xl cursor-text transition-all duration-200`}
-            onClick={() => setShowSearch(true)}
-          >
-            <Search
-              className="w-3.5 h-3.5 text-muted-foreground shrink-0"
-            />
-            {showSearch ? (
-              <input
-                autoFocus
-                className="bg-transparent text-sm text-foreground outline-none w-full placeholder-muted-foreground"
-                placeholder="顧客を検索..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onBlur={() => {
-                  setTimeout(() => {
-                    setShowSearch(false);
-                    setSearchQuery("");
-                  }, 150);
-                }}
-              />
-            ) : (
-              <span className="text-sm text-muted-foreground flex-1">
-                顧客を検索
-              </span>
-            )}
-            <Kbd className="hidden md:flex">⌘K</Kbd>
-          </div>
+          <SearchBar
+            placeholder="顧客を検索..."
+            value={searchQuery}
+            onSearchChange={setSearchQuery}
+            isCompact={isCompact}
+          />
 
           {filteredCustomers.length > 0 && (
             <div className="absolute top-10 left-0 w-full bg-background border border-border rounded-lg shadow-md overflow-hidden z-50">
@@ -173,7 +149,6 @@ export default function Header({ onMenuToggle }: HeaderProps) {
                   className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted text-left"
                   onClick={() => {
                     navigate(`/customers/${c.id}`);
-                    setShowSearch(false);
                     setSearchQuery("");
                   }}
                 >

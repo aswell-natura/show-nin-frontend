@@ -6,7 +6,7 @@ import {
   type WidgetType,
   type LayoutConfig,
 } from "../context/LayoutConfigContext";
-import AppLayout from "../components/layout/AppLayout";
+import PageLayout from "../components/layout/PageLayout";
 import SummaryCards from "../components/dashboard/SummaryCards";
 import PlayerTimeline from "../components/dashboard/widgets/PlayerTimeline";
 import PlayerNextActions from "../components/dashboard/widgets/PlayerNextActions";
@@ -318,8 +318,8 @@ export default function Dashboard() {
         : "player";
 
   return (
-    <AppLayout>
+    <PageLayout>
       {effectiveMode === "manager" ? <ManagerDashboard /> : <PlayerDashboard />}
-    </AppLayout>
+    </PageLayout>
   );
 }

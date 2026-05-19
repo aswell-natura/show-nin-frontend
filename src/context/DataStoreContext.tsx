@@ -23,10 +23,17 @@ function load<T>(key: string, seed: T[]): T[] {
   return seed
 }
 
+function loadWithNewSeeds<T extends { id: string }>(key: string, mockSeeds: T[]): T[] {
+  const loaded = load(key, mockSeeds)
+  const existingIds = new Set(loaded.map((item) => item.id))
+  const newSeeds = mockSeeds.filter((item) => !existingIds.has(item.id))
+  return [...loaded, ...newSeeds]
+}
+
 function loadProjects() {
-  const loaded = load(KEYS.projects, mockProjects)
+  const loaded = loadWithNewSeeds(KEYS.projects, mockProjects)
   const seedById = new Map(mockProjects.map((project) => [project.id, project]))
-  const hydrated = loaded.map((project) => {
+  return loaded.map((project) => {
     const seed = seedById.get(project.id)
     if (!seed) return project
     return {
@@ -35,19 +42,19 @@ function loadProjects() {
       next_action_date: project.next_action_date ?? seed.next_action_date,
     }
   })
-  const ids = new Set(hydrated.map((project) => project.id))
-  const newUnlinkedSeeds = mockProjects.filter((project) => project.customer_id === null && !ids.has(project.id))
-  return [...hydrated, ...newUnlinkedSeeds]
 }
 
 function loadCustomers() {
-  const loaded = load(KEYS.customers, mockCustomers)
+  const loaded = loadWithNewSeeds(KEYS.customers, mockCustomers)
   const seedById = new Map(mockCustomers.map((customer) => [customer.id, customer]))
   return loaded.map((customer) => {
     const seed = seedById.get(customer.id)
     if (!seed) return customer
     return {
       ...customer,
+      company_code: customer.company_code ?? seed.company_code,
+      email: customer.email ?? seed.email,
+      status: customer.status ?? seed.status,
       labels: customer.labels ?? seed.labels,
       acquisition_source: customer.acquisition_source ?? seed.acquisition_source,
     }
@@ -55,12 +62,13 @@ function loadCustomers() {
 }
 
 function loadTasks() {
-  const loaded = load(KEYS.tasks, mockTasks)
+  const loaded = loadWithNewSeeds(KEYS.tasks, mockTasks)
   const seedById = new Map(mockTasks.map((task) => [task.id, task]))
   return loaded.map((task) => {
     const seed = seedById.get(task.id)
     return {
       ...task,
+      project_id: task.project_id ?? seed?.project_id,
       progress_percent: task.progress_percent ?? seed?.progress_percent ?? (task.is_completed ? 100 : 0),
       progress_updated_at: task.progress_updated_at ?? seed?.progress_updated_at,
     }
@@ -128,10 +136,10 @@ const DataStoreContext = createContext<DataStoreContextValue | null>(null)
 export function DataStoreProvider({ children }: { children: ReactNode }) {
   const [customers,     setCustomers]     = useState<Customer[]>    (() => loadCustomers())
   const [projects,      setProjects]      = useState<Project[]>     (() => loadProjects())
-  const [activities,    setActivities]    = useState<Activity[]>    (() => load(KEYS.activities,    mockActivities))
+  const [activities,    setActivities]    = useState<Activity[]>    (() => loadWithNewSeeds(KEYS.activities,    mockActivities))
   const [tasks,         setTasks]         = useState<Task[]>        (() => loadTasks())
-  const [targets,       setTargets]       = useState<Target[]>      (() => load(KEYS.targets,       mockTargets))
-  const [notifications, setNotifications] = useState<Notification[]>(() => load(KEYS.notifications, mockNotifications))
+  const [targets,       setTargets]       = useState<Target[]>      (() => loadWithNewSeeds(KEYS.targets,       mockTargets))
+  const [notifications, setNotifications] = useState<Notification[]>(() => loadWithNewSeeds(KEYS.notifications, mockNotifications))
 
   // localStorage への自動保存
   useEffect(() => { localStorage.setItem(KEYS.customers,     JSON.stringify(customers)) },     [customers])

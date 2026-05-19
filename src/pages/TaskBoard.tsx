@@ -196,6 +196,7 @@ export default function TaskBoard() {
       tasks.map((task, index) => {
         const customer = customers.find((item) => item.id === task.customer_id)
         const project =
+          projects.find((item) => item.id === task.project_id) ??
           projects.find((item) => item.customer_id === task.customer_id && item.user_id === task.user_id) ??
           projects.find((item) => item.customer_id === task.customer_id)
         const owner = profiles.find((profile) => profile.id === task.user_id)

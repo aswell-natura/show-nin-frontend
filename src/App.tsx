@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { DataStoreProvider } from './context/DataStoreContext'
+import { GlobalDialogProvider } from './context/GlobalDialogContext'
 import { LayoutConfigProvider } from './context/LayoutConfigContext'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -56,7 +57,9 @@ export default function App() {
       <AuthProvider>
         <DataStoreProvider>
           <LayoutConfigProvider>
-            <AppRoutes />
+            <GlobalDialogProvider>
+              <AppRoutes />
+            </GlobalDialogProvider>
           </LayoutConfigProvider>
         </DataStoreProvider>
       </AuthProvider>

@@ -90,6 +90,28 @@ Supported sizes:
 
 Disabled buttons use token-driven patterned backgrounds, muted text, and dashed borders so the state is visually distinct without hardcoded colors.
 
+### Global Dialog
+
+Global add/edit flows use `GlobalDialogProvider` from `src/context/GlobalDialogContext.tsx`, built on the shadcn-style primitive in `src/components/ui/dialog.tsx`.
+
+Dialog usage should follow the Linear-inspired application pattern:
+
+- Use a soft `bg-foreground/20` overlay with light backdrop blur.
+- Keep the panel large, quiet, and work-focused: `rounded-2xl`, token borders, `bg-background`, and `--shadow-lg`.
+- Put entity context in the top breadcrumb row, the main editable object name as the title, and supporting copy in `DialogDescription`.
+- Keep form content scrollable while the footer remains fixed at the bottom.
+- Use the footer for `キャンセル` plus the primary add/save action.
+- New and modify flows should share the same form component where possible by passing `initialValues`, `submitLabel`, and `onSubmit`.
+
+### Tooltips & Popovers
+
+Inline helpful text and micro-copy should use the `Tooltip` component from `src/components/ui/tooltip.tsx` to keep the UI clean, information-dense, and avoid click/hover event conflicts:
+
+- Wrap the trigger and content in `<TooltipProvider delayDuration={200}>`.
+- Use an `Info` icon (`w-4 h-4 text-muted-foreground/60 hover:text-primary`) inside `<TooltipTrigger asChild>` as the trigger button.
+- Style `<TooltipContent>` with `backdrop-blur-xl bg-background/90 border border-border/60 shadow-xl rounded-xl text-xs text-foreground/90 leading-relaxed animate-in zoom-in-95 duration-200 z-50`.
+- Reserve `Popover` from `src/components/ui/popover.tsx` for complex interactive metrics (like project counts) or click-driven dropdown menus.
+
 ## Living Style Guide
 
 The visual reference page is available at `/design` and implemented in `src/pages/DesignShowcase.tsx`.

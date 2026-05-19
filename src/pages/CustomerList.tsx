@@ -1,375 +1,1171 @@
-import { useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
-import AppLayout from '../components/layout/AppLayout'
-import { useDataStore } from '../context/DataStoreContext'
-import type { CustomerRank } from '../types'
-import { StatCard } from '../components/dashboard/shared/StatCard'
-import { RankBadge, StatusBadge } from '../components/dashboard/shared/StatusBadge'
-import { Button } from '@/components/ui/button'
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import AppLayout from "../components/layout/AppLayout";
+import { useDataStore } from "../context/DataStoreContext";
+import { useAuth } from "../context/AuthContext";
+import { useGlobalDialog } from "../context/GlobalDialogContext";
+import CustomerDialogForm from "@/components/customers/CustomerDialogForm";
+import {
+  RankBadge,
+  StatusBadge,
+} from "../components/dashboard/shared/StatusBadge";
+import { Button } from "@/components/ui/button";
+import { SearchBar } from "@/components/ui/search-bar";
+import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  ListPagination,
+  SortableListTableHead,
+  type ListSortOrder,
+  type ListTableColumn,
+} from "@/components/ui/list-table";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Combobox } from "@/components/ui/combobox";
+import {
+  Filter,
+  Plus,
+  X,
+  ChevronRight,
+  Pin,
+  PinOff,
+  Search,
+  RotateCcw,
+  Info,
+} from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  horizontalListSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import type { DragEndEvent } from "@dnd-kit/core";
 
 function formatRelative(iso: string) {
-  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000 / 60 / 60 / 24)
-  if (diff === 0) return '今日'
-  if (diff === 1) return '昨日'
-  if (diff < 7) return `${diff}日前`
-  return new Date(iso).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })
+  const diff = Math.floor(
+    (Date.now() - new Date(iso).getTime()) / 1000 / 60 / 60 / 24,
+  );
+  if (diff === 0) return "今日";
+  if (diff === 1) return "昨日";
+  if (diff < 7) return `${diff}日前`;
+  return new Date(iso).toLocaleDateString("ja-JP", {
+    month: "short",
+    day: "numeric",
+  });
 }
 
-type SortKey = 'last_accessed' | 'name' | 'rank'
-type RankFilter = 'all' | CustomerRank
-type ViewMode = 'table' | 'cards'
+const DEFAULT_COLUMNS: ListTableColumn[] = [
+  { id: "pin", label: "ピン留め", width: "w-24" },
+  { id: "rank", label: "ランク", width: "w-20" },
+  { id: "company_code", label: "企業コード", width: "w-28" },
+  { id: "name", label: "顧客名", width: "w-72" },
+  { id: "phone", label: "電話番号", width: "w-36" },
+  { id: "email", label: "メール", width: "w-48" },
+  { id: "status", label: "ステータス", width: "w-28" },
+  { id: "labels", label: "ラベル", width: "w-48" },
+  { id: "acquisition_source", label: "流入経路", width: "w-36" },
+  { id: "amount", label: "案件金額", width: "w-36" },
+  { id: "projects", label: "進行中の案件数", width: "w-40" },
+  { id: "accessed", label: "最終アクセス", width: "w-32" },
+];
 
-function formatCustomerLabels(labels?: string[]) {
-  return labels?.length ? labels.join('、') : '-'
-}
-
-function ViewButton({
-  active,
-  label,
-  icon,
-  onClick,
-}: {
-  active: boolean
-  label: string
-  icon: string
-  onClick: () => void
-}) {
-  return (
-    <Button
-      type="button"
-      variant={active ? "secondary" : "ghost"}
-      size="sm"
-      onClick={onClick}
-      title={label}
-      className={`w-9 h-9 p-0 rounded-md transition-colors ${
-        active ? 'bg-foreground text-background hover:bg-foreground/90' : 'text-muted-foreground hover:bg-muted'
-      }`}
-    >
-      {icon}
-    </Button>
-  )
+interface FilterRule {
+  id: string;
+  field: string;
+  operator: string;
+  value: string;
 }
 
 export default function CustomerList() {
-  const navigate = useNavigate()
-  const { customers, projects, activities } = useDataStore()
-  const [search, setSearch] = useState('')
-  const [rankFilter, setRankFilter] = useState<RankFilter>('all')
-  const [sortKey, setSortKey] = useState<SortKey>('last_accessed')
-  const [pinnedOnly, setPinnedOnly] = useState(false)
-  const [viewMode, setViewMode] = useState<ViewMode>('table')
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { currentUser } = useAuth();
+  const { customers, projects, addCustomer, updateCustomer } =
+    useDataStore();
+  const { openDialog, closeDialog } = useGlobalDialog();
 
-  const rankACount = customers.filter((c) => c.rank === 'A').length
-  const activeCustomerCount = customers.filter((c) =>
-    projects.some((p) => p.customer_id === c.id && p.status !== 'closed'),
-  ).length
-  const pinnedCount = customers.filter((c) => c.is_pinned).length
+  const [search, setSearch] = useState(() => searchParams.get("q") || "");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [sortKey, setSortKey] = useState<string>(() => searchParams.get("sort") || "accessed");
+  const [sortOrder, setSortOrder] = useState<ListSortOrder>(() => (searchParams.get("order") as ListSortOrder) || "desc");
+  const [currentPage, setCurrentPage] = useState(() => {
+    const page = searchParams.get("page");
+    return page ? parseInt(page, 10) : 1;
+  });
+  const [filters, setFilters] = useState<FilterRule[]>(() => {
+    const initialFilters: FilterRule[] = [];
+    const filterFields = [
+      "rank",
+      "status",
+      "labels",
+      "industry",
+      "acquisition_source",
+      "amount",
+      "date",
+    ];
+
+    filterFields.forEach((field) => {
+      const values = searchParams.getAll(field);
+      values.forEach((value) => {
+        if (value) {
+          initialFilters.push({
+            id: Math.random().toString(36).substr(2, 9),
+            field,
+            operator: "contains",
+            value,
+          });
+        }
+      });
+    });
+
+    return initialFilters;
+  });
+  const [isFilterOpen, setIsFilterOpen] = useState(() => {
+    const filterFields = [
+      "rank",
+      "status",
+      "labels",
+      "industry",
+      "acquisition_source",
+      "amount",
+      "date",
+    ];
+    return filterFields.some((field) => searchParams.has(field));
+  });
+  const [columns, setColumns] = useState<ListTableColumn[]>(DEFAULT_COLUMNS);
+  const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
+  const itemsPerPage = 8;
+
+  // URLSearchParams の同期
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search.trim()) params.set("q", search.trim());
+    if (sortKey !== "accessed") params.set("sort", sortKey);
+    if (sortOrder !== "desc") params.set("order", sortOrder);
+    if (currentPage > 1) params.set("page", currentPage.toString());
+
+    filters.forEach((filter) => {
+      if (filter.value) {
+        params.append(filter.field, filter.value);
+      }
+    });
+
+    setSearchParams(params, { replace: true });
+  }, [search, sortKey, sortOrder, currentPage, filters, setSearchParams]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const allLabels = useMemo(() => {
+    const labels = new Set<string>();
+    customers.forEach((c) => c.labels?.forEach((l) => labels.add(l)));
+    return Array.from(labels)
+      .sort()
+      .map((l) => ({ label: l, value: l }));
+  }, [customers]);
+
+  const allIndustries = useMemo(() => {
+    const industries = new Set<string>();
+    customers.forEach((c) => industries.add(c.industry));
+    return Array.from(industries)
+      .sort()
+      .map((i) => ({ label: i, value: i }));
+  }, [customers]);
+
+  const allAcquisitionSources = useMemo(() => {
+    const sources = new Set<string>();
+    customers.forEach((c) => {
+      if (c.acquisition_source) sources.add(c.acquisition_source);
+    });
+    return Array.from(sources)
+      .sort()
+      .map((s) => ({ label: s, value: s }));
+  }, [customers]);
+
+  const rankOptions = [
+    { label: "ランクA", value: "A" },
+    { label: "ランクB", value: "B" },
+    { label: "ランクC", value: "C" },
+    { label: "ランクD", value: "D" },
+  ];
+
+  const statusOptions = [
+    { label: "リード", value: "lead" },
+    { label: "提案中", value: "proposing" },
+    { label: "商談中", value: "negotiating" },
+    { label: "既存顧客", value: "active" },
+    { label: "休眠", value: "dormant" },
+  ];
+
+  const handleOpenAddCustomerDialog = () => {
+    const formId = "customer-add-form";
+
+    openDialog({
+      mode: "add",
+      eyebrow: "顧客",
+      breadcrumbs: ["新規作成"],
+      title: "顧客を追加",
+      hideHeaderTitle: true,
+      size: "xl",
+      content: (
+        <CustomerDialogForm
+          formId={formId}
+          submitLabel="顧客を追加"
+          onSubmit={(values) => {
+            const record = addCustomer({
+              ...values,
+              created_by: currentUser?.id ?? "user-001",
+            });
+            closeDialog();
+            navigate(`/customers/${record.id}`);
+          }}
+        />
+      ),
+      footer: (
+        <>
+          <Button type="button" variant="secondary" onClick={closeDialog}>
+            キャンセル
+          </Button>
+          <Button type="submit" form={formId} variant="primary">
+            顧客を追加
+          </Button>
+        </>
+      ),
+    });
+  };
+
+  const addFilter = () => {
+    const newFilter: FilterRule = {
+      id: Math.random().toString(36).substr(2, 9),
+      field: "rank",
+      operator: "contains",
+      value: "",
+    };
+    setFilters([...filters, newFilter]);
+    setCurrentPage(1);
+    setIsFilterOpen(true);
+  };
+
+  const removeFilter = (id: string) => {
+    setFilters(filters.filter((f) => f.id !== id));
+    setCurrentPage(1);
+  };
+
+  const updateFilter = (id: string, updates: Partial<FilterRule>) => {
+    setFilters(filters.map((f) => (f.id === id ? { ...f, ...updates } : f)));
+    setCurrentPage(1);
+  };
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setSortOrder("desc");
+    }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) return;
+
+    setColumns((current) => {
+      const oldIndex = current.findIndex((column) => column.id === active.id);
+      const newIndex = current.findIndex((column) => column.id === over.id);
+
+      if (oldIndex === -1 || newIndex === -1) return current;
+
+      return arrayMove(current, oldIndex, newIndex);
+    });
+  };
 
   const filtered = useMemo(() => {
-    let list = [...customers]
+    let list = [...customers];
 
+    // Main search
     if (search.trim()) {
-      const q = search.trim()
+      const q = search.trim().toLowerCase();
       list = list.filter(
         (c) =>
-          c.name.includes(q) ||
-          c.industry.includes(q) ||
-          (c.labels?.join('、') ?? '').includes(q) ||
-          (c.acquisition_source ?? '').includes(q)
-      )
+          c.name.toLowerCase().includes(q) ||
+          (c.company_code ?? "").toLowerCase().includes(q) ||
+          (c.phone ?? "").toLowerCase().includes(q) ||
+          (c.email ?? "").toLowerCase().includes(q) ||
+          c.industry.toLowerCase().includes(q) ||
+          (c.labels?.join("、") ?? "").toLowerCase().includes(q) ||
+          (c.acquisition_source ?? "").toLowerCase().includes(q),
+      );
     }
-    if (rankFilter !== 'all') {
-      list = list.filter((c) => c.rank === rankFilter)
-    }
-    if (pinnedOnly) {
-      list = list.filter((c) => c.is_pinned)
-    }
+
+    // Advanced filters
+    filters.forEach((filter) => {
+      if (!filter.value && filter.field !== "is_pinned") return;
+
+      list = list.filter((c) => {
+        const val = filter.value;
+        switch (filter.field) {
+          case "rank":
+            return c.rank === val;
+          case "status":
+            return c.status === val;
+          case "labels":
+            return (c.labels?.join("、") ?? "").includes(val);
+          case "industry":
+            return c.industry === val;
+          case "acquisition_source":
+            return (c.acquisition_source ?? "")
+              .toLowerCase()
+              .includes(val.toLowerCase());
+          case "amount": {
+            if (!val || val === ",") return true;
+            const total = projects
+              .filter((p) => p.customer_id === c.id && p.status !== "closed")
+              .reduce((sum, p) => sum + p.amount, 0);
+            const parts = val.split(",");
+            const fromStr = parts[0] || "";
+            const untilStr = parts[1] || "";
+            const fromVal = fromStr.trim() ? Number(fromStr) : 0;
+            const untilVal = untilStr.trim() ? Number(untilStr) : Infinity;
+            return total >= fromVal && total <= untilVal;
+          }
+          case "date": {
+            if (!val || val === ",") return true;
+            const dateTime = new Date(c.last_accessed_at).getTime();
+            const parts = val.split(",");
+            const fromStr = parts[0] || "";
+            const untilStr = parts[1] || "";
+            const fromTime = fromStr ? new Date(fromStr).getTime() : 0;
+            const untilTime = untilStr
+              ? new Date(untilStr).getTime() + 24 * 60 * 60 * 1000 - 1
+              : Infinity;
+            return dateTime >= fromTime && dateTime <= untilTime;
+          }
+          default:
+            return true;
+        }
+      });
+    });
 
     list.sort((a, b) => {
-      if (sortKey === 'last_accessed') {
-        return new Date(b.last_accessed_at).getTime() - new Date(a.last_accessed_at).getTime()
+      if (sortKey === "pin") {
+        const pinA = a.is_pinned ? 1 : 0;
+        const pinB = b.is_pinned ? 1 : 0;
+        const comparison = pinA - pinB;
+        return sortOrder === "desc" ? -comparison : comparison;
       }
-      if (sortKey === 'name') return a.name.localeCompare(b.name, 'ja')
-      if (sortKey === 'rank') return a.rank.localeCompare(b.rank)
-      return 0
-    })
 
-    return list
-  }, [search, rankFilter, sortKey, pinnedOnly, customers])
+      if (a.is_pinned !== b.is_pinned) {
+        return a.is_pinned ? -1 : 1;
+      }
+
+      const comparison = (() => {
+        if (sortKey === "accessed") {
+          return (
+            new Date(a.last_accessed_at).getTime() -
+            new Date(b.last_accessed_at).getTime()
+          );
+        }
+        if (sortKey === "name") {
+          return a.name.localeCompare(b.name, "ja");
+        }
+        if (sortKey === "company_code") {
+          return (a.company_code ?? "").localeCompare(b.company_code ?? "");
+        }
+        if (sortKey === "phone") {
+          return (a.phone ?? "").localeCompare(b.phone ?? "");
+        }
+        if (sortKey === "email") {
+          return (a.email ?? "").localeCompare(b.email ?? "");
+        }
+        if (sortKey === "status") {
+          return (a.status ?? "").localeCompare(b.status ?? "");
+        }
+        if (sortKey === "acquisition_source") {
+          return (a.acquisition_source ?? "").localeCompare(
+            b.acquisition_source ?? "",
+          );
+        }
+        if (sortKey === "amount") {
+          const amountA = projects
+            .filter((p) => p.customer_id === a.id && p.status !== "closed")
+            .reduce((sum, p) => sum + p.amount, 0);
+          const amountB = projects
+            .filter((p) => p.customer_id === b.id && p.status !== "closed")
+            .reduce((sum, p) => sum + p.amount, 0);
+          return amountA - amountB;
+        }
+        if (sortKey === "rank") {
+          return a.rank.localeCompare(b.rank);
+        }
+        if (sortKey === "projects") {
+          const countA = projects.filter(
+            (p) => p.customer_id === a.id && p.status !== "closed",
+          ).length;
+          const countB = projects.filter(
+            (p) => p.customer_id === b.id && p.status !== "closed",
+          ).length;
+          return countA - countB;
+        }
+        return 0;
+      })();
+      return sortOrder === "desc" ? -comparison : comparison;
+    });
+
+    return list;
+  }, [search, filters, sortKey, sortOrder, customers, projects]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedCustomers = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filtered.slice(start, start + itemsPerPage);
+  }, [filtered, currentPage, itemsPerPage]);
 
   return (
     <AppLayout>
-      <div className="h-full flex flex-col bg-background">
-        {/* ページヘッダー */}
-        <div className="bg-card border-b border-border px-4 md:px-6 py-4 shrink-0 shadow-sm z-10">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <h1 className="text-lg font-bold text-foreground tracking-tight">顧客一覧</h1>
-              <p className="text-xs text-muted-foreground mt-0.5">企業ごとの案件・活動状況を管理します</p>
-            </div>
-            <div className="grid grid-cols-2 sm:flex gap-2">
-              {[
-                { label: '顧客数', value: customers.length },
-                { label: 'ランクA', value: rankACount, labelClass: 'text-blue-600', valueClass: 'text-blue-700' },
-                { label: '進行中', value: activeCustomerCount },
-                { label: 'ピン留め', value: pinnedCount },
-              ].map((stat) => (
-                <StatCard 
-                  key={stat.label} 
-                  label={stat.label} 
-                  value={stat.value} 
-                  labelClassName={stat.labelClass} 
-                  valueClassName={stat.valueClass}
-                  className="bg-muted/30 shadow-none border-border/50"
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* フィルターバー */}
-          <div className="flex flex-col sm:flex-row gap-2 mt-4">
-            {/* 検索 */}
-            <div className="relative flex-1 max-w-sm">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
-              </svg>
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="企業名・業種・ラベル・流入経路で検索"
-                className="h-9 w-full pl-8 pr-3 text-sm rounded-md border border-input bg-background text-foreground outline-none focus:ring-2 focus:ring-ring focus:border-transparent placeholder:text-muted-foreground transition-all shadow-sm"
-              />
-            </div>
-
-            <div className="flex gap-2 flex-wrap items-center">
-              {/* ランクフィルター */}
-              <select
-                value={rankFilter}
-                onChange={(e) => setRankFilter(e.target.value as RankFilter)}
-                className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring focus:border-transparent shadow-sm cursor-pointer"
-              >
-                <option value="all">すべてのランク</option>
-                <option value="A">ランクA</option>
-                <option value="B">ランクB</option>
-                <option value="C">ランクC</option>
-              </select>
-
-              {/* ソート */}
-              <select
-                value={sortKey}
-                onChange={(e) => setSortKey(e.target.value as SortKey)}
-                className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring focus:border-transparent shadow-sm cursor-pointer"
-              >
-                <option value="last_accessed">最終アクセス順</option>
-                <option value="name">名前順</option>
-                <option value="rank">ランク順</option>
-              </select>
-
-              {/* ピン留めフィルター */}
-              <Button
-                variant={pinnedOnly ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setPinnedOnly((v) => !v)}
-                className={`h-9 border shadow-sm ${pinnedOnly ? 'border-primary/50 text-primary bg-primary/5' : 'text-muted-foreground'}`}
-              >
-                📌 ピン留め
-              </Button>
-
-              <div className="flex items-center gap-1 rounded-md bg-muted p-1">
-                <ViewButton active={viewMode === 'table'} label="表形式" icon="☷" onClick={() => setViewMode('table')} />
-                <ViewButton active={viewMode === 'cards'} label="カード" icon="▦" onClick={() => setViewMode('cards')} />
-              </div>
-
-              <Button variant="primary" className="h-9 gap-1.5 ml-auto sm:ml-0 shadow-sm">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-                <span className="hidden sm:inline">顧客を追加</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* 顧客リスト */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-muted/10">
-          {filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-48 text-muted-foreground gap-2 bg-card rounded-lg border border-border">
-              <svg className="w-8 h-8 text-muted-foreground/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5" />
-              </svg>
-              <p className="text-sm">条件に一致する顧客がありません</p>
-            </div>
-          ) : viewMode === 'table' ? (
-            <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[1180px] table-fixed text-left">
-                  <thead className="bg-muted/50 border-b border-border">
-                    <tr>
-                      <th className="w-20 px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap uppercase tracking-wider">ランク</th>
-                      <th className="w-64 px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap uppercase tracking-wider">顧客名</th>
-                      <th className="w-40 px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap uppercase tracking-wider">ラベル</th>
-                      <th className="w-36 px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap uppercase tracking-wider">流入経路</th>
-                      <th className="w-52 px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap uppercase tracking-wider">進行中案件</th>
-                      <th className="w-28 px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap uppercase tracking-wider">案件金額</th>
-                      <th className="w-56 px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap uppercase tracking-wider">最終活動</th>
-                      <th className="w-28 px-4 py-3 text-xs font-medium text-muted-foreground whitespace-nowrap uppercase tracking-wider">最終アクセス</th>
-                      <th className="w-16 px-4 py-3 text-xs font-medium text-muted-foreground text-right whitespace-nowrap uppercase tracking-wider">操作</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border text-sm">
-                    {filtered.map((customer) => {
-                      const activeProjects = projects.filter(
-                        (p) => p.customer_id === customer.id && p.status !== 'closed'
-                      )
-                      const latestActivity = activities
-                        .filter((a) => a.customer_id === customer.id)
-                        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
-                      const totalAmount = activeProjects.reduce((s, p) => s + p.amount, 0)
-
-                      return (
-                        <tr
-                          key={customer.id}
-                          onClick={() => navigate(`/customers/${customer.id}`)}
-                          className="cursor-pointer bg-card hover:bg-muted/50 transition-colors"
+      <div className="flex flex-col h-full bg-background overflow-hidden">
+        {/* 独立スクロールするメインコンテンツエリア */}
+        <div className="flex-1 overflow-auto bg-muted/5 custom-scrollbar">
+          {/* ヘッダー＆操作バー */}
+          <div className="bg-background/95 backdrop-blur-md">
+            <div className="px-4 md:px-6 pt-6 pb-4">
+              <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
+                {/* 左側: タイトル＆ツールチップ */}
+                <div className="flex items-center gap-2 shrink-0 py-1">
+                  <h1 className="text-lg md:text-xl font-bold text-foreground tracking-tight">
+                    顧客一覧
+                  </h1>
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-foreground transition-colors cursor-help outline-none"
                         >
-                          <td className="px-4 py-3">
-                            <RankBadge rank={customer.rank} size="lg" />
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2 min-w-0 mb-0.5">
-                                <p className="font-semibold text-foreground truncate">{customer.name}</p>
-                                {customer.is_pinned && (
-                                  <span className="text-muted-foreground text-xs shrink-0 bg-muted px-1 rounded-sm">📌</span>
-                                )}
-                              </div>
-                              <p className="text-xs text-muted-foreground truncate">{customer.industry}</p>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground truncate">{formatCustomerLabels(customer.labels)}</td>
-                          <td className="px-4 py-3 text-muted-foreground truncate">{customer.acquisition_source ?? '-'}</td>
-                          <td className="px-4 py-3">
-                            {activeProjects.length > 0 ? (
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                {activeProjects.slice(0, 2).map((p) => (
-                                  <StatusBadge key={p.id} status={p.status} />
-                                ))}
-                                {activeProjects.length > 2 && (
-                                  <span className="text-[11px] text-muted-foreground">+{activeProjects.length - 2}</span>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-xs text-muted-foreground/70">進行中案件なし</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground whitespace-nowrap font-medium">
-                            {activeProjects.length > 0 ? `${(totalAmount / 10000).toLocaleString()}万円` : '-'}
-                          </td>
-                          <td className="px-4 py-3">
-                            {latestActivity ? (
-                              <div className="min-w-0">
-                                <p className="text-xs text-foreground/80 truncate">{latestActivity.title}</p>
-                                <p className="mt-1 text-[11px] text-muted-foreground">{formatRelative(latestActivity.created_at)}</p>
-                              </div>
-                            ) : (
-                              <span className="text-xs text-muted-foreground/70">活動なし</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground whitespace-nowrap text-xs">{formatRelative(customer.last_accessed_at)}</td>
-                          <td className="px-4 py-3 text-right">
-                            <span className="text-muted-foreground/50 group-hover:text-foreground">›</span>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {filtered.map((customer) => {
-                const activeProjects = projects.filter(
-                  (p) => p.customer_id === customer.id && p.status !== 'closed'
-                )
-                const latestActivity = activities
-                  .filter((a) => a.customer_id === customer.id)
-                  .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
-                const totalAmount = activeProjects.reduce((s, p) => s + p.amount, 0)
+                          <Info className="w-4 h-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="bottom"
+                        className="bg-popover text-popover-foreground border border-border shadow-md"
+                      >
+                        <p>企業ごとの案件・活動状況を管理します</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
 
-                return (
-                  <button
-                    key={customer.id}
-                    onClick={() => navigate(`/customers/${customer.id}`)}
-                    className="w-full flex flex-col gap-3 p-4 bg-card border border-border rounded-xl hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 transition-all text-left group"
+                {/* 右側: 検索バー (コンパクト＆クリック拡張機能付き) ＆ 各種操作ボタン */}
+                <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center flex-1 md:flex-initial md:justify-end">
+                  <div className="flex-1 md:flex-initial flex flex-col sm:flex-row gap-3 sm:gap-2 items-stretch sm:items-center justify-end">
+                    {/* 検索バー: 非フォーカス時はコンパクト、クリック・フォーカス時または検索文字列あり時にスムーズに拡張 */}
+                    <div
+                      className={cn(
+                        "transition-all duration-300 ease-in-out max-w-full shrink-0",
+                        isSearchFocused || search.trim() !== ""
+                          ? "w-full sm:w-72 md:w-80"
+                          : "w-full sm:w-44 md:w-48",
+                      )}
+                    >
+                      <SearchBar
+                        placeholder="顧客名・企業コード・電話番号・メール等で検索"
+                        value={search}
+                        onSearchChange={(value) => {
+                          setSearch(value);
+                          setCurrentPage(1);
+                        }}
+                        onFocus={() => setIsSearchFocused(true)}
+                        onBlur={() => setIsSearchFocused(false)}
+                        showKbd={false}
+                      />
+                    </div>
+
+                    {/* フィルター ＆ ピン留めのみ */}
+                    <div className="flex gap-2 items-center justify-between sm:justify-center shrink-0 w-full sm:w-auto">
+                      <TooltipProvider delayDuration={200}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant={
+                                isFilterOpen
+                                  ? "ghost"
+                                  : filters.length > 0
+                                    ? "secondary"
+                                    : "ghost"
+                              }
+                              size="md"
+                              onClick={() => setIsFilterOpen(!isFilterOpen)}
+                              className={cn(
+                                "h-10 border border-border/50 transition-all shadow-sm flex-1 sm:flex-initial justify-center",
+                                filters.length === 0
+                                  ? "px-3 md:w-10 md:px-0 gap-2 md:gap-0"
+                                  : "px-3 md:px-2.5 gap-2 md:gap-1.5",
+                                isFilterOpen
+                                  ? "bg-primary/10 text-primary border-primary shadow-sm"
+                                  : filters.length > 0
+                                    ? "bg-secondary text-foreground border-border"
+                                    : "bg-card",
+                              )}
+                            >
+                              <Filter className="w-4 h-4" />
+                              <span className="text-sm md:hidden">
+                                フィルター
+                              </span>
+                              {filters.length > 0 && (
+                                <span
+                                  className={cn(
+                                    "flex items-center justify-center text-[10px] font-bold rounded-full w-4 h-4",
+                                    isFilterOpen
+                                      ? "bg-primary text-primary-foreground"
+                                      : "bg-primary text-primary-foreground",
+                                  )}
+                                >
+                                  {filters.length}
+                                </span>
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="bottom"
+                            className="hidden md:block bg-popover text-popover-foreground border border-border shadow-md"
+                          >
+                            <p>
+                              フィルター
+                              {filters.length > 0 ? ` (${filters.length})` : ""}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </div>
+
+                  {/* 顧客を追加ボタン */}
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={handleOpenAddCustomerDialog}
+                    className="gap-2 shadow-md h-10 px-4 shrink-0 w-full sm:w-auto justify-center"
                   >
-                    <div className="flex items-start gap-3 w-full">
-                      <RankBadge rank={customer.rank} size="lg" className="shrink-0" />
-                      <div className="flex-1 min-w-0 pt-0.5">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <p className="text-sm font-bold text-foreground truncate">{customer.name}</p>
-                          {customer.is_pinned && (
-                            <span className="text-muted-foreground text-xs shrink-0 bg-muted px-1.5 py-0.5 rounded-md">📌</span>
-                          )}
-                        </div>
-                        <span className="text-xs text-muted-foreground shrink-0">{customer.industry}</span>
-                      </div>
-                    </div>
+                    <Plus className="w-4.5 h-4.5" />
+                    <span className="text-sm font-bold">顧客を追加</span>
+                  </Button>
+                </div>
+              </div>
 
-                    <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 w-full text-xs text-muted-foreground pt-2 border-t border-border/50">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">ラベル</span>
-                        <span className="truncate text-foreground/80">{formatCustomerLabels(customer.labels)}</span>
-                      </div>
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">流入経路</span>
-                        <span className="truncate text-foreground/80">{customer.acquisition_source ?? '-'}</span>
-                      </div>
-                    </div>
+              {/* 詳細フィルターエリア (スティッキー内) */}
+              {isFilterOpen && (
+                <div className="p-3 md:p-4 bg-muted/40 border border-border/80 rounded-xl animate-in fade-in slide-in-from-top-2 duration-200 shadow-sm mt-3">
+                  <div className="grid grid-cols-2 sm:flex sm:flex-row sm:flex-wrap sm:items-center gap-3 w-full min-w-0">
+                    {filters.map((filter) => (
+                      <div
+                        key={filter.id}
+                        className={cn(
+                          "flex flex-wrap sm:flex-nowrap items-center gap-2 p-2 sm:p-1.5 bg-background border border-border/60 rounded-xl shadow-sm animate-in zoom-in-95 duration-200 w-full sm:w-auto min-w-0 overflow-hidden",
+                          filter.field === "amount" || filter.field === "date"
+                            ? "col-span-2"
+                            : "col-span-1",
+                        )}
+                      >
+                        <Select
+                          value={filter.field}
+                          onValueChange={(val) =>
+                            updateFilter(filter.id, { field: val, value: "" })
+                          }
+                        >
+                          <SelectTrigger className="order-1 h-8 flex-1 sm:flex-initial sm:w-28 bg-muted/30 border-none shadow-none text-xs font-bold truncate min-w-[80px] sm:min-w-[120px]">
+                            <SelectValue placeholder="項目" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="rank">ランク</SelectItem>
+                            <SelectItem value="status">ステータス</SelectItem>
+                            <SelectItem value="labels">ラベル</SelectItem>
+                            <SelectItem value="industry">業種</SelectItem>
+                            <SelectItem value="acquisition_source">
+                              流入経路
+                            </SelectItem>
+                            <SelectItem value="amount">案件金額</SelectItem>
+                            <SelectItem value="date">最終アクセス</SelectItem>
+                          </SelectContent>
+                        </Select>
 
-                    <div className="w-full pt-2 border-t border-border/50">
-                      {activeProjects.length > 0 ? (
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {activeProjects.slice(0, 2).map((p) => (
-                              <StatusBadge key={p.id} status={p.status} />
-                            ))}
-                            {activeProjects.length > 2 && (
-                              <span className="text-[11px] text-muted-foreground">+{activeProjects.length - 2}</span>
-                            )}
+                        <div className="order-3 w-px h-4 bg-border/60 mx-1 shrink-0 hidden sm:block" />
+
+                        {filter.field === "rank" ? (
+                          <Combobox
+                            options={rankOptions}
+                            value={filter.value}
+                            onValueChange={(val) =>
+                              updateFilter(filter.id, { value: val })
+                            }
+                            placeholder="ランクを選択"
+                            className="order-4 sm:order-3 w-full sm:w-48 h-8 text-xs font-medium min-w-0"
+                          />
+                        ) : filter.field === "status" ? (
+                          <Combobox
+                            options={statusOptions}
+                            value={filter.value}
+                            onValueChange={(val) =>
+                              updateFilter(filter.id, { value: val })
+                            }
+                            placeholder="ステータスを選択"
+                            className="order-4 sm:order-3 w-full sm:w-48 h-8 text-xs font-medium min-w-0"
+                          />
+                        ) : filter.field === "labels" ? (
+                          <Combobox
+                            options={allLabels}
+                            value={filter.value}
+                            onValueChange={(val) =>
+                              updateFilter(filter.id, { value: val })
+                            }
+                            placeholder="ラベルを選択"
+                            className="order-4 sm:order-3 w-full sm:w-48 h-8 text-xs font-medium min-w-0"
+                          />
+                        ) : filter.field === "industry" ? (
+                          <Combobox
+                            options={allIndustries}
+                            value={filter.value}
+                            onValueChange={(val) =>
+                              updateFilter(filter.id, { value: val })
+                            }
+                            placeholder="業種を選択"
+                            className="order-4 sm:order-3 w-full sm:w-48 h-8 text-xs font-medium min-w-0"
+                          />
+                        ) : filter.field === "acquisition_source" ? (
+                          <Combobox
+                            options={allAcquisitionSources}
+                            value={filter.value}
+                            onValueChange={(val) =>
+                              updateFilter(filter.id, { value: val })
+                            }
+                            placeholder="流入経路を選択"
+                            className="order-4 sm:order-3 w-full sm:w-48 h-8 text-xs font-medium min-w-0"
+                          />
+                        ) : filter.field === "date" ? (
+                          <div className="order-4 sm:order-3 flex items-center gap-1 w-full sm:w-auto min-w-0">
+                            <input
+                              type="date"
+                              value={filter.value.split(",")[0] || ""}
+                              onChange={(e) => {
+                                const parts = filter.value.split(",");
+                                updateFilter(filter.id, {
+                                  value: `${e.target.value},${parts[1] || ""}`,
+                                });
+                              }}
+                              className="h-8 flex-1 sm:flex-initial sm:w-32 rounded-lg border border-border bg-background px-2 text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium text-foreground min-w-0"
+                            />
+                            <span className="text-xs text-muted-foreground font-bold shrink-0">
+                              〜
+                            </span>
+                            <input
+                              type="date"
+                              value={filter.value.split(",")[1] || ""}
+                              onChange={(e) => {
+                                const parts = filter.value.split(",");
+                                updateFilter(filter.id, {
+                                  value: `${parts[0] || ""},${e.target.value}`,
+                                });
+                              }}
+                              className="h-8 flex-1 sm:flex-initial sm:w-32 rounded-lg border border-border bg-background px-2 text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium text-foreground min-w-0"
+                            />
                           </div>
-                          <span className="text-xs font-semibold text-foreground/90 shrink-0">
-                            {(totalAmount / 10000).toLocaleString()}万円
-                          </span>
-                        </div>
-                      ) : (
-                        <p className="text-xs text-muted-foreground/70">進行中案件なし</p>
+                        ) : filter.field === "amount" ? (
+                          <div className="order-4 sm:order-3 flex items-center gap-1 w-full sm:w-auto min-w-0">
+                            <input
+                              type="number"
+                              value={filter.value.split(",")[0] || ""}
+                              onChange={(e) => {
+                                const parts = filter.value.split(",");
+                                updateFilter(filter.id, {
+                                  value: `${e.target.value},${parts[1] || ""}`,
+                                });
+                              }}
+                              placeholder="下限"
+                              className="h-8 flex-1 sm:flex-initial sm:w-28 rounded-lg border border-border bg-background px-2.5 text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium min-w-0"
+                            />
+                            <span className="text-xs text-muted-foreground font-bold shrink-0">
+                              〜
+                            </span>
+                            <input
+                              type="number"
+                              value={filter.value.split(",")[1] || ""}
+                              onChange={(e) => {
+                                const parts = filter.value.split(",");
+                                updateFilter(filter.id, {
+                                  value: `${parts[0] || ""},${e.target.value}`,
+                                });
+                              }}
+                              placeholder="上限"
+                              className="h-8 flex-1 sm:flex-initial sm:w-28 rounded-lg border border-border bg-background px-2.5 text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium min-w-0"
+                            />
+                          </div>
+                        ) : (
+                          <input
+                            type="text"
+                            value={filter.value}
+                            onChange={(e) =>
+                              updateFilter(filter.id, {
+                                value: e.target.value,
+                              })
+                            }
+                            placeholder="値を入力"
+                            className="order-4 sm:order-3 h-8 w-full sm:w-48 rounded-lg border border-border bg-background px-3 text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium min-w-0"
+                          />
+                        )}
+
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeFilter(filter.id)}
+                          className="order-2 sm:order-4 w-8 h-8 text-muted-foreground/30 hover:text-destructive hover:bg-destructive/5 rounded-lg ml-auto sm:ml-1 shrink-0"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+
+                    <div className="col-span-2 flex items-center justify-between gap-3 pt-1 w-full min-w-0">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={addFilter}
+                        className="h-9 px-3 border border-dashed border-border text-muted-foreground hover:text-primary hover:border-primary/30 hover:bg-primary/5 rounded-md text-xs font-bold transition-all shrink-0"
+                      >
+                        <Plus className="w-4 h-4 mr-1.5" />
+                        条件追加
+                      </Button>
+
+                      {filters.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setFilters([]);
+                            setIsFilterOpen(false);
+                            setCurrentPage(1);
+                          }}
+                          className="h-9 px-3 gap-1.5 text-xs text-muted-foreground hover:text-destructive font-medium transition-colors shrink-0"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          条件クリア
+                        </Button>
                       )}
                     </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
 
-                    <div className="w-full pt-2 border-t border-border/50 flex items-end justify-between">
-                      <div className="min-w-0 flex-1 pr-4">
-                        {latestActivity ? (
-                          <>
-                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 mb-0.5">最終活動</p>
-                            <p className="text-xs text-foreground/80 truncate">{latestActivity.title}</p>
-                          </>
-                        ) : (
-                          <p className="text-xs text-muted-foreground/70 mt-3">活動なし</p>
-                        )}
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <p className="text-[10px] text-muted-foreground">{formatRelative(customer.last_accessed_at)}</p>
-                      </div>
-                    </div>
-                  </button>
-                )
-              })}
+          {filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3 bg-card rounded-2xl border border-border/50 border-dashed m-4 md:m-6">
+              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                <Search className="w-6 h-6 opacity-20" />
+              </div>
+              <p className="text-sm font-medium">
+                条件に一致する顧客がありません
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearch("");
+                  setFilters([]);
+                  setCurrentPage(1);
+                }}
+              >
+                すべてのフィルターをクリア
+              </Button>
+            </div>
+          ) : (
+            <div className="px-4 md:px-6 pb-6 lg:pb-10 mt-4">
+              <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <Table className="min-w-[600px] sm:min-w-[1000px] bg-card">
+                    <TableHeader className="bg-muted/40">
+                      <TableRow className="border-b border-border hover:bg-transparent">
+                        <SortableContext
+                          items={columns.map((column) => column.id)}
+                          strategy={horizontalListSortingStrategy}
+                        >
+                          {columns.map((column) => (
+                            <SortableListTableHead
+                              key={column.id}
+                              column={column}
+                              sortKey={sortKey}
+                              sortOrder={sortOrder}
+                              onSort={handleSort}
+                            />
+                          ))}
+                        </SortableContext>
+                        <TableHead className="w-12 px-3 py-3" />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedCustomers.map((customer) => {
+                        const activeProjects = projects.filter(
+                          (p) =>
+                            p.customer_id === customer.id &&
+                            p.status !== "closed",
+                        );
+
+                        return (
+                          <TableRow
+                            key={customer.id}
+                            onClick={() =>
+                              navigate(`/customers/${customer.id}`)
+                            }
+                            className={cn(
+                              "group cursor-pointer border-b border-border/70 bg-card transition-colors duration-200 last:border-b-0 hover:bg-muted/40",
+                              customer.is_pinned &&
+                                "bg-primary/[0.035] hover:bg-primary/[0.07]",
+                            )}
+                          >
+                            {columns.map((column) => {
+                              switch (column.id) {
+                                case "pin":
+                                  return (
+                                    <TableCell
+                                      key={column.id}
+                                      className={cn(
+                                        "border-r border-border/60 px-3 py-3.5",
+                                        customer.is_pinned &&
+                                          "bg-primary/[0.035]",
+                                      )}
+                                    >
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          updateCustomer(customer.id, {
+                                            is_pinned: !customer.is_pinned,
+                                          });
+                                        }}
+                                        className={cn(
+                                          "flex h-8 w-8 items-center justify-center rounded-md transition-all",
+                                          customer.is_pinned
+                                            ? "text-primary bg-primary/10"
+                                            : "text-muted-foreground/30 hover:text-muted-foreground hover:bg-muted",
+                                        )}
+                                      >
+                                        {customer.is_pinned ? (
+                                          <Pin className="w-3.5 h-3.5 fill-current" />
+                                        ) : (
+                                          <PinOff className="w-3.5 h-3.5" />
+                                        )}
+                                      </button>
+                                    </TableCell>
+                                  );
+                                case "rank":
+                                  return (
+                                    <TableCell
+                                      key={column.id}
+                                      className="px-4 py-3.5"
+                                    >
+                                      <RankBadge
+                                        rank={customer.rank}
+                                        size="lg"
+                                      />
+                                    </TableCell>
+                                  );
+                                case "company_code":
+                                  return (
+                                    <TableCell
+                                      key={column.id}
+                                      className="px-4 py-3.5 text-xs font-mono font-bold text-muted-foreground"
+                                    >
+                                      {customer.company_code || "-"}
+                                    </TableCell>
+                                  );
+                                case "name":
+                                  return (
+                                    <TableCell
+                                      key={column.id}
+                                      className="px-4 py-3.5"
+                                    >
+                                      <div className="flex flex-col gap-0.5">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="max-w-[18rem] truncate text-sm font-bold text-foreground transition-colors group-hover:text-primary">
+                                            {customer.name}
+                                          </span>
+                                        </div>
+                                        <span className="text-xs text-muted-foreground">
+                                          {customer.industry}
+                                        </span>
+                                      </div>
+                                    </TableCell>
+                                  );
+                                case "phone":
+                                  return (
+                                    <TableCell
+                                      key={column.id}
+                                      className="px-4 py-3.5 text-xs text-foreground font-medium"
+                                    >
+                                      {customer.phone || "-"}
+                                    </TableCell>
+                                  );
+                                case "email":
+                                  return (
+                                    <TableCell
+                                      key={column.id}
+                                      className="px-4 py-3.5 text-xs text-muted-foreground truncate max-w-[14rem]"
+                                    >
+                                      {customer.email || "-"}
+                                    </TableCell>
+                                  );
+                                case "status":
+                                  return (
+                                    <TableCell
+                                      key={column.id}
+                                      className="px-4 py-3.5"
+                                    >
+                                      <span
+                                        className={cn(
+                                          "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border shadow-2xs whitespace-nowrap",
+                                          customer.status === "active" &&
+                                            "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400",
+                                          customer.status === "negotiating" &&
+                                            "bg-blue-500/10 text-blue-600 border-blue-500/20 dark:text-blue-400",
+                                          customer.status === "proposing" &&
+                                            "bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400",
+                                          customer.status === "lead" &&
+                                            "bg-purple-500/10 text-purple-600 border-purple-500/20 dark:text-purple-400",
+                                          customer.status === "dormant" &&
+                                            "bg-muted text-muted-foreground border-border",
+                                        )}
+                                      >
+                                        {
+                                          {
+                                            lead: "リード",
+                                            proposing: "提案中",
+                                            negotiating: "商談中",
+                                            active: "既存顧客",
+                                            dormant: "休眠",
+                                          }[customer.status || "lead"]
+                                        }
+                                      </span>
+                                    </TableCell>
+                                  );
+                                case "labels":
+                                  return (
+                                    <TableCell
+                                      key={column.id}
+                                      className="px-4 py-3.5"
+                                    >
+                                      <div className="flex flex-wrap gap-1 max-w-[16rem]">
+                                        {customer.labels &&
+                                        customer.labels.length > 0 ? (
+                                          customer.labels.map((lbl, idx) => (
+                                            <span
+                                              key={idx}
+                                              className="px-2 py-0.5 rounded bg-muted text-foreground text-[10px] font-medium truncate max-w-[8rem]"
+                                            >
+                                              {lbl}
+                                            </span>
+                                          ))
+                                        ) : (
+                                          <span className="text-xs text-muted-foreground/40">
+                                            -
+                                          </span>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                  );
+                                case "acquisition_source":
+                                  return (
+                                    <TableCell
+                                      key={column.id}
+                                      className="px-4 py-3.5 text-xs text-foreground font-medium truncate max-w-[10rem]"
+                                    >
+                                      {customer.acquisition_source || "-"}
+                                    </TableCell>
+                                  );
+                                case "amount": {
+                                  const totalAmount = activeProjects.reduce(
+                                    (sum, p) => sum + p.amount,
+                                    0,
+                                  );
+                                  return (
+                                    <TableCell
+                                      key={column.id}
+                                      className="px-4 py-3.5 text-xs font-bold text-foreground"
+                                    >
+                                      {totalAmount > 0
+                                        ? `¥${totalAmount.toLocaleString()}`
+                                        : "-"}
+                                    </TableCell>
+                                  );
+                                }
+                                case "projects":
+                                  return (
+                                    <TableCell
+                                      key={column.id}
+                                      className="px-4 py-3.5"
+                                    >
+                                      {activeProjects.length > 0 ? (
+                                        <Popover
+                                          open={openPopoverId === customer.id}
+                                        >
+                                          <PopoverTrigger asChild>
+                                            <div
+                                              className="-m-1 inline-flex cursor-help items-center gap-1 rounded-md px-2 py-1 transition-all hover:bg-primary/10 hover:text-primary group/num"
+                                              onMouseEnter={() =>
+                                                setOpenPopoverId(customer.id)
+                                              }
+                                              onMouseLeave={() =>
+                                                setOpenPopoverId(null)
+                                              }
+                                              onClick={(e) =>
+                                                e.stopPropagation()
+                                              }
+                                            >
+                                              <span className="text-sm font-bold text-foreground group-hover/num:text-primary transition-colors">
+                                                {activeProjects.length}
+                                              </span>
+                                              <span className="text-xs text-muted-foreground font-medium group-hover/num:text-primary transition-colors">
+                                                件
+                                              </span>
+                                            </div>
+                                          </PopoverTrigger>
+                                          <PopoverContent
+                                            className="w-72 p-0 overflow-hidden backdrop-blur-xl bg-background/80 border-border/40 shadow-2xl animate-in zoom-in-95 duration-200 z-50"
+                                            onMouseEnter={() =>
+                                              setOpenPopoverId(customer.id)
+                                            }
+                                            onMouseLeave={() =>
+                                              setOpenPopoverId(null)
+                                            }
+                                          >
+                                            <div className="bg-primary/5 px-4 py-3 border-b border-border/40">
+                                              <div className="flex items-center justify-between">
+                                                <h4 className="text-[10px] font-bold text-primary uppercase tracking-widest">
+                                                  進行中の案件一覧
+                                                </h4>
+                                                <span className="text-[10px] font-bold text-muted-foreground/60">
+                                                  {activeProjects.length}件
+                                                </span>
+                                              </div>
+                                            </div>
+                                            <div className="p-2 max-h-72 overflow-y-auto custom-scrollbar bg-background/40">
+                                              <div className="flex flex-col gap-1">
+                                                {activeProjects.map((p) => (
+                                                  <div
+                                                    key={p.id}
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setOpenPopoverId(null);
+                                                      navigate("/projects");
+                                                    }}
+                                                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-primary/5 transition-colors group/item cursor-pointer"
+                                                  >
+                                                    <StatusBadge
+                                                      status={p.status}
+                                                    />
+                                                    <div className="flex flex-col min-w-0">
+                                                      <span className="text-xs font-bold text-foreground truncate group-hover/item:text-primary transition-colors">
+                                                        {p.name}
+                                                      </span>
+                                                      <span className="text-[10px] text-muted-foreground font-medium">
+                                                        最終更新:{" "}
+                                                        {formatRelative(
+                                                          p.updated_at ||
+                                                            p.created_at,
+                                                        )}
+                                                      </span>
+                                                    </div>
+                                                    <ChevronRight className="w-3 h-3 ml-auto text-muted-foreground/30 group-hover/item:text-primary transition-colors" />
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          </PopoverContent>
+                                        </Popover>
+                                      ) : (
+                                        <span className="text-sm font-bold text-muted-foreground/40">
+                                          0{" "}
+                                          <span className="text-xs font-medium">
+                                            件
+                                          </span>
+                                        </span>
+                                      )}
+                                    </TableCell>
+                                  );
+                                case "accessed":
+                                  return (
+                                    <TableCell
+                                      key={column.id}
+                                      className="px-4 py-3.5 text-xs font-semibold text-muted-foreground"
+                                    >
+                                      {formatRelative(
+                                        customer.last_accessed_at,
+                                      )}
+                                    </TableCell>
+                                  );
+                                default:
+                                  return null;
+                              }
+                            })}
+                            <TableCell className="px-4 py-3.5 text-right">
+                              <div className="flex items-center justify-end pr-4">
+                                <ChevronRight className="w-5 h-5 text-muted-foreground opacity-0 -translate-x-2 transition-all duration-300 ease-out group-hover:opacity-100 group-hover:translate-x-0 group-hover:text-primary" />
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </DndContext>
+              </div>
+
+              <ListPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={filtered.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
             </div>
           )}
         </div>
       </div>
     </AppLayout>
-  )
+  );
 }

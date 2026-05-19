@@ -1,6 +1,7 @@
 export type Role = 'player' | 'manager' | 'dual'
 export type ActiveMode = 'player' | 'manager'
 export type CustomerRank = 'A' | 'B' | 'C'
+export type CustomerStatus = 'lead' | 'proposing' | 'negotiating' | 'active' | 'dormant'
 export type ProjectStatus = 'lead' | 'proposing' | 'negotiating' | 'closed'
 export type TaskType = 'individual' | 'team'
 
@@ -26,12 +27,15 @@ export interface Profile {
 
 export interface Customer {
   id: string
+  company_code?: string
   name: string
   industry: string
   rank: CustomerRank
+  status?: CustomerStatus
   is_pinned: boolean
   last_accessed_at: string
   created_by: string
+  email?: string
   address?: string
   phone?: string
   website?: string
@@ -79,6 +83,7 @@ export interface Activity {
 export interface Task {
   id: string
   customer_id: string
+  project_id?: string | null
   user_id: string
   title: string
   due_date: string

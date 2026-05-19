@@ -1,8 +1,10 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import {
   DndContext,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   closestCenter,
   useSensor,
   useSensors,
@@ -28,9 +30,12 @@ import {
 import AppLayout from "../../components/layout/AppLayout";
 import { useAuth } from "../../context/AuthContext";
 import { useDataStore } from "../../context/DataStoreContext";
+import { useGlobalDialog } from "../../context/GlobalDialogContext";
+import ProjectDialogForm from "@/components/projects/ProjectDialogForm";
 import type { Project, ProjectStatus } from "../../types";
 import { StatusBadge } from "../../components/dashboard/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Combobox } from "@/components/ui/combobox";
 import {
   ListPagination,
@@ -145,12 +150,6 @@ const linkOptions = [
   { label: "未紐付け", value: "unlinked" },
 ];
 
-const dateOptions = [
-  { label: "今日", value: "today" },
-  { label: "過去7日間", value: "7days" },
-  { label: "過去30日間", value: "30days" },
-];
-
 function normalizeSearch(value: string) {
   return value.toLowerCase().replace(/\s+/g, "");
 }
@@ -176,45 +175,175 @@ function compareValue(a: string | number | undefined, b: string | number | undef
   return String(left).localeCompare(String(right), "ja");
 }
 
-function projectDateMatches(value: string | undefined, option: string) {
-  if (!value) return false;
-  const date = new Date(value);
-  const now = new Date();
-  if (option === "today") return date.toDateString() === now.toDateString();
-  if (option === "7days") {
-    return now.getTime() - date.getTime() <= 7 * 24 * 60 * 60 * 1000;
-  }
-  if (option === "30days") {
-    return now.getTime() - date.getTime() <= 30 * 24 * 60 * 60 * 1000;
-  }
-  return true;
-}
-
 export default function ProjectList() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const { projects, customers, profiles, addProject } = useDataStore();
-  const [search, setSearch] = useState("");
+  const { projects, customers, profiles, addProject, updateProject } = useDataStore();
+  const { openDialog, closeDialog } = useGlobalDialog();
+
+  const [search, setSearch] = useState(() => searchParams.get("q") || "");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [sortKey, setSortKey] = useState<SortKey>("updated_at");
-  const [sortOrder, setSortOrder] = useState<ListSortOrder>("desc");
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [filters, setFilters] = useState<FilterRule[]>([]);
+  const [sortKey, setSortKey] = useState<SortKey>(() => (searchParams.get("sort") as SortKey) || "updated_at");
+  const [sortOrder, setSortOrder] = useState<ListSortOrder>(() => (searchParams.get("order") as ListSortOrder) || "desc");
+  const [isFilterOpen, setIsFilterOpen] = useState(() => {
+    const filterFields = [
+      "status",
+      "priority",
+      "source",
+      "link",
+      "customer",
+      "owner",
+      "date",
+      "amount",
+    ];
+    return filterFields.some((field) => searchParams.has(field));
+  });
+  const [filters, setFilters] = useState<FilterRule[]>(() => {
+    const initialFilters: FilterRule[] = [];
+    const filterFields = [
+      "status",
+      "priority",
+      "source",
+      "link",
+      "customer",
+      "owner",
+      "date",
+      "amount",
+    ];
+
+    filterFields.forEach((field) => {
+      const values = searchParams.getAll(field);
+      values.forEach((value) => {
+        if (value) {
+          initialFilters.push({
+            id: Math.random().toString(36).substr(2, 9),
+            field,
+            value,
+          });
+        }
+      });
+    });
+
+    return initialFilters;
+  });
   const [columns, setColumns] = useState<ListTableColumn[]>(DEFAULT_COLUMNS);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    customer_id: "",
-    status: "lead" as ProjectStatus,
-    priority: 2 as Project["priority"],
-    amount: "",
-    close_date: "",
-    note: "",
+  const [currentPage, setCurrentPage] = useState(() => {
+    const page = searchParams.get("page");
+    return page ? parseInt(page, 10) : 1;
   });
   const itemsPerPage = 8;
 
+  // URLSearchParams の同期
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search.trim()) params.set("q", search.trim());
+    if (sortKey !== "updated_at") params.set("sort", sortKey);
+    if (sortOrder !== "desc") params.set("order", sortOrder);
+    if (currentPage > 1) params.set("page", currentPage.toString());
+
+    filters.forEach((filter) => {
+      if (filter.value) {
+        params.append(filter.field, filter.value);
+      }
+    });
+
+    setSearchParams(params, { replace: true });
+  }, [search, sortKey, sortOrder, currentPage, filters, setSearchParams]);
+
+  const handleOpenAddProjectDialog = () => {
+    const formId = "add-project-form";
+    openDialog({
+      mode: "add",
+      eyebrow: "案件",
+      breadcrumbs: ["新規作成"],
+      title: "案件を追加",
+      hideHeaderTitle: true,
+      size: "xl",
+      content: (
+        <ProjectDialogForm
+          formId={formId}
+          submitLabel="案件を追加"
+          initialValues={{
+            user_id: currentUser?.id ?? "user-001",
+            source: "manual",
+          }}
+          onSubmit={(values) => {
+            addProject(values);
+            closeDialog();
+          }}
+        />
+      ),
+      footer: (
+        <>
+          <Button type="button" variant="secondary" onClick={closeDialog}>
+            キャンセル
+          </Button>
+          <Button type="submit" form={formId} variant="primary">
+            案件を追加
+          </Button>
+        </>
+      ),
+    });
+  };
+
+  const handleOpenEditProjectDialog = (project: Project) => {
+    const formId = "edit-project-form";
+    openDialog({
+      mode: "edit",
+      eyebrow: "案件",
+      breadcrumbs: ["編集"],
+      title: "案件を編集",
+      hideHeaderTitle: true,
+      size: "xl",
+      content: (
+        <ProjectDialogForm
+          formId={formId}
+          submitLabel="変更を保存"
+          initialValues={{
+            name: project.name,
+            customer_id: project.customer_id,
+            status: project.status,
+            priority: project.priority,
+            amount: project.amount,
+            close_date: project.close_date || "",
+            note: project.note || "",
+            labels: project.labels || [],
+            user_id: project.user_id,
+            source: project.source || "manual",
+            next_action_date: project.next_action_date || "",
+          }}
+          onSubmit={(values) => {
+            updateProject(project.id, values);
+            closeDialog();
+          }}
+        />
+      ),
+      footer: (
+        <>
+          <Button type="button" variant="secondary" onClick={closeDialog}>
+            キャンセル
+          </Button>
+          <Button type="submit" form={formId} variant="primary">
+            変更を保存
+          </Button>
+        </>
+      ),
+    });
+  };
+
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 10,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
@@ -327,7 +456,27 @@ export default function ProjectList() {
         }
         if (filter.field === "customer") return project.customer_id === filter.value;
         if (filter.field === "owner") return project.user_id === filter.value;
-        if (filter.field === "date") return projectDateMatches(project.updated_at, filter.value);
+        if (filter.field === "date") {
+          if (!filter.value || filter.value === ",") return true;
+          const dateTime = new Date(project.updated_at).getTime();
+          const parts = filter.value.split(",");
+          const fromStr = parts[0] || "";
+          const untilStr = parts[1] || "";
+          const fromTime = fromStr ? new Date(fromStr).getTime() : 0;
+          const untilTime = untilStr
+            ? new Date(untilStr).getTime() + 24 * 60 * 60 * 1000 - 1
+            : Infinity;
+          return dateTime >= fromTime && dateTime <= untilTime;
+        }
+        if (filter.field === "amount") {
+          if (!filter.value || filter.value === ",") return true;
+          const parts = filter.value.split(",");
+          const fromStr = parts[0] || "";
+          const untilStr = parts[1] || "";
+          const fromVal = fromStr.trim() ? Number(fromStr) : 0;
+          const untilVal = untilStr.trim() ? Number(untilStr) : Infinity;
+          return project.amount >= fromVal && project.amount <= untilVal;
+        }
         return true;
       });
     });
@@ -367,35 +516,6 @@ export default function ProjectList() {
     const start = (currentPage - 1) * itemsPerPage;
     return filteredProjects.slice(start, start + itemsPerPage);
   }, [currentPage, filteredProjects]);
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const trimmedName = form.name.trim();
-    if (!trimmedName || !currentUser) return;
-
-    addProject({
-      customer_id: form.customer_id || null,
-      name: trimmedName,
-      status: form.status,
-      priority: form.priority,
-      amount: Number(form.amount) || 0,
-      user_id: currentUser.id,
-      close_date: form.close_date || undefined,
-      source: "manual",
-      note: form.note.trim() || undefined,
-    });
-
-    setForm({
-      name: "",
-      customer_id: "",
-      status: "lead",
-      priority: 2,
-      amount: "",
-      close_date: "",
-      note: "",
-    });
-    setIsFormOpen(false);
-  };
 
   return (
     <AppLayout>
@@ -501,7 +621,7 @@ export default function ProjectList() {
                   <Button
                     variant="primary"
                     size="md"
-                    onClick={() => setIsFormOpen((current) => !current)}
+                    onClick={handleOpenAddProjectDialog}
                     className="h-10 w-full shrink-0 justify-center gap-2 px-4 shadow-md sm:w-auto"
                   >
                     <Plus className="h-4.5 w-4.5" />
@@ -512,197 +632,87 @@ export default function ProjectList() {
 
               {isFilterOpen && (
                 <div className="mt-3 rounded-xl border border-border/80 bg-muted/40 p-3 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200 md:p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex flex-1 flex-wrap items-center gap-2.5">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border/50 bg-background shadow-sm">
-                        <Filter className="h-3.5 w-3.5 text-primary" />
-                      </div>
-
-                      {filters.map((filter) => (
-                        <div
-                          key={filter.id}
-                          className="flex min-w-[260px] flex-1 animate-in items-center gap-2 rounded-xl border border-border/60 bg-background p-1.5 shadow-sm zoom-in-95 duration-200 sm:min-w-0 sm:flex-initial"
+                  <div className="grid grid-cols-2 sm:flex sm:flex-row sm:flex-wrap sm:items-center gap-3 w-full min-w-0">
+                    {filters.map((filter) => (
+                      <div
+                        key={filter.id}
+                        className={cn(
+                          "flex flex-wrap sm:flex-nowrap items-center gap-2 p-2 sm:p-1.5 bg-background border border-border/60 rounded-xl shadow-sm animate-in zoom-in-95 duration-200 w-full sm:w-auto min-w-0 overflow-hidden",
+                          filter.field === "amount" || filter.field === "date"
+                            ? "col-span-2"
+                            : "col-span-1",
+                        )}
+                      >
+                        <Select
+                          value={filter.field}
+                          onValueChange={(value) =>
+                            updateFilter(filter.id, { field: value, value: "" })
+                          }
                         >
-                          <Select
-                            value={filter.field}
-                            onValueChange={(value) =>
-                              updateFilter(filter.id, { field: value, value: "" })
-                            }
-                          >
-                            <SelectTrigger className="h-8 flex-1 border-none bg-muted/30 text-xs font-bold shadow-none sm:w-32">
-                              <SelectValue placeholder="項目" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="status">ステータス</SelectItem>
-                              <SelectItem value="priority">優先度</SelectItem>
-                              <SelectItem value="source">登録元</SelectItem>
-                              <SelectItem value="link">紐付け状態</SelectItem>
-                              <SelectItem value="customer">顧客</SelectItem>
-                              <SelectItem value="owner">担当者</SelectItem>
-                              <SelectItem value="date">最終更新</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <SelectTrigger className="order-1 h-8 flex-1 sm:flex-initial sm:w-28 bg-muted/30 border-none shadow-none text-xs font-bold truncate min-w-[80px] sm:min-w-[120px]">
+                            <SelectValue placeholder="項目" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="status">ステータス</SelectItem>
+                            <SelectItem value="priority">優先度</SelectItem>
+                            <SelectItem value="source">登録元</SelectItem>
+                            <SelectItem value="link">紐付け状態</SelectItem>
+                            <SelectItem value="customer">顧客</SelectItem>
+                            <SelectItem value="owner">担当者</SelectItem>
+                            <SelectItem value="date">最終更新</SelectItem>
+                            <SelectItem value="amount">案件金額</SelectItem>
+                          </SelectContent>
+                        </Select>
 
-                          <div className="mx-1 h-4 w-px shrink-0 bg-border/60" />
+                        <div className="order-3 w-px h-4 bg-border/60 mx-1 shrink-0 hidden sm:block" />
 
-                          <FilterValueControl
-                            filter={filter}
-                            customerOptions={customerOptions}
-                            ownerOptions={ownerOptions}
-                            onChange={(value) => updateFilter(filter.id, { value })}
-                          />
+                        <FilterValueControl
+                          filter={filter}
+                          customerOptions={customerOptions}
+                          ownerOptions={ownerOptions}
+                          onChange={(value) => updateFilter(filter.id, { value })}
+                        />
 
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeFilter(filter.id)}
-                            className="ml-1 h-8 w-8 shrink-0 rounded-lg text-muted-foreground/30 hover:bg-destructive/5 hover:text-destructive"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeFilter(filter.id)}
+                          className="order-2 sm:order-4 w-8 h-8 text-muted-foreground/30 hover:text-destructive hover:bg-destructive/5 rounded-lg ml-auto sm:ml-1 shrink-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
 
+                    <div className="col-span-2 flex items-center justify-between gap-3 pt-1 w-full min-w-0">
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={addFilter}
-                        className="h-10 shrink-0 rounded-md border border-dashed border-border px-4 text-xs font-bold text-muted-foreground transition-all hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
+                        className="h-9 px-3 border border-dashed border-border text-muted-foreground hover:text-primary hover:border-primary/30 hover:bg-primary/5 rounded-md text-xs font-bold transition-all shrink-0"
                       >
-                        <Plus className="mr-1.5 h-4 w-4" />
+                        <Plus className="w-4 h-4 mr-1.5" />
                         条件追加
                       </Button>
-                    </div>
 
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setFilters([]);
-                        setIsFilterOpen(false);
-                        setCurrentPage(1);
-                      }}
-                      className="ml-auto h-8 shrink-0 gap-1.5 px-3 text-[10px] font-bold uppercase text-muted-foreground transition-colors hover:text-destructive sm:ml-0"
-                    >
-                      <RotateCcw className="h-3 w-3" />
-                      条件クリア
-                    </Button>
+                      {filters.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setFilters([]);
+                            setIsFilterOpen(false);
+                            setCurrentPage(1);
+                          }}
+                          className="h-9 px-3 text-muted-foreground hover:text-destructive gap-1.5 rounded-md text-xs font-bold transition-all shrink-0 ml-auto"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          条件クリア
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              )}
-
-              {isFormOpen && (
-                <form
-                  onSubmit={handleSubmit}
-                  className="mt-3 rounded-xl border border-border/80 bg-muted/30 p-3 shadow-sm md:p-4"
-                >
-                  <div className="grid gap-3 lg:grid-cols-[minmax(220px,1.4fr)_220px_140px_120px_140px_150px]">
-                    <input
-                      value={form.name}
-                      onChange={(event) =>
-                        setForm((current) => ({ ...current, name: event.target.value }))
-                      }
-                      placeholder="案件名"
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-all focus:ring-2 focus:ring-primary/10"
-                      required
-                    />
-                    <select
-                      value={form.customer_id}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          customer_id: event.target.value,
-                        }))
-                      }
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-all focus:ring-2 focus:ring-primary/10"
-                    >
-                      <option value="">企業未紐付け</option>
-                      {customers.map((customer) => (
-                        <option key={customer.id} value={customer.id}>
-                          {customer.name}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={form.status}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          status: event.target.value as ProjectStatus,
-                        }))
-                      }
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-all focus:ring-2 focus:ring-primary/10"
-                    >
-                      {statusOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={form.priority}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          priority: Number(event.target.value) as Project["priority"],
-                        }))
-                      }
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-all focus:ring-2 focus:ring-primary/10"
-                    >
-                      {priorityOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      value={form.amount}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          amount: event.target.value,
-                        }))
-                      }
-                      inputMode="numeric"
-                      placeholder="金額"
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-all focus:ring-2 focus:ring-primary/10"
-                    />
-                    <input
-                      type="date"
-                      value={form.close_date}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          close_date: event.target.value,
-                        }))
-                      }
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-all focus:ring-2 focus:ring-primary/10"
-                    />
-                  </div>
-                  <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_auto]">
-                    <input
-                      value={form.note}
-                      onChange={(event) =>
-                        setForm((current) => ({ ...current, note: event.target.value }))
-                      }
-                      placeholder="メモ"
-                      className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none transition-all focus:ring-2 focus:ring-primary/10"
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={() => setIsFormOpen(false)}
-                        className="h-10 px-4"
-                      >
-                        キャンセル
-                      </Button>
-                      <Button type="submit" variant="primary" className="h-10 px-6">
-                        登録
-                      </Button>
-                    </div>
-                  </div>
-                </form>
               )}
             </div>
           </div>
@@ -728,12 +738,12 @@ export default function ProjectList() {
           ) : (
             <div className="mt-4 px-4 pb-6 md:px-6 lg:pb-10">
               <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleDragEnd}
-                >
-                  <Table className="min-w-[1480px] bg-card">
+                <Table className="min-w-[1480px] bg-card">
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                  >
                     <TableHeader className="bg-muted/40">
                       <TableRow className="border-b border-border hover:bg-transparent">
                         <SortableContext
@@ -753,7 +763,8 @@ export default function ProjectList() {
                         <TableHead className="w-12 px-3 py-3" />
                       </TableRow>
                     </TableHeader>
-                    <TableBody>
+                  </DndContext>
+                  <TableBody>
                       {paginatedProjects.map((project) => {
                         const source = project.source ?? "manual";
                         const customer = project.customer_id
@@ -767,9 +778,10 @@ export default function ProjectList() {
                         return (
                           <TableRow
                             key={project.id}
+                            onClick={() => handleOpenEditProjectDialog(project)}
                             className={cn(
-                              "group border-b border-border/70 bg-card transition-colors duration-200 last:border-b-0 hover:bg-muted/40",
-                              isUnlinked && "bg-destructive/[0.035] hover:bg-destructive/[0.06]",
+                              "group cursor-pointer border-b border-border/70 bg-card transition-colors duration-200 last:border-b-0 hover:bg-muted/40",
+                              isUnlinked && "bg-destructive/[0.035] hover:bg-destructive/6",
                             )}
                           >
                             {columns.map((column) => {
@@ -796,10 +808,19 @@ export default function ProjectList() {
                                   );
                                 case "customer":
                                   return (
-                                    <TableCell key={column.id} className="px-4 py-3.5">
+                                    <TableCell
+                                      key={column.id}
+                                      className="px-4 py-3.5"
+                                      onClick={(e) => {
+                                        if (customer) {
+                                          e.stopPropagation();
+                                          navigate(`/customers/${customer.id}`);
+                                        }
+                                      }}
+                                    >
                                       {customer ? (
-                                        <div className="flex min-w-0 flex-col gap-0.5">
-                                          <span className="truncate text-sm font-bold text-foreground">
+                                        <div className="flex min-w-0 flex-col gap-0.5 hover:opacity-80">
+                                          <span className="truncate text-sm font-bold text-primary hover:underline">
                                             {customer.name}
                                           </span>
                                           <span className="text-xs text-muted-foreground">
@@ -816,21 +837,96 @@ export default function ProjectList() {
                                   );
                                 case "status":
                                   return (
-                                    <TableCell key={column.id} className="px-4 py-3.5">
-                                      <StatusBadge status={project.status} />
+                                    <TableCell key={column.id} className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+                                      <Popover>
+                                        <PopoverTrigger asChild>
+                                          <button className="h-8 border border-transparent hover:border-border hover:bg-muted/50 px-2 shadow-none focus:ring-0 w-auto gap-1.5 rounded-lg flex items-center">
+                                            <StatusBadge status={project.status} />
+                                          </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-56 p-3 bg-background border border-border shadow-md rounded-xl" align="start">
+                                          <div className="space-y-3">
+                                            <div className="space-y-1">
+                                              <h4 className="font-bold text-xs text-foreground">ステータス変更</h4>
+                                              <p className="text-[11px] text-muted-foreground">案件のステータスを選択してください。</p>
+                                            </div>
+                                            <Select
+                                              value={project.status}
+                                              onValueChange={(val) => updateProject(project.id, { status: val as ProjectStatus })}
+                                            >
+                                              <SelectTrigger className="h-8 bg-muted/30 border-border/60 text-xs w-full justify-between">
+                                                <SelectValue placeholder="ステータスを選択" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="lead">
+                                                  <StatusBadge status="lead" />
+                                                </SelectItem>
+                                                <SelectItem value="proposing">
+                                                  <StatusBadge status="proposing" />
+                                                </SelectItem>
+                                                <SelectItem value="negotiating">
+                                                  <StatusBadge status="negotiating" />
+                                                </SelectItem>
+                                                <SelectItem value="closed">
+                                                  <StatusBadge status="closed" />
+                                                </SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
+                                        </PopoverContent>
+                                      </Popover>
                                     </TableCell>
                                   );
                                 case "priority":
                                   return (
-                                    <TableCell key={column.id} className="px-4 py-3.5">
-                                      <span
-                                        className={cn(
-                                          "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
-                                          priorityColor[project.priority],
-                                        )}
-                                      >
-                                        {priorityLabel[project.priority]}
-                                      </span>
+                                    <TableCell key={column.id} className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
+                                      <Popover>
+                                        <PopoverTrigger asChild>
+                                          <button className="h-8 border border-transparent hover:border-border hover:bg-muted/50 px-2 shadow-none focus:ring-0 w-auto gap-1.5 rounded-lg flex items-center">
+                                            <span
+                                              className={cn(
+                                                "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
+                                                priorityColor[project.priority],
+                                              )}
+                                            >
+                                              {priorityLabel[project.priority]}
+                                            </span>
+                                          </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-56 p-3 bg-background border border-border shadow-md rounded-xl" align="start">
+                                          <div className="space-y-3">
+                                            <div className="space-y-1">
+                                              <h4 className="font-bold text-xs text-foreground">優先度変更</h4>
+                                              <p className="text-[11px] text-muted-foreground">案件の優先度を選択してください。</p>
+                                            </div>
+                                            <Select
+                                              value={String(project.priority)}
+                                              onValueChange={(val) => updateProject(project.id, { priority: Number(val) as Project["priority"] })}
+                                            >
+                                              <SelectTrigger className="h-8 bg-muted/30 border-border/60 text-xs w-full justify-between">
+                                                <SelectValue placeholder="優先度を選択" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="1">
+                                                  <span className={cn("inline-flex rounded-full px-2.5 py-1 text-xs font-medium", priorityColor[1])}>
+                                                    高
+                                                  </span>
+                                                </SelectItem>
+                                                <SelectItem value="2">
+                                                  <span className={cn("inline-flex rounded-full px-2.5 py-1 text-xs font-medium", priorityColor[2])}>
+                                                    中
+                                                  </span>
+                                                </SelectItem>
+                                                <SelectItem value="3">
+                                                  <span className={cn("inline-flex rounded-full px-2.5 py-1 text-xs font-medium", priorityColor[3])}>
+                                                    低
+                                                  </span>
+                                                </SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
+                                        </PopoverContent>
+                                      </Popover>
                                     </TableCell>
                                   );
                                 case "amount":
@@ -907,7 +1003,6 @@ export default function ProjectList() {
                       })}
                     </TableBody>
                   </Table>
-                </DndContext>
               </div>
 
               <ListPagination
@@ -945,8 +1040,65 @@ function FilterValueControl({
     link: linkOptions,
     customer: customerOptions,
     owner: ownerOptions,
-    date: dateOptions,
   };
+
+  if (filter.field === "date") {
+    return (
+      <div className="order-4 sm:order-3 flex items-center gap-1 w-full sm:w-auto min-w-0">
+        <input
+          type="date"
+          value={filter.value.split(",")[0] || ""}
+          onChange={(e) => {
+            const parts = filter.value.split(",");
+            onChange(`${e.target.value},${parts[1] || ""}`);
+          }}
+          className="h-8 flex-1 sm:flex-initial sm:w-32 rounded-lg border border-border bg-background px-2 text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium text-foreground min-w-0"
+        />
+        <span className="text-xs text-muted-foreground font-bold shrink-0">
+          〜
+        </span>
+        <input
+          type="date"
+          value={filter.value.split(",")[1] || ""}
+          onChange={(e) => {
+            const parts = filter.value.split(",");
+            onChange(`${parts[0] || ""},${e.target.value}`);
+          }}
+          className="h-8 flex-1 sm:flex-initial sm:w-32 rounded-lg border border-border bg-background px-2 text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium text-foreground min-w-0"
+        />
+      </div>
+    );
+  }
+
+  if (filter.field === "amount") {
+    return (
+      <div className="order-4 sm:order-3 flex items-center gap-1 w-full sm:w-auto min-w-0">
+        <input
+          type="number"
+          value={filter.value.split(",")[0] || ""}
+          onChange={(e) => {
+            const parts = filter.value.split(",");
+            onChange(`${e.target.value},${parts[1] || ""}`);
+          }}
+          placeholder="下限"
+          className="h-8 flex-1 sm:flex-initial sm:w-28 rounded-lg border border-border bg-background px-2.5 text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium min-w-0"
+        />
+        <span className="text-xs text-muted-foreground font-bold shrink-0">
+          〜
+        </span>
+        <input
+          type="number"
+          value={filter.value.split(",")[1] || ""}
+          onChange={(e) => {
+            const parts = filter.value.split(",");
+            onChange(`${parts[0] || ""},${e.target.value}`);
+          }}
+          placeholder="上限"
+          className="h-8 flex-1 sm:flex-initial sm:w-28 rounded-lg border border-border bg-background px-2.5 text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium min-w-0"
+        />
+      </div>
+    );
+  }
 
   return (
     <Combobox
@@ -954,7 +1106,7 @@ function FilterValueControl({
       value={filter.value}
       onValueChange={onChange}
       placeholder="値を選択"
-      className="h-8 flex-1 text-xs font-medium sm:w-36"
+      className="order-4 sm:order-3 w-full sm:w-48 h-8 text-xs font-medium min-w-0"
     />
   );
 }

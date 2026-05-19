@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
-import { useDataStore } from '../context/DataStoreContext'
-import { mockAudioMinutes } from '../data/mock'
+import { useDataStore } from '../../context/DataStoreContext'
+import { mockAudioMinutes } from '../../data/mock'
 
 // ─── シンプルなMarkdownレンダラー ─────────────────────────────────────────────
 

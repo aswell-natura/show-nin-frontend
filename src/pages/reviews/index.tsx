@@ -1,6 +1,6 @@
-import AppLayout from '../components/layout/AppLayout'
-import { useAuth } from '../context/AuthContext'
-import { useDataStore } from '../context/DataStoreContext'
+import AppLayout from '../../components/layout/AppLayout'
+import { useAuth } from '../../context/AuthContext'
+import { useDataStore } from '../../context/DataStoreContext'
 
 export default function ManagerReviews() {
   const { currentUser } = useAuth()

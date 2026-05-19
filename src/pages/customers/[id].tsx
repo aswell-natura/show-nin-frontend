@@ -23,14 +23,14 @@ import {
   Info,
   ListFilter,
 } from "lucide-react";
-import AppLayout from "../components/layout/AppLayout";
-import { useDataStore } from "../context/DataStoreContext";
-import { useGlobalDialog } from "../context/GlobalDialogContext";
+import AppLayout from "../../components/layout/AppLayout";
+import { useDataStore } from "../../context/DataStoreContext";
+import { useGlobalDialog } from "../../context/GlobalDialogContext";
 import CustomerDialogForm from "@/components/customers/CustomerDialogForm";
 import {
   RankBadge,
   StatusBadge,
-} from "../components/dashboard/shared/StatusBadge";
+} from "../../components/dashboard/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -54,7 +54,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { mockAudioMinutes } from "../data/mock";
+import { mockAudioMinutes } from "../../data/mock";
 
 type Tab = "projects" | "details" | "profile";
 

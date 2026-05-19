@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import AppLayout from '../components/layout/AppLayout'
-import { useDataStore } from '../context/DataStoreContext'
-import { StatusBadge } from '../components/dashboard/shared/StatusBadge'
+import AppLayout from '../../components/layout/AppLayout'
+import { useDataStore } from '../../context/DataStoreContext'
+import { StatusBadge } from '../../components/dashboard/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 
 const hearingTemplate = [

@@ -25,11 +25,11 @@ import {
   X,
 } from "lucide-react";
 
-import AppLayout from "../components/layout/AppLayout";
-import { useAuth } from "../context/AuthContext";
-import { useDataStore } from "../context/DataStoreContext";
-import type { Project, ProjectStatus } from "../types";
-import { StatusBadge } from "../components/dashboard/shared/StatusBadge";
+import AppLayout from "../../components/layout/AppLayout";
+import { useAuth } from "../../context/AuthContext";
+import { useDataStore } from "../../context/DataStoreContext";
+import type { Project, ProjectStatus } from "../../types";
+import { StatusBadge } from "../../components/dashboard/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import {

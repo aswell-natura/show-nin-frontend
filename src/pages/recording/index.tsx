@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { useDataStore } from '../context/DataStoreContext'
+import { useDataStore } from '../../context/DataStoreContext'
 
 type RecordingStatus = 'idle' | 'recording' | 'paused' | 'unsupported' | 'error'
 

@@ -1,33 +1,33 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 import {
   useLayoutConfig,
   type WidgetType,
   type LayoutConfig,
-} from "../context/LayoutConfigContext";
-import PageLayout from "../components/layout/PageLayout";
-import SummaryCards from "../components/dashboard/SummaryCards";
-import PlayerTimeline from "../components/dashboard/widgets/PlayerTimeline";
-import PlayerNextActions from "../components/dashboard/widgets/PlayerNextActions";
-import ManagerTeamPipeline from "../components/dashboard/widgets/ManagerTeamPipeline";
-import ManagerAtRisk from "../components/dashboard/widgets/ManagerAtRisk";
-import ManagerTeamActivity from "../components/dashboard/widgets/ManagerTeamActivity";
-import TaskOverview from "../components/dashboard/widgets/TaskOverview";
-import ProjectOverview from "../components/dashboard/widgets/ProjectOverview";
-import CustomerOverview from "../components/dashboard/widgets/CustomerOverview";
-import PlayerBudgetOverview from "../components/dashboard/widgets/PlayerBudgetOverview";
+} from "../../context/LayoutConfigContext";
+import PageLayout from "../../components/layout/PageLayout";
+import SummaryCards from "../../components/dashboard/SummaryCards";
+import PlayerTimeline from "../../components/dashboard/widgets/PlayerTimeline";
+import PlayerNextActions from "../../components/dashboard/widgets/PlayerNextActions";
+import ManagerTeamPipeline from "../../components/dashboard/widgets/ManagerTeamPipeline";
+import ManagerAtRisk from "../../components/dashboard/widgets/ManagerAtRisk";
+import ManagerTeamActivity from "../../components/dashboard/widgets/ManagerTeamActivity";
+import TaskOverview from "../../components/dashboard/widgets/TaskOverview";
+import ProjectOverview from "../../components/dashboard/widgets/ProjectOverview";
+import CustomerOverview from "../../components/dashboard/widgets/CustomerOverview";
+import PlayerBudgetOverview from "../../components/dashboard/widgets/PlayerBudgetOverview";
 import {
   BudgetSummaryWidget,
   MemberSummaryWidget,
   ReportSummaryWidget,
   ReviewSummaryWidget,
   RiskSummaryWidget,
-} from "../components/dashboard/widgets/ManagerMenuOverviews";
-import CalendarWidget from "../components/dashboard/widgets/CalendarWidget";
-import DashboardLayoutSettings from "../components/dashboard/DashboardLayoutSettings";
-import type { ActiveMode } from "../types";
-import { cn } from "../lib/utils";
+} from "../../components/dashboard/widgets/ManagerMenuOverviews";
+import CalendarWidget from "../../components/dashboard/widgets/CalendarWidget";
+import DashboardLayoutSettings from "../../components/dashboard/DashboardLayoutSettings";
+import type { ActiveMode } from "../../types";
+import { cn } from "../../lib/utils";
 import { LayoutDashboard, ChevronUp, ChevronDown } from "lucide-react";
 
 const tabLabel: Record<WidgetType, string> = {

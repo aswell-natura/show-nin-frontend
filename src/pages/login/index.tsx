@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import { mockProfiles } from '../data/mock'
-import type { Profile } from '../types'
+import { useAuth } from '../../context/AuthContext'
+import { mockProfiles } from '../../data/mock'
+import type { Profile } from '../../types'
 
 const roleCards = [
   {

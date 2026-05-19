@@ -1,14 +1,14 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import AppLayout from "../components/layout/AppLayout";
-import { useDataStore } from "../context/DataStoreContext";
-import { useAuth } from "../context/AuthContext";
-import { useGlobalDialog } from "../context/GlobalDialogContext";
+import AppLayout from "../../components/layout/AppLayout";
+import { useDataStore } from "../../context/DataStoreContext";
+import { useAuth } from "../../context/AuthContext";
+import { useGlobalDialog } from "../../context/GlobalDialogContext";
 import CustomerDialogForm from "@/components/customers/CustomerDialogForm";
 import {
   RankBadge,
   StatusBadge,
-} from "../components/dashboard/shared/StatusBadge";
+} from "../../components/dashboard/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { SearchBar } from "@/components/ui/search-bar";
 import { cn } from "@/lib/utils";

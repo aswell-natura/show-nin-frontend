@@ -29,7 +29,8 @@ export interface Customer {
   id: string
   company_code?: string
   name: string
-  industry: string
+  industry: string[]
+  business_number?: string
   rank: CustomerRank
   status?: CustomerStatus
   is_pinned: boolean

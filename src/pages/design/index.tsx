@@ -415,7 +415,7 @@ function TaskCardDemo() {
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground font-medium">Card State View</span>
         <Button 
-          variant="outline" 
+          variant="secondary" 
           size="sm" 
           onClick={() => setIsOverdue(!isOverdue)} 
           className="h-7 text-[10px] font-bold py-0"

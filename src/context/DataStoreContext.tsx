@@ -52,9 +52,25 @@ function loadCustomers() {
   const seedById = new Map(mockCustomers.map((customer) => [customer.id, customer]))
   return loaded.map((customer) => {
     const seed = seedById.get(customer.id)
-    if (!seed) return customer
+    
+    let normalizedIndustry: string[] = []
+    if (Array.isArray(customer.industry)) {
+      normalizedIndustry = customer.industry
+    } else if (typeof customer.industry === 'string') {
+      normalizedIndustry = [customer.industry]
+    } else if (seed?.industry) {
+      normalizedIndustry = seed.industry
+    }
+
+    if (!seed) {
+      return {
+        ...customer,
+        industry: normalizedIndustry,
+      }
+    }
     return {
       ...customer,
+      industry: normalizedIndustry,
       company_code: customer.company_code ?? seed.company_code,
       email: customer.email ?? seed.email,
       status: customer.status ?? seed.status,
@@ -79,6 +95,7 @@ function loadTasks() {
 }
 
 const KEYS = {
+  profiles:      'show-nin-profiles',
   customers:     'show-nin-customers',
   projects:      'show-nin-projects',
   activities:    'show-nin-activities',
@@ -97,6 +114,9 @@ interface DataStoreContextValue {
   tasks:         Task[]
   targets:       Target[]
   notifications: Notification[]
+
+  // Profile CRUD
+  addProfile:    (data: Omit<Profile, 'id' | 'sidebar_settings' | 'dashboard_layout'>) => Profile
 
   // Customer CRUD
   addCustomer:    (data: Omit<Customer, 'id' | 'last_accessed_at'>) => Customer
@@ -137,6 +157,7 @@ interface DataStoreContextValue {
 const DataStoreContext = createContext<DataStoreContextValue | null>(null)
 
 export function DataStoreProvider({ children }: { children: ReactNode }) {
+  const [profiles,      setProfiles]      = useState<Profile[]>     (() => loadWithNewSeeds(KEYS.profiles, mockProfiles))
   const [customers,     setCustomers]     = useState<Customer[]>    (() => loadCustomers())
   const [projects,      setProjects]      = useState<Project[]>     (() => loadProjects())
   const [activities,    setActivities]    = useState<Activity[]>    (() => loadWithNewSeeds(KEYS.activities,    mockActivities))
@@ -145,6 +166,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>(() => loadWithNewSeeds(KEYS.notifications, mockNotifications))
 
   // localStorage への自動保存
+  useEffect(() => { localStorage.setItem(KEYS.profiles,      JSON.stringify(profiles)) },      [profiles])
   useEffect(() => { localStorage.setItem(KEYS.customers,     JSON.stringify(customers)) },     [customers])
   useEffect(() => { localStorage.setItem(KEYS.projects,      JSON.stringify(projects)) },      [projects])
   useEffect(() => { localStorage.setItem(KEYS.activities,    JSON.stringify(activities)) },    [activities])
@@ -153,6 +175,28 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => { localStorage.setItem(KEYS.notifications, JSON.stringify(notifications)) }, [notifications])
 
   // ─── Customer CRUD ──────────────────────────────────────────────────────
+
+  function addProfile(data: Omit<Profile, 'id' | 'sidebar_settings' | 'dashboard_layout'>): Profile {
+    const record: Profile = {
+      ...data,
+      id: genId(),
+      sidebar_settings: {
+        order: [
+          "home",
+          "customers",
+          "projects",
+          "minutes",
+          "tasks",
+          "budget",
+          "reports",
+        ],
+        is_fixed: true,
+      },
+      dashboard_layout: { card_order: [1, 2, 3, 4, 5] },
+    }
+    setProfiles((prev) => [...prev, record])
+    return record
+  }
 
   function addCustomer(data: Omit<Customer, 'id' | 'last_accessed_at'>): Customer {
     const record: Customer = { ...data, id: genId(), last_accessed_at: now() }
@@ -266,6 +310,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
   // ─── デフォルトにリセット ────────────────────────────────────────────────
 
   function resetToDefaults() {
+    setProfiles(mockProfiles)
     setCustomers(mockCustomers)
     setProjects(mockProjects)
     setActivities(mockActivities)
@@ -277,8 +322,9 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
 
   return (
     <DataStoreContext.Provider value={{
-      profiles: mockProfiles,
+      profiles,
       customers, projects, activities, tasks, targets, notifications,
+      addProfile,
       addCustomer, updateCustomer, deleteCustomer,
       addProject, updateProject, deleteProject,
       addActivity, updateActivity, deleteActivity,

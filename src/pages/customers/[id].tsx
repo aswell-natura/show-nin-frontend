@@ -166,6 +166,8 @@ export default function CustomerDetail() {
             industry: customer.industry,
             rank: customer.rank,
             is_pinned: customer.is_pinned,
+            company_code: customer.company_code,
+            business_number: customer.business_number,
             address: customer.address,
             phone: customer.phone,
             website: customer.website,
@@ -296,6 +298,26 @@ export default function CustomerDetail() {
       </div>
 
       <dl className="flex flex-col gap-4 text-sm">
+        {customer.company_code && (
+          <div className="flex flex-col gap-1 bg-muted/30 dark:bg-muted/10 p-3 rounded-xl border border-border/50">
+            <dt className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5 text-primary/80" /> 企業コード
+            </dt>
+            <dd className="text-foreground font-semibold text-xs pl-5">
+              {customer.company_code}
+            </dd>
+          </div>
+        )}
+        {customer.business_number && (
+          <div className="flex flex-col gap-1 bg-muted/30 dark:bg-muted/10 p-3 rounded-xl border border-border/50">
+            <dt className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
+              <Briefcase className="w-3.5 h-3.5 text-primary/80" /> 事業者番号
+            </dt>
+            <dd className="text-foreground font-semibold text-xs pl-5 tracking-wider font-mono">
+              {customer.business_number}
+            </dd>
+          </div>
+        )}
         {customer.employee_count && (
           <div className="flex flex-col gap-1 bg-muted/30 dark:bg-muted/10 p-3 rounded-xl border border-border/50">
             <dt className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
@@ -880,7 +902,7 @@ export default function CustomerDetail() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       className="h-8 text-xs font-bold text-muted-foreground hover:text-foreground bg-background gap-1.5 shadow-2xs border-border/50 relative"
                     >
@@ -1097,7 +1119,7 @@ export default function CustomerDetail() {
                     variant="secondary"
                     className="font-medium text-secondary-foreground text-xs px-2.5 py-1"
                   >
-                    {customer.industry}
+                    {customer.industry?.join("、")}
                   </Badge>
                   {customer.is_pinned && (
                     <Badge

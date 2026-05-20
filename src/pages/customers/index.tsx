@@ -201,7 +201,7 @@ export default function CustomerList() {
 
   const allIndustries = useMemo(() => {
     const industries = new Set<string>();
-    customers.forEach((c) => industries.add(c.industry));
+    customers.forEach((c) => c.industry?.forEach((ind) => industries.add(ind)));
     return Array.from(industries)
       .sort()
       .map((i) => ({ label: i, value: i }));
@@ -327,7 +327,7 @@ export default function CustomerList() {
           (c.company_code ?? "").toLowerCase().includes(q) ||
           (c.phone ?? "").toLowerCase().includes(q) ||
           (c.email ?? "").toLowerCase().includes(q) ||
-          c.industry.toLowerCase().includes(q) ||
+          (c.industry?.join("、") ?? "").toLowerCase().includes(q) ||
           (c.labels?.join("、") ?? "").toLowerCase().includes(q) ||
           (c.acquisition_source ?? "").toLowerCase().includes(q),
       );
@@ -347,7 +347,7 @@ export default function CustomerList() {
           case "labels":
             return (c.labels?.join("、") ?? "").includes(val);
           case "industry":
-            return c.industry === val;
+            return c.industry?.includes(val);
           case "acquisition_source":
             return (c.acquisition_source ?? "")
               .toLowerCase()
@@ -927,7 +927,7 @@ export default function CustomerList() {
                                           </span>
                                         </div>
                                         <span className="text-xs text-muted-foreground">
-                                          {customer.industry}
+                                          {customer.industry?.join("、")}
                                         </span>
                                       </div>
                                     </TableCell>

@@ -180,7 +180,7 @@ export default function DesignShowcase() {
         <section className="grid gap-4 rounded-lg border border-border bg-card p-5 shadow-sm">
           <div>
             <h2 className="text-xl font-semibold">Dashboard Shared Components</h2>
-            <p className="text-sm text-muted-foreground">High-level components composed from Shadcn primitives for specific dashboard use cases.</p>
+            <p className="text-sm text-muted-foreground">ダッシュボード用途に合わせた共通コンポーネントです。</p>
           </div>
           <div className="grid gap-6">
             <div className="grid gap-3 border-t border-border pt-4">
@@ -270,7 +270,7 @@ export default function DesignShowcase() {
               </div>
             </div>
 
-            {/* 3. High-Density checklist & Task Cards */}
+            {/* 3. 高密度チェックリスト・タスクカード */}
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold">Task Card State Variants</h3>

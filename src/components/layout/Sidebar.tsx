@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   DndContext,
@@ -27,13 +27,23 @@ import {
   Users,
   FileText,
   AlertTriangle,
+  BookOpen,
   GripVertical,
+  IdCard,
   Unlock,
   Lock,
+  MessageCircle,
+  Receipt,
+  ScanText,
   ChevronLeft,
   ChevronRight,
   type LucideIcon
 } from "lucide-react";
+import {
+  loadFeatureFlags,
+  OPTIONAL_FEATURE_FLAGS_EVENT,
+  optionalFeatures,
+} from "@/lib/feature-menu";
 
 const sidebarIconMap: Record<string, LucideIcon> = {
   home: Home,
@@ -45,6 +55,11 @@ const sidebarIconMap: Record<string, LucideIcon> = {
   users: Users,
   "file-text": FileText,
   alert: AlertTriangle,
+  "scan-text": ScanText,
+  "message-circle": MessageCircle,
+  "id-card": IdCard,
+  receipt: Receipt,
+  "book-open": BookOpen,
 };
 import { Button } from "../ui/button";
 import logoUrlLight from "../../assets/show-nin.svg";
@@ -143,19 +158,27 @@ function NavContent({
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
   const [localOrder, setLocalOrder] = useState(order);
+  const currentOrder = [
+    ...localOrder.filter((id) => order.includes(id)),
+    ...order.filter((id) => !localOrder.includes(id)),
+  ];
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (over && active.id !== over.id) {
       setLocalOrder((prev) => {
-        const oldIndex = prev.indexOf(active.id as string);
-        const newIndex = prev.indexOf(over.id as string);
-        return arrayMove(prev, oldIndex, newIndex);
+        const nextOrder = [
+          ...prev.filter((id) => order.includes(id)),
+          ...order.filter((id) => !prev.includes(id)),
+        ];
+        const oldIndex = nextOrder.indexOf(active.id as string);
+        const newIndex = nextOrder.indexOf(over.id as string);
+        return arrayMove(nextOrder, oldIndex, newIndex);
       });
     }
   }
 
-  const orderedItems = localOrder
+  const orderedItems = currentOrder
     .map((id) => menuItems.find((m) => m.id === id))
     .filter(Boolean) as typeof menuItems;
 
@@ -166,7 +189,7 @@ function NavContent({
       onDragEnd={handleDragEnd}
     >
       <SortableContext
-        items={localOrder}
+        items={currentOrder}
         strategy={verticalListSortingStrategy}
       >
         <nav className="flex flex-col gap-0.5 flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-2">
@@ -223,16 +246,36 @@ export default function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
         : "player";
   const menuItems =
     effectiveMode === "manager" ? managerSidebarMenuItems : sidebarMenuItems;
-  const roleDefaultOrder = menuItems.map((m) => m.id);
+  const [featureFlags, setFeatureFlags] = useState(() => loadFeatureFlags());
+  const enabledFeatureItems = optionalFeatures
+    .filter((feature) => featureFlags[feature.id])
+    .map((feature) => ({
+      id: feature.id,
+      label: feature.label,
+      icon: feature.icon,
+      path: feature.path,
+    }));
+  const sidebarItems = [...menuItems, ...enabledFeatureItems];
+  const roleDefaultOrder = sidebarItems.map((m) => m.id);
   const userOrder = currentUser?.sidebar_settings.order ?? roleDefaultOrder;
   const normalizedUserOrder = [
-    ...userOrder.filter((id) => menuItems.some((m) => m.id === id)),
+    ...userOrder.filter((id) => sidebarItems.some((m) => m.id === id)),
     ...roleDefaultOrder.filter((id) => !userOrder.includes(id)),
   ];
   const initialOrder =
     effectiveMode === "manager" ? roleDefaultOrder : normalizedUserOrder;
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  useEffect(() => {
+    const refresh = () => setFeatureFlags(loadFeatureFlags());
+    window.addEventListener(OPTIONAL_FEATURE_FLAGS_EVENT, refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener(OPTIONAL_FEATURE_FLAGS_EVENT, refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
 
   function getActivePath(itemId: string) {
     if (itemId === "home") return location.pathname === "/dashboard";
@@ -250,6 +293,9 @@ export default function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
     if (itemId === "reviews") return location.pathname.startsWith("/reviews");
     if (itemId === "risks") return location.pathname.startsWith("/risks");
     if (itemId === "reports") return location.pathname.startsWith("/reports");
+    if (optionalFeatures.some((feature) => feature.id === itemId)) {
+      return location.pathname.startsWith("/settings");
+    }
     return false;
   }
 
@@ -265,7 +311,10 @@ export default function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
     else if (itemId === "reviews") navigate("/reviews");
     else if (itemId === "risks") navigate("/risks");
     else if (itemId === "reports") navigate("/reports/rep-001");
-    else navigate("/dashboard");
+    else {
+      const feature = optionalFeatures.find((item) => item.id === itemId);
+      navigate(feature?.path ?? "/dashboard");
+    }
     onMobileClose();
   }
 
@@ -276,7 +325,7 @@ export default function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
     onNavigate: handleNavigate,
     onToggleLock: () => setIsUnlocked((v) => !v),
     getActivePath,
-    menuItems,
+    menuItems: sidebarItems,
   };
 
   return (

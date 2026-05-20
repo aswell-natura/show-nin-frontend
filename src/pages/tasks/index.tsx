@@ -30,6 +30,7 @@ import AppLayout from "../../components/layout/AppLayout";
 import { useAuth } from "../../context/AuthContext";
 import { useDataStore } from "../../context/DataStoreContext";
 import { useGlobalDialog } from "../../context/GlobalDialogContext";
+import TaskDialogForm from "@/components/tasks/TaskDialogForm";
 import type { Task } from "../../types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -92,16 +93,15 @@ interface FilterRule {
 }
 
 const DEFAULT_COLUMNS: ListTableColumn[] = [
-  { id: "status", label: "ステータス", width: "w-32" },
+  { id: "status", label: "フェーズ", width: "w-32" },
   { id: "title", label: "タスク名", width: "w-72" },
+  { id: "due_date", label: "期限", width: "w-36" },
   { id: "customer", label: "企業", width: "w-56" },
   { id: "project", label: "案件", width: "w-64" },
-  { id: "priority", label: "優先度", width: "w-28" },
-  { id: "owner", label: "担当者", width: "w-36" },
   { id: "progress", label: "進捗率", width: "w-32" },
-  { id: "updated", label: "進捗更新日", width: "w-36" },
-  { id: "due_date", label: "期限", width: "w-32" },
-  { id: "complete", label: "完了", width: "w-24", sortable: false },
+  { id: "priority", label: "確度", width: "w-28" },
+  { id: "owner", label: "担当者", width: "w-36" },
+  { id: "updated", label: "最終更新日", width: "w-36" },
 ];
 
 const statusOptions = [
@@ -112,12 +112,19 @@ const statusOptions = [
 ];
 
 const priorityOptions = [
-  { label: "High", value: "High" },
-  { label: "Middle", value: "Middle" },
-  { label: "Low", value: "Low" },
+  { label: "高", value: "High" },
+  { label: "中", value: "Middle" },
+  { label: "低", value: "Low" },
 ];
 
+const priorityLabels: Record<Priority, string> = {
+  High: "高",
+  Middle: "中",
+  Low: "低",
+};
+
 const progressOptions = Array.from({ length: 11 }, (_, index) => index * 10);
+const DEFAULT_SORT_KEY = "severity_due_progress";
 
 function todayString() {
   return new Date().toISOString().slice(0, 10);
@@ -126,8 +133,21 @@ function todayString() {
 function formatDate(date?: string) {
   if (!date) return "-";
   return new Date(`${date}T00:00:00`).toLocaleDateString("ja-JP", {
+    year: "numeric",
     month: "short",
     day: "numeric",
+  });
+}
+
+function formatDateTimeMinute(date?: string) {
+  if (!date) return "-";
+  return new Date(`${date}T00:00:00`).toLocaleString("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
   });
 }
 
@@ -181,10 +201,13 @@ export default function TaskBoard() {
   const [search, setSearch] = useState(() => searchParams.get("q") || "");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [sortKey, setSortKey] = useState<string>(
-    () => searchParams.get("sort") || "due_date",
+    () => {
+      const key = searchParams.get("sort");
+      return key && key !== "urgency_progress" ? key : DEFAULT_SORT_KEY;
+    },
   );
   const [sortOrder, setSortOrder] = useState<ListSortOrder>(
-    () => (searchParams.get("order") as ListSortOrder) || "asc",
+    () => (searchParams.get("sort") ? (searchParams.get("order") as ListSortOrder) : "asc") || "asc",
   );
   const [currentPage, setCurrentPage] = useState(() => {
     const page = searchParams.get("page");
@@ -213,14 +236,15 @@ export default function TaskBoard() {
       (field) => searchParams.has(field),
     ),
   );
+  const [showCompletedTasks, setShowCompletedTasks] = useState(false);
   const [columns, setColumns] = useState<ListTableColumn[]>(DEFAULT_COLUMNS);
   const itemsPerPage = 8;
 
   useEffect(() => {
     const params = new URLSearchParams();
     if (search.trim()) params.set("q", search.trim());
-    if (sortKey !== "due_date") params.set("sort", sortKey);
-    if (sortOrder !== "asc") params.set("order", sortOrder);
+    if (sortKey !== DEFAULT_SORT_KEY) params.set("sort", sortKey);
+    if (sortKey !== DEFAULT_SORT_KEY && sortOrder !== "asc") params.set("order", sortOrder);
     if (currentPage > 1) params.set("page", currentPage.toString());
 
     filters.forEach((filter) => {
@@ -293,12 +317,6 @@ export default function TaskBoard() {
 
   const handleOpenAddTaskDialog = () => {
     const formId = "task-add-form";
-    const defaultCustomerId = customers[0]?.id ?? "";
-    const defaultProjectId =
-      projects.find((project) => project.customer_id === defaultCustomerId)?.id ??
-      projects[0]?.id ??
-      "";
-    const defaultOwnerId = currentUser?.id ?? profiles[0]?.id ?? "";
 
     openDialog({
       mode: "add",
@@ -306,106 +324,19 @@ export default function TaskBoard() {
       breadcrumbs: ["新規作成"],
       title: "タスクを追加",
       hideHeaderTitle: true,
-      size: "lg",
+      size: "xl",
       content: (
-        <form
-          id={formId}
-          className="grid gap-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const formData = new FormData(event.currentTarget);
-            const progress = Number(formData.get("progress_percent") || 0);
-            addTask({
-              title: String(formData.get("title") || "新規タスク"),
-              customer_id: String(formData.get("customer_id") || defaultCustomerId),
-              project_id: String(formData.get("project_id") || defaultProjectId) || null,
-              user_id: String(formData.get("user_id") || defaultOwnerId),
-              due_date: String(formData.get("due_date") || todayString()),
-              is_completed: progress === 100,
-              progress_percent: progress,
-              progress_updated_at: todayString(),
-            });
+        <TaskDialogForm
+          formId={formId}
+          submitLabel="タスクを追加"
+          initialValues={{
+            user_id: currentUser?.id ?? profiles[0]?.id ?? "user-001",
+          }}
+          onSubmit={(values) => {
+            addTask(values);
             closeDialog();
           }}
-        >
-          <label className="grid gap-1.5 text-sm font-bold text-foreground">
-            タスク名
-            <input
-              name="title"
-              required
-              placeholder="次回提案資料を準備"
-              className="h-10 rounded-md border border-border bg-background px-3 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20"
-            />
-          </label>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="grid gap-1.5 text-sm font-bold text-foreground">
-              企業
-              <select
-                name="customer_id"
-                defaultValue={defaultCustomerId}
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                {customers.map((customer) => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-1.5 text-sm font-bold text-foreground">
-              案件
-              <select
-                name="project_id"
-                defaultValue={defaultProjectId}
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="">未設定</option>
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-1.5 text-sm font-bold text-foreground">
-              担当者
-              <select
-                name="user_id"
-                defaultValue={defaultOwnerId}
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                {profiles.map((profile) => (
-                  <option key={profile.id} value={profile.id}>
-                    {profile.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-1.5 text-sm font-bold text-foreground">
-              期限
-              <input
-                name="due_date"
-                type="date"
-                defaultValue={todayString()}
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-              />
-            </label>
-            <label className="grid gap-1.5 text-sm font-bold text-foreground">
-              進捗率
-              <select
-                name="progress_percent"
-                defaultValue="0"
-                className="h-10 rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                {progressOptions.map((value) => (
-                  <option key={value} value={value}>
-                    {value}%
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </form>
+        />
       ),
       footer: (
         <>
@@ -479,6 +410,10 @@ export default function TaskBoard() {
   const filtered = useMemo(() => {
     let list = [...taskViews];
 
+    if (!showCompletedTasks) {
+      list = list.filter((task) => !task.isCompleted);
+    }
+
     if (search.trim()) {
       const query = search.trim().toLowerCase();
       list = list.filter(
@@ -531,6 +466,25 @@ export default function TaskBoard() {
 
     list.sort((a, b) => {
       const comparison = (() => {
+        if (sortKey === DEFAULT_SORT_KEY) {
+          const statusScore: Record<TaskStatus, number> = {
+            overdue: 4,
+            in_progress: 3,
+            not_started: 2,
+            completed: 1,
+          };
+          const statusComparison = statusScore[b.status] - statusScore[a.status];
+          if (statusComparison !== 0) return statusComparison;
+
+          const dueComparison =
+            new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+          if (dueComparison !== 0) return dueComparison;
+
+          const progressComparison = a.progressPercent - b.progressPercent;
+          if (progressComparison !== 0) return progressComparison;
+
+          return a.title.localeCompare(b.title, "ja");
+        }
         if (sortKey === "title") return a.title.localeCompare(b.title, "ja");
         if (sortKey === "customer") return a.customer.localeCompare(b.customer, "ja");
         if (sortKey === "project") return a.project.localeCompare(b.project, "ja");
@@ -549,11 +503,12 @@ export default function TaskBoard() {
         }
         return 0;
       })();
+      if (sortKey === DEFAULT_SORT_KEY) return comparison;
       return sortOrder === "desc" ? -comparison : comparison;
     });
 
     return list;
-  }, [filters, search, sortKey, sortOrder, taskViews]);
+  }, [filters, search, showCompletedTasks, sortKey, sortOrder, taskViews]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginatedTasks = useMemo(() => {
@@ -661,6 +616,23 @@ export default function TaskBoard() {
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
+                      <Button
+                        variant={showCompletedTasks ? "secondary" : "ghost"}
+                        size="md"
+                        onClick={() => {
+                          setShowCompletedTasks((current) => !current);
+                          setCurrentPage(1);
+                        }}
+                        className={cn(
+                          "h-10 flex-1 justify-center gap-2 border border-border/50 px-3 text-sm font-bold shadow-sm transition-all sm:flex-initial",
+                          showCompletedTasks
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "bg-card text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>完了したタスク</span>
+                      </Button>
                     </div>
                   </div>
 
@@ -699,8 +671,8 @@ export default function TaskBoard() {
                             <SelectValue placeholder="項目" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="status">ステータス</SelectItem>
-                            <SelectItem value="priority">優先度</SelectItem>
+                            <SelectItem value="status">フェーズ</SelectItem>
+                            <SelectItem value="priority">確度</SelectItem>
                             <SelectItem value="customer">企業</SelectItem>
                             <SelectItem value="project">案件</SelectItem>
                             <SelectItem value="owner">担当者</SelectItem>
@@ -718,7 +690,7 @@ export default function TaskBoard() {
                             onValueChange={(value) =>
                               updateFilter(filter.id, { value })
                             }
-                            placeholder="ステータスを選択"
+                            placeholder="フェーズを選択"
                             className="order-4 h-8 w-full min-w-0 text-xs font-medium sm:order-3 sm:w-48"
                           />
                         ) : filter.field === "priority" ? (
@@ -728,7 +700,7 @@ export default function TaskBoard() {
                             onValueChange={(value) =>
                               updateFilter(filter.id, { value })
                             }
-                            placeholder="優先度を選択"
+                            placeholder="確度を選択"
                             className="order-4 h-8 w-full min-w-0 text-xs font-medium sm:order-3 sm:w-48"
                           />
                         ) : filter.field === "customer" ? (
@@ -977,7 +949,7 @@ export default function TaskBoard() {
                                 return (
                                   <TableCell key={column.id} className="px-4 py-3.5">
                                     <Badge variant="outline" className={priorityTone(task.priority)}>
-                                      {task.priority}
+                                      {priorityLabels[task.priority]}
                                     </Badge>
                                   </TableCell>
                                 );
@@ -1016,10 +988,10 @@ export default function TaskBoard() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="px-4 py-3.5 text-xs font-semibold text-muted-foreground"
-                                  >
-                                    {task.progressUpdatedAt
-                                      ? formatDate(task.progressUpdatedAt)
+                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-muted-foreground"
+                                    >
+                                      {task.progressUpdatedAt
+                                      ? formatDateTimeMinute(task.progressUpdatedAt)
                                       : "-"}
                                   </TableCell>
                                 );
@@ -1028,41 +1000,13 @@ export default function TaskBoard() {
                                   <TableCell
                                     key={column.id}
                                     className={cn(
-                                      "px-4 py-3.5 text-xs font-bold",
+                                      "whitespace-nowrap px-4 py-3.5 text-xs font-bold",
                                       task.status === "overdue"
                                         ? "text-destructive"
                                         : "text-foreground",
                                     )}
                                   >
                                     {formatDate(task.dueDate)}
-                                  </TableCell>
-                                );
-                              case "complete":
-                                return (
-                                  <TableCell key={column.id} className="px-4 py-3.5">
-                                    <button
-                                      type="button"
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        updateTask(task.id, {
-                                          is_completed: !task.isCompleted,
-                                          progress_percent: task.isCompleted ? 0 : 100,
-                                        });
-                                      }}
-                                      className={cn(
-                                        "flex h-8 w-8 items-center justify-center rounded-md transition-all",
-                                        task.isCompleted
-                                          ? "bg-emerald-500/10 text-emerald-600"
-                                          : "text-muted-foreground/30 hover:bg-muted hover:text-muted-foreground",
-                                      )}
-                                    >
-                                      <CheckCircle2
-                                        className={cn(
-                                          "h-4 w-4",
-                                          task.isCompleted && "fill-current",
-                                        )}
-                                      />
-                                    </button>
                                   </TableCell>
                                 );
                               default:

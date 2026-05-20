@@ -19,6 +19,8 @@ import ManagerReviews from './pages/reviews'
 import ManagerRisks from './pages/risks'
 import AudioMinuteList from './pages/minutes'
 import AudioMinuteDetail from './pages/minutes/[id]'
+import NotificationsPage from './pages/notifications'
+import SettingsPage from './pages/settings'
 import DesignShowcase from './pages/design'
 import type { ReactNode } from 'react'
 
@@ -47,6 +49,9 @@ function AppRoutes() {
       <Route path="/recording" element={<RecordingWindow />} />
       <Route path="/minutes" element={<ProtectedRoute><AudioMinuteList /></ProtectedRoute>} />
       <Route path="/minutes/:id" element={<AudioMinuteDetail />} />
+      <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+      <Route path="/settings/:section" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/design" element={<DesignShowcase />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

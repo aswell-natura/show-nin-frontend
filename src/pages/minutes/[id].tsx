@@ -63,6 +63,13 @@ function formatDateTime(date: Date) {
   return `${yyyy}/${mm}/${dd} ${hh}:${mi}:${ss}`
 }
 
+function formatTime(date: Date) {
+  const hh = String(date.getHours()).padStart(2, '0')
+  const mi = String(date.getMinutes()).padStart(2, '0')
+  const ss = String(date.getSeconds()).padStart(2, '0')
+  return `${hh}:${mi}:${ss}`
+}
+
 function formatDateLabel(date: Date) {
   const yyyy = date.getFullYear()
   const mm = String(date.getMonth() + 1).padStart(2, '0')
@@ -170,7 +177,7 @@ export default function AudioMinuteDetail() {
         <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-500">
           <span>
             <span className="text-xs font-medium text-gray-400">録音時刻: </span>
-            {formatDateTime(recordingStartDate)} ～ {formatDateTime(recordingEndDate)}
+            {formatDateTime(recordingStartDate)} ～ {formatTime(recordingEndDate)}
           </span>
           <span>
             <span className="text-xs font-medium text-gray-400">録音時間: </span>

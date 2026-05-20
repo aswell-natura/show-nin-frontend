@@ -4,18 +4,19 @@ import {
   ArrowLeft,
   Briefcase,
   Calendar,
-  CheckCircle2,
   Clock,
   Edit,
   ExternalLink,
   Flag,
   Hash,
-  ListChecks,
+  Plus,
   User,
 } from "lucide-react";
 
 import AppLayout from "../../components/layout/AppLayout";
 import { useDataStore } from "../../context/DataStoreContext";
+import { useGlobalDialog } from "../../context/GlobalDialogContext";
+import TaskDialogForm from "@/components/tasks/TaskDialogForm";
 import type { Task } from "../../types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -209,7 +210,8 @@ function DetailRow({
 export default function TaskDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { tasks, customers, projects, profiles, updateTask } = useDataStore();
+  const { tasks, customers, projects, profiles, addTask, updateTask } = useDataStore();
+  const { openDialog, closeDialog } = useGlobalDialog();
   const [activeTab, setActiveTab] = useState<MobileTab>("record");
   const [selection, setSelection] = useState(() => ({
     baseId: id ?? "",
@@ -235,8 +237,12 @@ export default function TaskDetail() {
             (item.customer_id === task.customer_id ||
             (task.project_id && item.project_id === task.project_id))),
       )
-      .slice(0, 8)
-      .map((item) => buildTaskView(item, customers, projects, profiles));
+      .map((item) => buildTaskView(item, customers, projects, profiles))
+      .sort((a, b) => {
+        if (a.isCompleted !== b.isCompleted) return a.isCompleted ? 1 : -1;
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      })
+      .slice(0, 8);
     return related;
   }, [customers, profiles, projects, task, tasks]);
 
@@ -275,6 +281,90 @@ export default function TaskDetail() {
     } satisfies Partial<Task>);
   };
 
+  const handleOpenAddTaskDialog = () => {
+    const formId = "task-detail-add-form";
+
+    openDialog({
+      mode: "add",
+      eyebrow: "タスク",
+      breadcrumbs: ["新規作成"],
+      title: "タスクを追加",
+      hideHeaderTitle: true,
+      size: "xl",
+      content: (
+        <TaskDialogForm
+          formId={formId}
+          submitLabel="タスクを追加"
+          initialValues={{
+            customer_id: taskView.customerId ?? undefined,
+            project_id: taskView.projectId,
+            user_id: taskView.ownerId,
+            due_date: todayString(),
+          }}
+          onSubmit={(values) => {
+            const newTask = addTask(values);
+            setSelection({ baseId: id ?? "", selectedId: newTask.id });
+            setActiveTab("record");
+            closeDialog();
+          }}
+        />
+      ),
+      footer: (
+        <>
+          <Button type="button" variant="secondary" onClick={closeDialog}>
+            キャンセル
+          </Button>
+          <Button type="submit" form={formId} variant="primary">
+            タスクを追加
+          </Button>
+        </>
+      ),
+    });
+  };
+
+  const handleOpenEditTaskDialog = () => {
+    const formId = "task-detail-edit-form";
+
+    openDialog({
+      mode: "edit",
+      eyebrow: "タスク",
+      breadcrumbs: ["編集"],
+      title: "タスクを編集",
+      hideHeaderTitle: true,
+      size: "xl",
+      content: (
+        <TaskDialogForm
+          formId={formId}
+          submitLabel="変更を保存"
+          initialValues={{
+            title: taskView.title,
+            customer_id: taskView.customerId ?? "",
+            project_id: taskView.projectId,
+            user_id: taskView.ownerId,
+            due_date: taskView.dueDate,
+            is_completed: taskView.isCompleted,
+            progress_percent: taskView.progressPercent,
+            progress_updated_at: taskView.progressUpdatedAt ?? todayString(),
+          }}
+          onSubmit={(values) => {
+            updateTask(taskView.id, values);
+            closeDialog();
+          }}
+        />
+      ),
+      footer: (
+        <>
+          <Button type="button" variant="secondary" onClick={closeDialog}>
+            キャンセル
+          </Button>
+          <Button type="submit" form={formId} variant="primary">
+            変更を保存
+          </Button>
+        </>
+      ),
+    });
+  };
+
   const RelatedContent = (
     <div className="flex h-full flex-col bg-muted/5">
       <div className="border-b border-border/60 bg-card/80 px-4 py-4 backdrop-blur-md">
@@ -289,6 +379,16 @@ export default function TaskDetail() {
             {relatedTasks.length}
           </Badge>
         </div>
+        <Button
+          type="button"
+          variant="primary"
+          size="sm"
+          onClick={handleOpenAddTaskDialog}
+          className="mt-3 w-full justify-center gap-1.5 font-bold shadow-sm"
+        >
+          <Plus className="h-4 w-4" />
+          タスクの追加
+        </Button>
       </div>
       <div className="flex-1 overflow-y-auto p-4">
         <div className="flex flex-col gap-3">
@@ -384,6 +484,7 @@ export default function TaskDetail() {
                   type="button"
                   variant="secondary"
                   size="md"
+                  onClick={handleOpenEditTaskDialog}
                   className="gap-1.5 font-bold shadow-sm"
                 >
                   <Edit className="h-4 w-4" />
@@ -513,32 +614,6 @@ export default function TaskDetail() {
                 </div>
               </div>
             </div>
-          </div>
-
-          <div className="relative z-10 mt-4 flex items-center justify-end gap-2 border-t border-border/60 pt-4 md:hidden">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => navigate("/tasks")}
-              className="flex-1 justify-center gap-1.5 font-bold shadow-2xs"
-            >
-              <ListChecks className="h-4 w-4" />
-              一覧
-            </Button>
-            <Button
-              variant={taskView.isCompleted ? "secondary" : "primary"}
-              size="sm"
-              onClick={() =>
-                updateTask(taskView.id, {
-                  is_completed: !taskView.isCompleted,
-                  progress_percent: taskView.isCompleted ? 0 : 100,
-                })
-              }
-              className="flex-1 justify-center gap-1.5 font-bold shadow-2xs"
-            >
-              <CheckCircle2 className="h-4 w-4" />
-              {taskView.isCompleted ? "未完了" : "完了"}
-            </Button>
           </div>
         </div>
 

@@ -19,6 +19,7 @@ import ManagerReviews from './pages/reviews'
 import ManagerRisks from './pages/risks'
 import AudioMinuteList from './pages/minutes'
 import AudioMinuteDetail from './pages/minutes/[id]'
+import MinuteDocumentEdit from './pages/minutes/document-edit'
 import NotificationsPage from './pages/notifications'
 import SettingsPage from './pages/settings'
 import DesignShowcase from './pages/design'
@@ -49,6 +50,7 @@ function AppRoutes() {
       <Route path="/recording" element={<RecordingWindow />} />
       <Route path="/minutes" element={<ProtectedRoute><AudioMinuteList /></ProtectedRoute>} />
       <Route path="/minutes/:id" element={<AudioMinuteDetail />} />
+      <Route path="/minutes/:id/documents/:documentId/edit" element={<ProtectedRoute><MinuteDocumentEdit /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/settings/:section" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />

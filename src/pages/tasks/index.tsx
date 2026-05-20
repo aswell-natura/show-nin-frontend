@@ -16,7 +16,6 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import {
-  CheckCircle2,
   ChevronRight,
   Filter,
   Info,
@@ -93,14 +92,14 @@ interface FilterRule {
 }
 
 const DEFAULT_COLUMNS: ListTableColumn[] = [
-  { id: "status", label: "ステータス", width: "w-32" },
+  { id: "status", label: "フェーズ", width: "w-32" },
   { id: "title", label: "タスク名", width: "w-72" },
+  { id: "due_date", label: "期限", width: "w-36" },
   { id: "customer", label: "企業", width: "w-56" },
   { id: "project", label: "案件", width: "w-64" },
-  { id: "priority", label: "優先度", width: "w-28" },
-  { id: "owner", label: "担当者", width: "w-36" },
   { id: "progress", label: "進捗率", width: "w-32" },
-  { id: "due_date", label: "期限", width: "w-32" },
+  { id: "priority", label: "確度", width: "w-28" },
+  { id: "owner", label: "担当者", width: "w-36" },
   { id: "updated", label: "最終更新日", width: "w-36" },
 ];
 
@@ -112,10 +111,16 @@ const statusOptions = [
 ];
 
 const priorityOptions = [
-  { label: "High", value: "High" },
-  { label: "Middle", value: "Middle" },
-  { label: "Low", value: "Low" },
+  { label: "高", value: "High" },
+  { label: "中", value: "Middle" },
+  { label: "低", value: "Low" },
 ];
+
+const priorityLabels: Record<Priority, string> = {
+  High: "高",
+  Middle: "中",
+  Low: "低",
+};
 
 const progressOptions = Array.from({ length: 11 }, (_, index) => index * 10);
 
@@ -126,9 +131,22 @@ function todayString() {
 function formatDate(date?: string) {
   if (!date) return "-";
   return new Date(`${date}T00:00:00`).toLocaleDateString("ja-JP", {
+    year: "numeric",
     month: "short",
     day: "numeric",
   });
+}
+
+function formatDateTimeMinute(date?: string) {
+  if (!date) return "-";
+  const normalized = date.includes("T") ? date : `${date}T00:00:00`;
+  const parsed = new Date(normalized);
+  const yyyy = parsed.getFullYear();
+  const mm = String(parsed.getMonth() + 1).padStart(2, "0");
+  const dd = String(parsed.getDate()).padStart(2, "0");
+  const hh = String(parsed.getHours()).padStart(2, "0");
+  const mi = String(parsed.getMinutes()).padStart(2, "0");
+  return `${yyyy}/${mm}/${dd} ${hh}:${mi}`;
 }
 
 function statusLabel(status: TaskStatus) {
@@ -213,6 +231,7 @@ export default function TaskBoard() {
       (field) => searchParams.has(field),
     ),
   );
+  const [showCompletedTasks, setShowCompletedTasks] = useState(false);
   const [columns, setColumns] = useState<ListTableColumn[]>(DEFAULT_COLUMNS);
   const itemsPerPage = 8;
 
@@ -386,6 +405,10 @@ export default function TaskBoard() {
   const filtered = useMemo(() => {
     let list = [...taskViews];
 
+    if (!showCompletedTasks) {
+      list = list.filter((task) => !task.isCompleted);
+    }
+
     if (search.trim()) {
       const query = search.trim().toLowerCase();
       list = list.filter(
@@ -460,7 +483,7 @@ export default function TaskBoard() {
     });
 
     return list;
-  }, [filters, search, sortKey, sortOrder, taskViews]);
+  }, [filters, search, showCompletedTasks, sortKey, sortOrder, taskViews]);
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginatedTasks = useMemo(() => {
@@ -572,6 +595,23 @@ export default function TaskBoard() {
                   </div>
 
                   <Button
+                    variant={showCompletedTasks ? "secondary" : "ghost"}
+                    size="md"
+                    onClick={() => {
+                      setShowCompletedTasks((current) => !current);
+                      setCurrentPage(1);
+                    }}
+                    className={cn(
+                      "h-10 w-full shrink-0 justify-center gap-2 border border-border/50 px-4 text-sm font-bold shadow-sm sm:w-auto",
+                      showCompletedTasks
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "bg-card text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    完了レコードを表示
+                  </Button>
+
+                  <Button
                     variant="primary"
                     size="md"
                     onClick={handleOpenAddTaskDialog}
@@ -606,8 +646,8 @@ export default function TaskBoard() {
                             <SelectValue placeholder="項目" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="status">ステータス</SelectItem>
-                            <SelectItem value="priority">優先度</SelectItem>
+                            <SelectItem value="status">フェーズ</SelectItem>
+                            <SelectItem value="priority">確度</SelectItem>
                             <SelectItem value="customer">企業</SelectItem>
                             <SelectItem value="project">案件</SelectItem>
                             <SelectItem value="owner">担当者</SelectItem>
@@ -625,7 +665,7 @@ export default function TaskBoard() {
                             onValueChange={(value) =>
                               updateFilter(filter.id, { value })
                             }
-                            placeholder="ステータスを選択"
+                            placeholder="フェーズを選択"
                             className="order-4 h-8 w-full min-w-0 text-xs font-medium sm:order-3 sm:w-48"
                           />
                         ) : filter.field === "priority" ? (
@@ -635,7 +675,7 @@ export default function TaskBoard() {
                             onValueChange={(value) =>
                               updateFilter(filter.id, { value })
                             }
-                            placeholder="優先度を選択"
+                            placeholder="確度を選択"
                             className="order-4 h-8 w-full min-w-0 text-xs font-medium sm:order-3 sm:w-48"
                           />
                         ) : filter.field === "customer" ? (
@@ -884,7 +924,7 @@ export default function TaskBoard() {
                                 return (
                                   <TableCell key={column.id} className="px-4 py-3.5">
                                     <Badge variant="outline" className={priorityTone(task.priority)}>
-                                      {task.priority}
+                                      {priorityLabels[task.priority]}
                                     </Badge>
                                   </TableCell>
                                 );
@@ -923,10 +963,10 @@ export default function TaskBoard() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="px-4 py-3.5 text-xs font-semibold text-muted-foreground"
+                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-muted-foreground"
                                   >
                                     {task.progressUpdatedAt
-                                      ? formatDate(task.progressUpdatedAt)
+                                      ? formatDateTimeMinute(task.progressUpdatedAt)
                                       : "-"}
                                   </TableCell>
                                 );
@@ -935,41 +975,13 @@ export default function TaskBoard() {
                                   <TableCell
                                     key={column.id}
                                     className={cn(
-                                      "px-4 py-3.5 text-xs font-bold",
+                                      "whitespace-nowrap px-4 py-3.5 text-xs font-bold",
                                       task.status === "overdue"
                                         ? "text-destructive"
                                         : "text-foreground",
                                     )}
                                   >
                                     {formatDate(task.dueDate)}
-                                  </TableCell>
-                                );
-                              case "complete":
-                                return (
-                                  <TableCell key={column.id} className="px-4 py-3.5">
-                                    <button
-                                      type="button"
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        updateTask(task.id, {
-                                          is_completed: !task.isCompleted,
-                                          progress_percent: task.isCompleted ? 0 : 100,
-                                        });
-                                      }}
-                                      className={cn(
-                                        "flex h-8 w-8 items-center justify-center rounded-md transition-all",
-                                        task.isCompleted
-                                          ? "bg-emerald-500/10 text-emerald-600"
-                                          : "text-muted-foreground/30 hover:bg-muted hover:text-muted-foreground",
-                                      )}
-                                    >
-                                      <CheckCircle2
-                                        className={cn(
-                                          "h-4 w-4",
-                                          task.isCompleted && "fill-current",
-                                        )}
-                                      />
-                                    </button>
                                   </TableCell>
                                 );
                               default:

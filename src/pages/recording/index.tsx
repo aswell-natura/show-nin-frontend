@@ -182,7 +182,7 @@ export default function RecordingWindow() {
 
     const messages: string[] = []
     if (findKeywordSentence(transcript, ['課題', '困って', '問題'])) {
-      messages.push('課題が出ています。影響範囲と優先度をもう一段掘ると提案に繋げやすくなります。')
+      messages.push('課題が出ています。影響範囲と確度をもう一段掘ると提案に繋げやすくなります。')
     }
     if (findKeywordSentence(transcript, ['予算', '金額', '費用', '価格'])) {
       messages.push('予算に触れられています。決裁可能な金額帯と比較対象を確認してください。')

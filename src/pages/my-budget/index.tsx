@@ -214,14 +214,14 @@ export default function PlayerBudget() {
             <div className="px-4 py-3 border-b border-border/60 flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-sm font-semibold text-foreground">案件実績の内訳</h2>
-                <p className="mt-0.5 text-xs text-muted-foreground">案件一覧のステータス・金額から期間別に集計しています</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">案件一覧のフェーズ・金額から期間別に集計しています</p>
               </div>
               <span className="text-xs text-muted-foreground">見込み込み 売上 {formatAmount(projectedAmount)} / 粗利 {formatAmount(projectedGrossProfit)}</span>
             </div>
             <div className="divide-y divide-border">
               <div className="hidden md:grid px-4 py-3 grid-cols-[1fr_120px_120px_120px_120px] gap-3 bg-muted/30 border-b border-border/60 text-xs font-medium text-muted-foreground">
                 <span>案件</span>
-                <span>ステータス</span>
+                <span>フェーズ</span>
                 <span>売上</span>
                 <span>粗利</span>
                 <span>計上区分</span>

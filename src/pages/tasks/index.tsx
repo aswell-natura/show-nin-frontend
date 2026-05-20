@@ -1,475 +1,1004 @@
-import { useMemo, useState } from 'react'
-import { DndContext, useDraggable, useDroppable } from '@dnd-kit/core'
-import type { DragEndEvent } from '@dnd-kit/core'
-import AppLayout from '../../components/layout/AppLayout'
-import { useDataStore } from '../../context/DataStoreContext'
-import type { Task } from '../../types'
-import { StatCard } from '../../components/dashboard/shared/StatCard'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  horizontalListSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import {
+  CheckCircle2,
+  ChevronRight,
+  Filter,
+  Info,
+  Plus,
+  RotateCcw,
+  Search,
+  X,
+} from "lucide-react";
 
-type ViewMode = 'table' | 'cards' | 'kanban' | 'gantt'
-type KanbanStatus = '未処理' | '実行中' | '完了' | '保留'
-type Priority = 'High' | 'Middle' | 'Low'
+import AppLayout from "../../components/layout/AppLayout";
+import { useAuth } from "../../context/AuthContext";
+import { useDataStore } from "../../context/DataStoreContext";
+import { useGlobalDialog } from "../../context/GlobalDialogContext";
+import TaskDialogForm from "@/components/tasks/TaskDialogForm";
+import type { Task } from "../../types";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
+import {
+  ListPagination,
+  SortableListTableHead,
+  type ListSortOrder,
+  type ListTableColumn,
+} from "@/components/ui/list-table";
+import { SearchBar } from "@/components/ui/search-bar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+
+type TaskStatus = "not_started" | "in_progress" | "completed" | "overdue";
+type Priority = "High" | "Middle" | "Low";
 
 interface TaskView {
-  id: string
-  title: string
-  description: string
-  customer: string
-  project: string
-  status: KanbanStatus
-  priority: Priority
-  owner: string
-  startDate: string
-  endDate: string
-  progressPercent: number
-  progressUpdatedAt?: string
+  id: string;
+  title: string;
+  customerId: string | null;
+  customer: string;
+  projectId: string | null;
+  project: string;
+  status: TaskStatus;
+  priority: Priority;
+  ownerId: string;
+  owner: string;
+  dueDate: string;
+  isCompleted: boolean;
+  progressPercent: number;
+  progressUpdatedAt?: string;
 }
 
-const kanbanColumns: KanbanStatus[] = ['未処理', '実行中', '完了', '保留']
-const statusOptions: Array<'all' | KanbanStatus> = ['all', '未処理', '実行中', '完了', '保留']
-const priorityOptions: Array<'all' | Priority> = ['all', 'High', 'Middle', 'Low']
-const progressOptions = Array.from({ length: 11 }, (_, index) => index * 10)
-
-const statusColor: Record<KanbanStatus, string> = {
-  未処理: 'bg-muted text-muted-foreground hover:bg-muted/80',
-  実行中: 'bg-primary/10 text-primary hover:bg-primary/20',
-  完了: 'bg-green-500/10 text-green-600 hover:bg-green-500/20',
-  保留: 'bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20',
+interface FilterRule {
+  id: string;
+  field: string;
+  operator: string;
+  value: string;
 }
 
-const priorityColor: Record<Priority, string> = {
-  High: 'bg-destructive/10 text-destructive hover:bg-destructive/20',
-  Middle: 'bg-yellow-500/10 text-yellow-600 hover:bg-yellow-500/20',
-  Low: 'bg-muted text-muted-foreground hover:bg-muted/80',
+const DEFAULT_COLUMNS: ListTableColumn[] = [
+  { id: "status", label: "ステータス", width: "w-32" },
+  { id: "title", label: "タスク名", width: "w-72" },
+  { id: "customer", label: "企業", width: "w-56" },
+  { id: "project", label: "案件", width: "w-64" },
+  { id: "priority", label: "優先度", width: "w-28" },
+  { id: "owner", label: "担当者", width: "w-36" },
+  { id: "progress", label: "進捗率", width: "w-32" },
+  { id: "due_date", label: "期限", width: "w-32" },
+  { id: "updated", label: "最終更新日", width: "w-36" },
+];
+
+const statusOptions = [
+  { label: "未処理", value: "not_started" },
+  { label: "実行中", value: "in_progress" },
+  { label: "完了", value: "completed" },
+  { label: "期限超過", value: "overdue" },
+];
+
+const priorityOptions = [
+  { label: "High", value: "High" },
+  { label: "Middle", value: "Middle" },
+  { label: "Low", value: "Low" },
+];
+
+const progressOptions = Array.from({ length: 11 }, (_, index) => index * 10);
+
+function todayString() {
+  return new Date().toISOString().slice(0, 10);
 }
 
-const kanbanTone: Record<KanbanStatus, string> = {
-  未処理: 'border-border bg-muted/30',
-  実行中: 'border-primary/20 bg-primary/5',
-  完了: 'border-green-500/20 bg-green-500/5',
-  保留: 'border-yellow-500/20 bg-yellow-500/5',
+function formatDate(date?: string) {
+  if (!date) return "-";
+  return new Date(`${date}T00:00:00`).toLocaleDateString("ja-JP", {
+    month: "short",
+    day: "numeric",
+  });
 }
 
-const ganttBarColor: Record<KanbanStatus, string> = {
-  未処理: 'bg-muted-foreground',
-  実行中: 'bg-primary',
-  完了: 'bg-green-500',
-  保留: 'bg-yellow-500',
+function statusLabel(status: TaskStatus) {
+  return statusOptions.find((option) => option.value === status)?.label ?? status;
 }
 
-const taskDescriptions = [
-  '録音議事録から抽出された先方依頼をもとに、次回商談までに必要な対応を進める。',
-  '会話内で確認が必要と判断された論点について、担当者に確認して回答を準備する。',
-  '提案内容の精度を上げるため、関連資料と過去商談メモを整理して共有する。',
-  '先方の検討スケジュールに合わせて、社内確認と次回アクションを完了させる。',
-]
-
-function formatDate(date: string) {
-  if (!date) return '-'
-  return new Date(`${date}T00:00:00`).toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit' })
+function statusTone(status: TaskStatus) {
+  return cn(
+    "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border shadow-2xs whitespace-nowrap",
+    status === "completed" &&
+      "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400",
+    status === "in_progress" &&
+      "bg-blue-500/10 text-blue-600 border-blue-500/20 dark:text-blue-400",
+    status === "overdue" &&
+      "bg-destructive/10 text-destructive border-destructive/20",
+    status === "not_started" && "bg-muted text-muted-foreground border-border",
+  );
 }
 
-function addDays(date: string, days: number) {
-  const base = new Date(`${date}T00:00:00`)
-  base.setDate(base.getDate() + days)
-  return base.toISOString().slice(0, 10)
+function priorityTone(priority: Priority) {
+  return cn(
+    "border-0 px-2.5 py-0.5 text-[11px] font-bold",
+    priority === "High" && "bg-destructive/10 text-destructive",
+    priority === "Middle" && "bg-amber-500/10 text-amber-600",
+    priority === "Low" && "bg-muted text-muted-foreground",
+  );
 }
 
-function daysBetween(start: string, end: string) {
-  const startTime = new Date(`${start}T00:00:00`).getTime()
-  const endTime = new Date(`${end}T00:00:00`).getTime()
-  return Math.max(1, Math.round((endTime - startTime) / 86400000) + 1)
+function deriveStatus(task: Task, progress: number): TaskStatus {
+  if (task.is_completed || progress === 100) return "completed";
+  if (task.due_date < todayString()) return "overdue";
+  if (progress > 0) return "in_progress";
+  return "not_started";
 }
 
-function ViewButton({ active, label, icon, onClick }: { active: boolean; label: string; icon: string; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      title={label}
-      className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm transition-colors ${
-        active ? 'bg-gray-900 text-white' : 'text-muted-foreground hover:bg-gray-100'
-      }`}
-    >
-      {icon}
-    </button>
-  )
-}
-
-function TaskCard({ task }: { task: TaskView }) {
-  return (
-    <article className="bg-card border border-border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between gap-3">
-        <h3 className="text-sm font-semibold text-foreground leading-6">{task.title}</h3>
-        <Badge variant="outline" className={`shrink-0 px-2 py-0.5 font-bold border-0 ${priorityColor[task.priority]}`}>
-          {task.priority}
-        </Badge>
-      </div>
-      <p className="mt-2 text-xs leading-5 text-muted-foreground line-clamp-2">{task.description}</p>
-      <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
-        <div>
-          <span className="text-muted-foreground">企業</span>
-          <p className="mt-0.5 text-foreground/90 truncate">{task.customer}</p>
-        </div>
-        <div>
-          <span className="text-muted-foreground">案件</span>
-          <p className="mt-0.5 text-foreground/90 truncate">{task.project}</p>
-        </div>
-        <div>
-          <span className="text-muted-foreground">担当者</span>
-          <p className="mt-0.5 text-foreground/90">{task.owner}</p>
-        </div>
-        <div>
-          <span className="text-muted-foreground">期限</span>
-          <p className="mt-0.5 text-foreground/90">{formatDate(task.endDate)}</p>
-        </div>
-        <div>
-          <span className="text-muted-foreground">進捗率</span>
-          <p className="mt-0.5 text-foreground/90">{task.progressPercent}%</p>
-        </div>
-        <div>
-          <span className="text-muted-foreground">進捗率更新日</span>
-          <p className="mt-0.5 text-foreground/90">{task.progressUpdatedAt ?? '-'}</p>
-        </div>
-      </div>
-      <div className="mt-4 flex items-center justify-between gap-2">
-        <Badge variant="outline" className={`px-2.5 py-0.5 text-[11px] font-bold border-0 ${statusColor[task.status]}`}>
-          {task.status}
-        </Badge>
-        <span className="text-xs text-muted-foreground">
-          {formatDate(task.startDate)} - {formatDate(task.endDate)}
-        </span>
-      </div>
-    </article>
-  )
-}
-
-function DraggableTaskCard({ task }: { task: TaskView }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: task.id })
-  return (
-    <div
-      ref={setNodeRef}
-      style={transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, position: 'relative', zIndex: 50 } : undefined}
-      className={`touch-none cursor-grab active:cursor-grabbing ${isDragging ? 'opacity-40' : ''}`}
-      {...listeners}
-      {...attributes}
-    >
-      <TaskCard task={task} />
-    </div>
-  )
-}
-
-function DroppableTaskColumn({ status, tasks }: { status: KanbanStatus; tasks: TaskView[] }) {
-  const { isOver, setNodeRef } = useDroppable({ id: status })
-  return (
-    <section
-      ref={setNodeRef}
-      className={`min-h-[520px] rounded-xl border transition-all ${kanbanTone[status]} ${isOver ? 'ring-2 ring-primary ring-inset shadow-md' : 'shadow-sm'}`}
-    >
-      <div className="border-b border-border/50 px-4 py-3 flex items-center justify-between bg-card/50 rounded-t-xl">
-        <h2 className="text-sm font-bold text-foreground">{status}</h2>
-        <span className="rounded-full bg-background px-2.5 py-0.5 text-xs font-medium text-muted-foreground shadow-sm">{tasks.length}件</span>
-      </div>
-      <div className="p-3 flex flex-col gap-3">
-        {tasks.map((task) => (
-          <DraggableTaskCard key={task.id} task={task} />
-        ))}
-        {tasks.length === 0 && (
-          <p className="py-12 text-center text-sm text-muted-foreground">タスクなし</p>
-        )}
-      </div>
-    </section>
-  )
+function derivePriority(projectPriority?: number): Priority {
+  if (projectPriority === 1) return "High";
+  if (projectPriority === 3) return "Low";
+  return "Middle";
 }
 
 export default function TaskBoard() {
-  const { tasks, customers, projects, profiles, updateTask } = useDataStore()
-  const [viewMode, setViewMode] = useState<ViewMode>('table')
-  const [statusFilter, setStatusFilter] = useState<'all' | KanbanStatus>('all')
-  const [priorityFilter, setPriorityFilter] = useState<'all' | Priority>('all')
-  const [search, setSearch] = useState('')
-  const [kanbanOverrides, setKanbanOverrides] = useState<Record<string, KanbanStatus>>({})
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { currentUser } = useAuth();
+  const { tasks, customers, projects, profiles, addTask, updateTask } =
+    useDataStore();
+  const { openDialog, closeDialog } = useGlobalDialog();
+
+  const [search, setSearch] = useState(() => searchParams.get("q") || "");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [sortKey, setSortKey] = useState<string>(
+    () => searchParams.get("sort") || "due_date",
+  );
+  const [sortOrder, setSortOrder] = useState<ListSortOrder>(
+    () => (searchParams.get("order") as ListSortOrder) || "asc",
+  );
+  const [currentPage, setCurrentPage] = useState(() => {
+    const page = searchParams.get("page");
+    return page ? parseInt(page, 10) : 1;
+  });
+  const [filters, setFilters] = useState<FilterRule[]>(() => {
+    const initialFilters: FilterRule[] = [];
+    ["status", "priority", "customer", "project", "owner", "progress", "date"].forEach(
+      (field) => {
+        searchParams.getAll(field).forEach((value) => {
+          if (value) {
+            initialFilters.push({
+              id: Math.random().toString(36).slice(2, 11),
+              field,
+              operator: "contains",
+              value,
+            });
+          }
+        });
+      },
+    );
+    return initialFilters;
+  });
+  const [isFilterOpen, setIsFilterOpen] = useState(() =>
+    ["status", "priority", "customer", "project", "owner", "progress", "date"].some(
+      (field) => searchParams.has(field),
+    ),
+  );
+  const [columns, setColumns] = useState<ListTableColumn[]>(DEFAULT_COLUMNS);
+  const itemsPerPage = 8;
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search.trim()) params.set("q", search.trim());
+    if (sortKey !== "due_date") params.set("sort", sortKey);
+    if (sortOrder !== "asc") params.set("order", sortOrder);
+    if (currentPage > 1) params.set("page", currentPage.toString());
+
+    filters.forEach((filter) => {
+      if (filter.value) params.append(filter.field, filter.value);
+    });
+
+    setSearchParams(params, { replace: true });
+  }, [search, sortKey, sortOrder, currentPage, filters, setSearchParams]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const customerOptions = useMemo(
+    () =>
+      customers
+        .map((customer) => ({ label: customer.name, value: customer.id }))
+        .sort((a, b) => a.label.localeCompare(b.label, "ja")),
+    [customers],
+  );
+
+  const projectOptions = useMemo(
+    () =>
+      projects
+        .map((project) => ({ label: project.name, value: project.id }))
+        .sort((a, b) => a.label.localeCompare(b.label, "ja")),
+    [projects],
+  );
+
+  const ownerOptions = useMemo(
+    () =>
+      profiles
+        .map((profile) => ({ label: profile.name, value: profile.id }))
+        .sort((a, b) => a.label.localeCompare(b.label, "ja")),
+    [profiles],
+  );
 
   const taskViews = useMemo<TaskView[]>(
     () =>
-      tasks.map((task, index) => {
-        const customer = customers.find((item) => item.id === task.customer_id)
+      tasks.map((task) => {
+        const customer = customers.find((item) => item.id === task.customer_id);
         const project =
           projects.find((item) => item.id === task.project_id) ??
-          projects.find((item) => item.customer_id === task.customer_id && item.user_id === task.user_id) ??
-          projects.find((item) => item.customer_id === task.customer_id)
-        const owner = profiles.find((profile) => profile.id === task.user_id)
-        const status: KanbanStatus = task.is_completed
-          ? '完了'
-          : index % 5 === 0
-            ? '保留'
-            : index % 3 === 0
-              ? '実行中'
-              : '未処理'
-        const priority: Priority = index % 6 === 0 ? 'High' : index % 4 === 0 ? 'Low' : 'Middle'
-        const startDate = addDays(task.due_date, -Math.max(1, (index % 7) + 1))
+          projects.find((item) => item.customer_id === task.customer_id);
+        const owner = profiles.find((profile) => profile.id === task.user_id);
+        const progressPercent = task.progress_percent ?? (task.is_completed ? 100 : 0);
 
         return {
           id: task.id,
-          title: task.title.replace(/^.+?：/, ''),
-          description: taskDescriptions[index % taskDescriptions.length],
-          customer: customer?.name ?? '未設定',
-          project: project?.name ?? '未設定',
-          status,
-          priority,
-          owner: owner?.name ?? '未担当',
-          startDate,
-          endDate: task.due_date,
-          progressPercent: task.progress_percent ?? (task.is_completed ? 100 : 0),
+          title: task.title.replace(/^.+?：/, ""),
+          customerId: task.customer_id,
+          customer: customer?.name ?? "未設定",
+          projectId: project?.id ?? null,
+          project: project?.name ?? "未設定",
+          status: deriveStatus(task, progressPercent),
+          priority: derivePriority(project?.priority),
+          ownerId: task.user_id,
+          owner: owner?.name ?? "未担当",
+          dueDate: task.due_date,
+          isCompleted: task.is_completed || progressPercent === 100,
+          progressPercent,
           progressUpdatedAt: task.progress_updated_at,
-        }
+        };
       }),
     [customers, profiles, projects, tasks],
-  )
+  );
 
-  const getStatus = (task: TaskView): KanbanStatus => kanbanOverrides[task.id] ?? task.status
+  const handleOpenAddTaskDialog = () => {
+    const formId = "task-add-form";
 
-  const filteredTasks = useMemo(
-    () =>
-      taskViews.filter((task) => {
-        const query = search.trim()
-        const matchesSearch =
-          !query ||
-          task.title.includes(query) ||
-          task.description.includes(query) ||
-          task.customer.includes(query) ||
-          task.project.includes(query)
-        const matchesStatus = statusFilter === 'all' || (kanbanOverrides[task.id] ?? task.status) === statusFilter
-        const matchesPriority = priorityFilter === 'all' || task.priority === priorityFilter
-        return matchesSearch && matchesStatus && matchesPriority
-      }),
-    [priorityFilter, search, statusFilter, taskViews, kanbanOverrides],
-  )
+    openDialog({
+      mode: "add",
+      eyebrow: "タスク",
+      breadcrumbs: ["新規作成"],
+      title: "タスクを追加",
+      hideHeaderTitle: true,
+      size: "xl",
+      content: (
+        <TaskDialogForm
+          formId={formId}
+          submitLabel="タスクを追加"
+          initialValues={{
+            user_id: currentUser?.id ?? profiles[0]?.id ?? "user-001",
+          }}
+          onSubmit={(values) => {
+            addTask(values);
+            closeDialog();
+          }}
+        />
+      ),
+      footer: (
+        <>
+          <Button type="button" variant="secondary" onClick={closeDialog}>
+            キャンセル
+          </Button>
+          <Button type="submit" form={formId} variant="primary">
+            タスクを追加
+          </Button>
+        </>
+      ),
+    });
+  };
 
-  const summary = {
-    total: filteredTasks.length,
-    active: filteredTasks.filter((task) => getStatus(task) !== '完了').length,
-    high: filteredTasks.filter((task) => task.priority === 'High').length,
-    overdue: filteredTasks.filter((task) => getStatus(task) !== '完了' && task.endDate < '2026-05-09').length,
-  }
+  const addFilter = () => {
+    setFilters((current) => [
+      ...current,
+      {
+        id: Math.random().toString(36).slice(2, 11),
+        field: "status",
+        operator: "contains",
+        value: "",
+      },
+    ]);
+    setCurrentPage(1);
+    setIsFilterOpen(true);
+  };
 
-  const ganttStart = '2026-05-01'
-  const ganttDays = Array.from({ length: 31 }, (_, index) => addDays(ganttStart, index))
-  const ganttStartTime = new Date(`${ganttStart}T00:00:00`).getTime()
+  const removeFilter = (id: string) => {
+    setFilters((current) => current.filter((filter) => filter.id !== id));
+    setCurrentPage(1);
+  };
 
-  function handleDragEnd({ active, over }: DragEndEvent) {
-    if (over && active.id !== over.id) {
-      setKanbanOverrides((prev) => ({ ...prev, [String(active.id)]: over.id as KanbanStatus }))
+  const updateFilter = (id: string, updates: Partial<FilterRule>) => {
+    setFilters((current) =>
+      current.map((filter) =>
+        filter.id === id ? { ...filter, ...updates } : filter,
+      ),
+    );
+    setCurrentPage(1);
+  };
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortOrder((current) => (current === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortOrder(key === "due_date" ? "asc" : "desc");
     }
-  }
+  };
 
-  function handleProgressChange(taskId: string, value: number) {
-    updateTask(taskId, { progress_percent: value } satisfies Partial<Task>)
-    if (value === 100) {
-      setKanbanOverrides((prev) => ({ ...prev, [taskId]: '完了' }))
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    setColumns((current) => {
+      const oldIndex = current.findIndex((column) => column.id === active.id);
+      const newIndex = current.findIndex((column) => column.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return current;
+      return arrayMove(current, oldIndex, newIndex);
+    });
+  };
+
+  const handleProgressChange = (taskId: string, value: number) => {
+    updateTask(taskId, {
+      progress_percent: value,
+      is_completed: value === 100,
+    } satisfies Partial<Task>);
+  };
+
+  const filtered = useMemo(() => {
+    let list = [...taskViews];
+
+    if (search.trim()) {
+      const query = search.trim().toLowerCase();
+      list = list.filter(
+        (task) =>
+          task.title.toLowerCase().includes(query) ||
+          task.customer.toLowerCase().includes(query) ||
+          task.project.toLowerCase().includes(query) ||
+          task.owner.toLowerCase().includes(query),
+      );
     }
-  }
+
+    filters.forEach((filter) => {
+      if (!filter.value) return;
+
+      list = list.filter((task) => {
+        const value = filter.value;
+        switch (filter.field) {
+          case "status":
+            return task.status === value;
+          case "priority":
+            return task.priority === value;
+          case "customer":
+            return task.customerId === value;
+          case "project":
+            return task.projectId === value;
+          case "owner":
+            return task.ownerId === value;
+          case "progress": {
+            if (value === ",") return true;
+            const [from = "", until = ""] = value.split(",");
+            const fromValue = from.trim() ? Number(from) : 0;
+            const untilValue = until.trim() ? Number(until) : 100;
+            return task.progressPercent >= fromValue && task.progressPercent <= untilValue;
+          }
+          case "date": {
+            if (value === ",") return true;
+            const [from = "", until = ""] = value.split(",");
+            const dueTime = new Date(`${task.dueDate}T00:00:00`).getTime();
+            const fromTime = from ? new Date(`${from}T00:00:00`).getTime() : 0;
+            const untilTime = until
+              ? new Date(`${until}T23:59:59`).getTime()
+              : Infinity;
+            return dueTime >= fromTime && dueTime <= untilTime;
+          }
+          default:
+            return true;
+        }
+      });
+    });
+
+    list.sort((a, b) => {
+      const comparison = (() => {
+        if (sortKey === "title") return a.title.localeCompare(b.title, "ja");
+        if (sortKey === "customer") return a.customer.localeCompare(b.customer, "ja");
+        if (sortKey === "project") return a.project.localeCompare(b.project, "ja");
+        if (sortKey === "status") return a.status.localeCompare(b.status);
+        if (sortKey === "priority") {
+          const score = { High: 3, Middle: 2, Low: 1 };
+          return score[a.priority] - score[b.priority];
+        }
+        if (sortKey === "owner") return a.owner.localeCompare(b.owner, "ja");
+        if (sortKey === "progress") return a.progressPercent - b.progressPercent;
+        if (sortKey === "updated") {
+          return (a.progressUpdatedAt ?? "").localeCompare(b.progressUpdatedAt ?? "");
+        }
+        if (sortKey === "due_date") {
+          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        }
+        return 0;
+      })();
+      return sortOrder === "desc" ? -comparison : comparison;
+    });
+
+    return list;
+  }, [filters, search, sortKey, sortOrder, taskViews]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedTasks = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filtered.slice(start, start + itemsPerPage);
+  }, [currentPage, filtered, itemsPerPage]);
 
   return (
     <AppLayout>
-      <div className="h-full flex flex-col bg-background">
-        <div className="bg-card border-b border-border px-4 md:px-6 py-4 shrink-0 shadow-sm z-10">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h1 className="text-lg font-bold text-foreground">タスク</h1>
-              <p className="mt-0.5 text-xs text-muted-foreground">AIが抽出したタスクを複数の形式で確認します</p>
-            </div>
-            <div className="grid grid-cols-2 sm:flex gap-3">
-              {[
-                ['総数', summary.total],
-                ['未完了', summary.active],
-                ['高優先度', summary.high],
-                ['期限超過', summary.overdue],
-              ].map(([label, value]) => (
-                <div key={label as string} className="w-28">
-                  <StatCard label={label as string} value={value as number} />
+      <div className="flex h-full flex-col overflow-hidden bg-background">
+        <div className="flex-1 overflow-auto bg-muted/5 custom-scrollbar">
+          <div className="bg-background/95 backdrop-blur-md">
+            <div className="px-4 pb-4 pt-6 md:px-6">
+              <div className="flex flex-col items-stretch justify-between gap-4 md:flex-row md:items-center">
+                <div className="flex shrink-0 items-center gap-2 py-1">
+                  <h1 className="text-lg font-bold tracking-tight text-foreground md:text-xl">
+                    タスク一覧
+                  </h1>
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="cursor-help text-muted-foreground outline-none transition-colors hover:text-foreground"
+                        >
+                          <Info className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="bottom"
+                        className="border border-border bg-popover text-popover-foreground shadow-md"
+                      >
+                        <p>AIが抽出したタスクの期限、担当、進捗を管理します</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
-              ))}
-            </div>
-          </div>
 
-          <div className="mt-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex flex-col sm:flex-row gap-2">
-              <select
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value as 'all' | KanbanStatus)}
-                className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-              >
-                {statusOptions.map((status) => (
-                  <option key={status} value={status}>
-                    {status === 'all' ? 'すべてのステータス' : status}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={priorityFilter}
-                onChange={(event) => setPriorityFilter(event.target.value as 'all' | Priority)}
-                className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-              >
-                {priorityOptions.map((priority) => (
-                  <option key={priority} value={priority}>
-                    {priority === 'all' ? 'すべての優先度' : priority}
-                  </option>
-                ))}
-              </select>
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="タスク・企業・案件で検索"
-                className="h-9 w-full sm:w-72 rounded-lg border border-border bg-card px-3 text-sm outline-none placeholder-gray-400 focus:ring-2 focus:border-primary focus:ring-1 focus:ring-primary transition-colors border-input"
-              />
-            </div>
+                <div className="flex flex-1 flex-col items-stretch gap-3 sm:flex-row sm:items-center md:flex-initial md:justify-end">
+                  <div className="flex flex-1 flex-col items-stretch justify-end gap-3 sm:flex-row sm:items-center sm:gap-2 md:flex-initial">
+                    <div
+                      className={cn(
+                        "max-w-full shrink-0 transition-all duration-300 ease-in-out",
+                        isSearchFocused || search.trim() !== ""
+                          ? "w-full sm:w-72 md:w-80"
+                          : "w-full sm:w-44 md:w-48",
+                      )}
+                    >
+                      <SearchBar
+                        placeholder="タスク名・企業・案件・担当者で検索"
+                        value={search}
+                        onSearchChange={(value) => {
+                          setSearch(value);
+                          setCurrentPage(1);
+                        }}
+                        onFocus={() => setIsSearchFocused(true)}
+                        onBlur={() => setIsSearchFocused(false)}
+                        showKbd={false}
+                      />
+                    </div>
 
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-1">
-                <ViewButton active={viewMode === 'table'} label="一覧" icon="☷" onClick={() => setViewMode('table')} />
-                <ViewButton active={viewMode === 'cards'} label="カード" icon="▦" onClick={() => setViewMode('cards')} />
-                <ViewButton active={viewMode === 'kanban'} label="かんばん" icon="▤" onClick={() => setViewMode('kanban')} />
-                <ViewButton active={viewMode === 'gantt'} label="ガント" icon="▥" onClick={() => setViewMode('gantt')} />
-              </div>
-              <Button variant="primary" className="hidden sm:inline-flex h-9 items-center px-4 font-medium shadow-sm gap-1.5">
-                <span className="text-base leading-none mb-0.5">+</span> タスク追加
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4 md:p-6">
-          {viewMode === 'table' && (
-            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[1640px] table-fixed text-left">
-                  <thead className="bg-muted/30 text-xs font-medium text-muted-foreground">
-                    <tr>
-                      <th className="w-60 px-4 py-3 whitespace-nowrap">タスク名</th>
-                      <th className="w-80 px-4 py-3 whitespace-nowrap">説明</th>
-                      <th className="w-56 px-4 py-3 whitespace-nowrap">企業</th>
-                      <th className="w-64 px-4 py-3 whitespace-nowrap">案件</th>
-                      <th className="w-32 px-4 py-3 whitespace-nowrap">ステータス</th>
-                      <th className="w-32 px-4 py-3 whitespace-nowrap">優先度</th>
-                      <th className="w-36 px-4 py-3 whitespace-nowrap">担当者</th>
-                      <th className="w-32 px-4 py-3 whitespace-nowrap">進捗率</th>
-                      <th className="w-36 px-4 py-3 whitespace-nowrap">進捗率更新日</th>
-                      <th className="w-32 px-4 py-3 whitespace-nowrap">開始日</th>
-                      <th className="w-32 px-4 py-3 whitespace-nowrap">終了日</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border text-sm">
-                    {filteredTasks.map((task) => {
-                      const s = getStatus(task)
-                      return (
-                        <tr key={task.id} className="hover:bg-muted/30">
-                          <td className="px-4 py-3 font-medium text-foreground truncate">{task.title}</td>
-                          <td className="px-4 py-3 text-muted-foreground truncate">{task.description}</td>
-                          <td className="px-4 py-3 text-muted-foreground/80 truncate">{task.customer}</td>
-                          <td className="px-4 py-3 text-muted-foreground/80 truncate">{task.project}</td>
-                          <td className="px-4 py-3">
-                            <Badge variant="outline" className={`inline-flex whitespace-nowrap px-2.5 py-0.5 text-[11px] font-bold border-0 ${statusColor[s]}`}>
-                              {s}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3">
-                            <Badge variant="outline" className={`inline-flex whitespace-nowrap px-2.5 py-0.5 text-[11px] font-bold border-0 ${priorityColor[task.priority]}`}>
-                              {task.priority}
-                            </Badge>
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground/80 whitespace-nowrap">{task.owner}</td>
-                          <td className="px-4 py-3">
-                            <select
-                              value={task.progressPercent}
-                              onChange={(event) => handleProgressChange(task.id, Number(event.target.value))}
-                              className="h-8 w-24 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
+                    <div className="flex w-full shrink-0 items-center justify-between gap-2 sm:w-auto sm:justify-center">
+                      <TooltipProvider delayDuration={200}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant={
+                                isFilterOpen
+                                  ? "ghost"
+                                  : filters.length > 0
+                                    ? "secondary"
+                                    : "ghost"
+                              }
+                              size="md"
+                              onClick={() => setIsFilterOpen(!isFilterOpen)}
+                              className={cn(
+                                "h-10 flex-1 justify-center border border-border/50 shadow-sm transition-all sm:flex-initial",
+                                filters.length === 0
+                                  ? "gap-2 px-3 md:w-10 md:px-0 md:gap-0"
+                                  : "gap-2 px-3 md:gap-1.5 md:px-2.5",
+                                isFilterOpen
+                                  ? "border-primary bg-primary/10 text-primary"
+                                  : filters.length > 0
+                                    ? "border-border bg-secondary text-foreground"
+                                    : "bg-card",
+                              )}
                             >
-                              {progressOptions.map((value) => (
-                                <option key={value} value={value}>{value}%</option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{task.progressUpdatedAt ?? '-'}</td>
-                          <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{task.startDate}</td>
-                          <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{task.endDate}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+                              <Filter className="h-4 w-4" />
+                              <span className="text-sm md:hidden">フィルター</span>
+                              {filters.length > 0 && (
+                                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                                  {filters.length}
+                                </span>
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="bottom"
+                            className="hidden border border-border bg-popover text-popover-foreground shadow-md md:block"
+                          >
+                            <p>
+                              フィルター
+                              {filters.length > 0 ? ` (${filters.length})` : ""}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </div>
 
-          {viewMode === 'cards' && (
-            <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-              {filteredTasks.map((task) => (
-                <TaskCard key={task.id} task={{ ...task, status: getStatus(task) }} />
-              ))}
-            </div>
-          )}
-
-          {viewMode === 'kanban' && (
-            <DndContext onDragEnd={handleDragEnd}>
-              <div className="overflow-x-auto">
-                <div className="grid min-w-[900px] grid-cols-4 gap-4">
-                  {kanbanColumns.map((col) => {
-                    const colTasks = filteredTasks
-                      .filter((task) => getStatus(task) === col)
-                      .map((task) => ({ ...task, status: col }))
-                    return <DroppableTaskColumn key={col} status={col} tasks={colTasks} />
-                  })}
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={handleOpenAddTaskDialog}
+                    className="h-10 w-full shrink-0 justify-center gap-2 px-4 shadow-md sm:w-auto"
+                  >
+                    <Plus className="h-4.5 w-4.5" />
+                    <span className="text-sm font-bold">タスクを追加</span>
+                  </Button>
                 </div>
               </div>
-            </DndContext>
-          )}
 
-          {viewMode === 'gantt' && (
-            <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-              <div className="overflow-x-auto">
-                <div className="min-w-[1280px]">
-                  <div className="grid border-b border-border bg-muted/30" style={{ gridTemplateColumns: '320px repeat(31, 38px)' }}>
-                    <div className="px-4 py-3 text-sm font-medium text-foreground/90">タスク名</div>
-                    {ganttDays.map((day) => (
-                      <div key={day} className="border-l border-border px-1 py-2 text-center text-xs text-muted-foreground">
-                        <div>{new Date(`${day}T00:00:00`).getDate()}</div>
-                        <div className="text-[10px] text-muted-foreground">
-                          {'日月火水木金土'[new Date(`${day}T00:00:00`).getDay()]}
-                        </div>
+              {isFilterOpen && (
+                <div className="mt-3 rounded-xl border border-border/80 bg-muted/40 p-3 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200 md:p-4">
+                  <div className="grid w-full min-w-0 grid-cols-2 gap-3 sm:flex sm:flex-row sm:flex-wrap sm:items-center">
+                    {filters.map((filter) => (
+                      <div
+                        key={filter.id}
+                        className={cn(
+                          "flex w-full min-w-0 flex-wrap items-center gap-2 overflow-hidden rounded-xl border border-border/60 bg-background p-2 shadow-sm animate-in zoom-in-95 duration-200 sm:w-auto sm:flex-nowrap sm:p-1.5",
+                          filter.field === "progress" || filter.field === "date"
+                            ? "col-span-2"
+                            : "col-span-1",
+                        )}
+                      >
+                        <Select
+                          value={filter.field}
+                          onValueChange={(value) =>
+                            updateFilter(filter.id, { field: value, value: "" })
+                          }
+                        >
+                          <SelectTrigger className="order-1 h-8 min-w-[80px] flex-1 truncate border-none bg-muted/30 text-xs font-bold shadow-none sm:w-32 sm:flex-initial">
+                            <SelectValue placeholder="項目" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="status">ステータス</SelectItem>
+                            <SelectItem value="priority">優先度</SelectItem>
+                            <SelectItem value="customer">企業</SelectItem>
+                            <SelectItem value="project">案件</SelectItem>
+                            <SelectItem value="owner">担当者</SelectItem>
+                            <SelectItem value="progress">進捗率</SelectItem>
+                            <SelectItem value="date">期限</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        <div className="order-3 mx-1 hidden h-4 w-px shrink-0 bg-border/60 sm:block" />
+
+                        {filter.field === "status" ? (
+                          <Combobox
+                            options={statusOptions}
+                            value={filter.value}
+                            onValueChange={(value) =>
+                              updateFilter(filter.id, { value })
+                            }
+                            placeholder="ステータスを選択"
+                            className="order-4 h-8 w-full min-w-0 text-xs font-medium sm:order-3 sm:w-48"
+                          />
+                        ) : filter.field === "priority" ? (
+                          <Combobox
+                            options={priorityOptions}
+                            value={filter.value}
+                            onValueChange={(value) =>
+                              updateFilter(filter.id, { value })
+                            }
+                            placeholder="優先度を選択"
+                            className="order-4 h-8 w-full min-w-0 text-xs font-medium sm:order-3 sm:w-48"
+                          />
+                        ) : filter.field === "customer" ? (
+                          <Combobox
+                            options={customerOptions}
+                            value={filter.value}
+                            onValueChange={(value) =>
+                              updateFilter(filter.id, { value })
+                            }
+                            placeholder="企業を選択"
+                            className="order-4 h-8 w-full min-w-0 text-xs font-medium sm:order-3 sm:w-56"
+                          />
+                        ) : filter.field === "project" ? (
+                          <Combobox
+                            options={projectOptions}
+                            value={filter.value}
+                            onValueChange={(value) =>
+                              updateFilter(filter.id, { value })
+                            }
+                            placeholder="案件を選択"
+                            className="order-4 h-8 w-full min-w-0 text-xs font-medium sm:order-3 sm:w-56"
+                          />
+                        ) : filter.field === "owner" ? (
+                          <Combobox
+                            options={ownerOptions}
+                            value={filter.value}
+                            onValueChange={(value) =>
+                              updateFilter(filter.id, { value })
+                            }
+                            placeholder="担当者を選択"
+                            className="order-4 h-8 w-full min-w-0 text-xs font-medium sm:order-3 sm:w-48"
+                          />
+                        ) : filter.field === "date" ? (
+                          <div className="order-4 flex w-full min-w-0 items-center gap-1 sm:order-3 sm:w-auto">
+                            <input
+                              type="date"
+                              value={filter.value.split(",")[0] || ""}
+                              onChange={(event) => {
+                                const parts = filter.value.split(",");
+                                updateFilter(filter.id, {
+                                  value: `${event.target.value},${parts[1] || ""}`,
+                                });
+                              }}
+                              className="h-8 min-w-0 flex-1 rounded-lg border border-border bg-background px-2 text-xs font-medium text-foreground outline-none transition-all focus:ring-2 focus:ring-primary/10 sm:w-32 sm:flex-initial"
+                            />
+                            <span className="shrink-0 text-xs font-bold text-muted-foreground">
+                              -
+                            </span>
+                            <input
+                              type="date"
+                              value={filter.value.split(",")[1] || ""}
+                              onChange={(event) => {
+                                const parts = filter.value.split(",");
+                                updateFilter(filter.id, {
+                                  value: `${parts[0] || ""},${event.target.value}`,
+                                });
+                              }}
+                              className="h-8 min-w-0 flex-1 rounded-lg border border-border bg-background px-2 text-xs font-medium text-foreground outline-none transition-all focus:ring-2 focus:ring-primary/10 sm:w-32 sm:flex-initial"
+                            />
+                          </div>
+                        ) : filter.field === "progress" ? (
+                          <div className="order-4 flex w-full min-w-0 items-center gap-1 sm:order-3 sm:w-auto">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={filter.value.split(",")[0] || ""}
+                              onChange={(event) => {
+                                const parts = filter.value.split(",");
+                                updateFilter(filter.id, {
+                                  value: `${event.target.value},${parts[1] || ""}`,
+                                });
+                              }}
+                              placeholder="下限"
+                              className="h-8 min-w-0 flex-1 rounded-lg border border-border bg-background px-2.5 text-xs font-medium outline-none transition-all focus:ring-2 focus:ring-primary/10 sm:w-24 sm:flex-initial"
+                            />
+                            <span className="shrink-0 text-xs font-bold text-muted-foreground">
+                              -
+                            </span>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={filter.value.split(",")[1] || ""}
+                              onChange={(event) => {
+                                const parts = filter.value.split(",");
+                                updateFilter(filter.id, {
+                                  value: `${parts[0] || ""},${event.target.value}`,
+                                });
+                              }}
+                              placeholder="上限"
+                              className="h-8 min-w-0 flex-1 rounded-lg border border-border bg-background px-2.5 text-xs font-medium outline-none transition-all focus:ring-2 focus:ring-primary/10 sm:w-24 sm:flex-initial"
+                            />
+                          </div>
+                        ) : null}
+
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeFilter(filter.id)}
+                          className="order-2 ml-auto h-8 w-8 shrink-0 rounded-lg text-muted-foreground/30 hover:bg-destructive/5 hover:text-destructive sm:order-4 sm:ml-1"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
                     ))}
+
+                    <div className="col-span-2 flex w-full min-w-0 items-center justify-between gap-3 pt-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={addFilter}
+                        className="h-9 shrink-0 rounded-md border border-dashed border-border px-3 text-xs font-bold text-muted-foreground transition-all hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
+                      >
+                        <Plus className="mr-1.5 h-4 w-4" />
+                        条件追加
+                      </Button>
+
+                      {filters.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setFilters([]);
+                            setIsFilterOpen(false);
+                            setCurrentPage(1);
+                          }}
+                          className="h-9 shrink-0 gap-1.5 px-3 text-xs font-medium text-muted-foreground transition-colors hover:text-destructive"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                          条件クリア
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  {filteredTasks.map((task) => {
-                    const offset = Math.max(0, Math.round((new Date(`${task.startDate}T00:00:00`).getTime() - ganttStartTime) / 86400000))
-                    const width = Math.min(31 - offset, daysBetween(task.startDate, task.endDate))
-                    return (
-                      <div key={task.id} className="grid min-h-16 border-b border-gray-100" style={{ gridTemplateColumns: '320px repeat(31, 38px)' }}>
-                        <div className="px-4 py-3">
-                          <p className="text-sm font-medium text-foreground truncate">{task.title}</p>
-                          <p className="mt-1 text-xs text-muted-foreground">{task.startDate} - {task.endDate}</p>
-                        </div>
-                        <div className="relative grid" style={{ gridColumn: '2 / span 31', gridTemplateColumns: 'repeat(31, 38px)' }}>
-                          {ganttDays.map((day) => (
-                            <div key={day} className="border-l border-gray-100" />
-                          ))}
-                          <div
-                            className={`absolute top-4 h-8 rounded-lg px-3 text-xs font-medium text-white flex items-center overflow-hidden ${ganttBarColor[getStatus(task)]}`}
-                            style={{ left: `${offset * 38 + 6}px`, width: `${Math.max(1, width) * 38 - 12}px` }}
-                          >
-                            <span className="truncate">{task.title}</span>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
                 </div>
+              )}
+            </div>
+          </div>
+
+          {filtered.length === 0 ? (
+            <div className="m-4 flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/50 bg-card py-20 text-muted-foreground md:m-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                <Search className="h-6 w-6 opacity-20" />
               </div>
+              <p className="text-sm font-medium">
+                条件に一致するタスクがありません
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearch("");
+                  setFilters([]);
+                  setCurrentPage(1);
+                }}
+              >
+                すべてのフィルターをクリア
+              </Button>
+            </div>
+          ) : (
+            <div className="mt-4 px-4 pb-6 md:px-6 lg:pb-10">
+              <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <Table className="min-w-[600px] bg-card sm:min-w-[1280px]">
+                    <TableHeader className="bg-muted/40">
+                      <TableRow className="border-b border-border hover:bg-transparent">
+                        <SortableContext
+                          items={columns.map((column) => column.id)}
+                          strategy={horizontalListSortingStrategy}
+                        >
+                          {columns.map((column) => (
+                            <SortableListTableHead
+                              key={column.id}
+                              column={column}
+                              sortKey={sortKey}
+                              sortOrder={sortOrder}
+                              onSort={handleSort}
+                            />
+                          ))}
+                        </SortableContext>
+                        <TableHead className="w-12 px-3 py-3" />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedTasks.map((task) => (
+                        <TableRow
+                          key={task.id}
+                          onClick={() => navigate(`/tasks/${task.id}`)}
+                          className={cn(
+                            "group cursor-pointer border-b border-border/70 bg-card transition-colors duration-200 last:border-b-0 hover:bg-muted/40",
+                            task.isCompleted &&
+                              "bg-muted/30 text-muted-foreground hover:bg-muted/50",
+                          )}
+                        >
+                          {columns.map((column) => {
+                            switch (column.id) {
+                              case "status":
+                                return (
+                                  <TableCell key={column.id} className="px-4 py-3.5">
+                                    <span className={statusTone(task.status)}>
+                                      {statusLabel(task.status)}
+                                    </span>
+                                  </TableCell>
+                                );
+                              case "title":
+                                return (
+                                  <TableCell key={column.id} className="px-4 py-3.5">
+                                    <div className="flex flex-col gap-0.5">
+                                      <span className="max-w-[18rem] truncate text-sm font-bold text-foreground transition-colors group-hover:text-primary">
+                                        {task.title}
+                                      </span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {formatDate(task.dueDate)} 期限
+                                      </span>
+                                    </div>
+                                  </TableCell>
+                                );
+                              case "customer":
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className="px-4 py-3.5 text-xs font-medium text-foreground"
+                                  >
+                                    <span className="block max-w-[14rem] truncate">
+                                      {task.customer}
+                                    </span>
+                                  </TableCell>
+                                );
+                              case "project":
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className="px-4 py-3.5 text-xs font-medium text-muted-foreground"
+                                  >
+                                    <span className="block max-w-[16rem] truncate">
+                                      {task.project}
+                                    </span>
+                                  </TableCell>
+                                );
+                              case "priority":
+                                return (
+                                  <TableCell key={column.id} className="px-4 py-3.5">
+                                    <Badge variant="outline" className={priorityTone(task.priority)}>
+                                      {task.priority}
+                                    </Badge>
+                                  </TableCell>
+                                );
+                              case "owner":
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className="px-4 py-3.5 text-xs font-semibold text-muted-foreground"
+                                  >
+                                    {task.owner}
+                                  </TableCell>
+                                );
+                              case "progress":
+                                return (
+                                  <TableCell key={column.id} className="px-4 py-3.5">
+                                    <select
+                                      value={task.progressPercent}
+                                      onClick={(event) => event.stopPropagation()}
+                                      onChange={(event) =>
+                                        handleProgressChange(
+                                          task.id,
+                                          Number(event.target.value),
+                                        )
+                                      }
+                                      className="h-8 w-24 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
+                                    >
+                                      {progressOptions.map((value) => (
+                                        <option key={value} value={value}>
+                                          {value}%
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </TableCell>
+                                );
+                              case "updated":
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className="px-4 py-3.5 text-xs font-semibold text-muted-foreground"
+                                  >
+                                    {task.progressUpdatedAt
+                                      ? formatDate(task.progressUpdatedAt)
+                                      : "-"}
+                                  </TableCell>
+                                );
+                              case "due_date":
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className={cn(
+                                      "px-4 py-3.5 text-xs font-bold",
+                                      task.status === "overdue"
+                                        ? "text-destructive"
+                                        : "text-foreground",
+                                    )}
+                                  >
+                                    {formatDate(task.dueDate)}
+                                  </TableCell>
+                                );
+                              case "complete":
+                                return (
+                                  <TableCell key={column.id} className="px-4 py-3.5">
+                                    <button
+                                      type="button"
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        updateTask(task.id, {
+                                          is_completed: !task.isCompleted,
+                                          progress_percent: task.isCompleted ? 0 : 100,
+                                        });
+                                      }}
+                                      className={cn(
+                                        "flex h-8 w-8 items-center justify-center rounded-md transition-all",
+                                        task.isCompleted
+                                          ? "bg-emerald-500/10 text-emerald-600"
+                                          : "text-muted-foreground/30 hover:bg-muted hover:text-muted-foreground",
+                                      )}
+                                    >
+                                      <CheckCircle2
+                                        className={cn(
+                                          "h-4 w-4",
+                                          task.isCompleted && "fill-current",
+                                        )}
+                                      />
+                                    </button>
+                                  </TableCell>
+                                );
+                              default:
+                                return null;
+                            }
+                          })}
+                          <TableCell className="px-4 py-3.5 text-right">
+                            <div className="flex items-center justify-end pr-4">
+                              <ChevronRight className="h-5 w-5 -translate-x-2 text-muted-foreground opacity-0 transition-all duration-300 ease-out group-hover:translate-x-0 group-hover:text-primary group-hover:opacity-100" />
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </DndContext>
+              </div>
+
+              <ListPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={filtered.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
             </div>
           )}
         </div>
       </div>
     </AppLayout>
-  )
+  );
 }

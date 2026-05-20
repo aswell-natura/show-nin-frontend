@@ -88,8 +88,8 @@ interface FilterRule {
 const DEFAULT_COLUMNS: ListTableColumn[] = [
   { id: "name", label: "案件名", width: "w-80" },
   { id: "customer", label: "顧客名", width: "w-72" },
-  { id: "status", label: "ステータス", width: "w-36" },
-  { id: "priority", label: "優先度", width: "w-28" },
+  { id: "status", label: "フェーズ", width: "w-36" },
+  { id: "priority", label: "確度", width: "w-28" },
   { id: "amount", label: "金額", width: "w-36" },
   { id: "owner", label: "担当者", width: "w-36" },
   { id: "next_action_date", label: "次回アクション", width: "w-40" },
@@ -135,9 +135,9 @@ const statusOptions = [
 ];
 
 const priorityOptions = [
-  { label: "優先度 高", value: "1" },
-  { label: "優先度 中", value: "2" },
-  { label: "優先度 低", value: "3" },
+  { label: "高", value: "1" },
+  { label: "中", value: "2" },
+  { label: "低", value: "3" },
 ];
 
 const sourceOptions = [
@@ -653,8 +653,8 @@ export default function ProjectList() {
                             <SelectValue placeholder="項目" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="status">ステータス</SelectItem>
-                            <SelectItem value="priority">優先度</SelectItem>
+                            <SelectItem value="status">フェーズ</SelectItem>
+                            <SelectItem value="priority">確度</SelectItem>
                             <SelectItem value="source">登録元</SelectItem>
                             <SelectItem value="link">紐付け状態</SelectItem>
                             <SelectItem value="customer">顧客</SelectItem>
@@ -847,15 +847,15 @@ export default function ProjectList() {
                                         <PopoverContent className="w-56 p-3 bg-background border border-border shadow-md rounded-xl" align="start">
                                           <div className="space-y-3">
                                             <div className="space-y-1">
-                                              <h4 className="font-bold text-xs text-foreground">ステータス変更</h4>
-                                              <p className="text-[11px] text-muted-foreground">案件のステータスを選択してください。</p>
+                                              <h4 className="font-bold text-xs text-foreground">フェーズ変更</h4>
+                                              <p className="text-[11px] text-muted-foreground">案件のフェーズを選択してください。</p>
                                             </div>
                                             <Select
                                               value={project.status}
                                               onValueChange={(val) => updateProject(project.id, { status: val as ProjectStatus })}
                                             >
                                               <SelectTrigger className="h-8 bg-muted/30 border-border/60 text-xs w-full justify-between">
-                                                <SelectValue placeholder="ステータスを選択" />
+                                                <SelectValue placeholder="フェーズを選択" />
                                               </SelectTrigger>
                                               <SelectContent>
                                                 <SelectItem value="lead">
@@ -896,15 +896,15 @@ export default function ProjectList() {
                                         <PopoverContent className="w-56 p-3 bg-background border border-border shadow-md rounded-xl" align="start">
                                           <div className="space-y-3">
                                             <div className="space-y-1">
-                                              <h4 className="font-bold text-xs text-foreground">優先度変更</h4>
-                                              <p className="text-[11px] text-muted-foreground">案件の優先度を選択してください。</p>
+                                              <h4 className="font-bold text-xs text-foreground">確度変更</h4>
+                                              <p className="text-[11px] text-muted-foreground">案件の確度を選択してください。</p>
                                             </div>
                                             <Select
                                               value={String(project.priority)}
                                               onValueChange={(val) => updateProject(project.id, { priority: Number(val) as Project["priority"] })}
                                             >
                                               <SelectTrigger className="h-8 bg-muted/30 border-border/60 text-xs w-full justify-between">
-                                                <SelectValue placeholder="優先度を選択" />
+                                                <SelectValue placeholder="確度を選択" />
                                               </SelectTrigger>
                                               <SelectContent>
                                                 <SelectItem value="1">

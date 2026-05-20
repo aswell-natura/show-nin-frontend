@@ -92,7 +92,7 @@ const DEFAULT_COLUMNS: ListTableColumn[] = [
   { id: "name", label: "顧客名", width: "w-72" },
   { id: "phone", label: "電話番号", width: "w-36" },
   { id: "email", label: "メール", width: "w-48" },
-  { id: "status", label: "ステータス", width: "w-28" },
+  { id: "status", label: "フェーズ", width: "w-28" },
   { id: "labels", label: "ラベル", width: "w-48" },
   { id: "acquisition_source", label: "流入経路", width: "w-36" },
   { id: "amount", label: "案件金額", width: "w-36" },
@@ -612,7 +612,7 @@ export default function CustomerList() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="rank">ランク</SelectItem>
-                            <SelectItem value="status">ステータス</SelectItem>
+                            <SelectItem value="status">フェーズ</SelectItem>
                             <SelectItem value="labels">ラベル</SelectItem>
                             <SelectItem value="industry">業種</SelectItem>
                             <SelectItem value="acquisition_source">
@@ -642,7 +642,7 @@ export default function CustomerList() {
                             onValueChange={(val) =>
                               updateFilter(filter.id, { value: val })
                             }
-                            placeholder="ステータスを選択"
+                            placeholder="フェーズを選択"
                             className="order-4 sm:order-3 w-full sm:w-48 h-8 text-xs font-medium min-w-0"
                           />
                         ) : filter.field === "labels" ? (

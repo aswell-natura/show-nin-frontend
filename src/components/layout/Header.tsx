@@ -14,7 +14,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { SearchBar } from "../ui/search-bar";
 import {
   Settings,
@@ -69,10 +68,6 @@ export default function Header({ onMenuToggle }: HeaderProps) {
   const unreadCount = notifications.filter(
     (n) => n.user_id === currentUser.id && !n.is_read,
   ).length;
-
-  const userNotifications = notifications.filter(
-    (n) => n.user_id === currentUser.id,
-  );
 
   const filteredCustomers =
     searchQuery.length > 0
@@ -216,53 +211,18 @@ export default function Header({ onMenuToggle }: HeaderProps) {
 
         {/* 通知 */}
         <div className="relative flex items-center justify-center">
-          <Popover>
-            <PopoverTrigger asChild>
-              <button
-                className={`relative ${iconSize} flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors outline-none`}
-              >
-                <Bell className="w-5 h-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 w-4 h-4 bg-destructive text-background text-[10px] font-bold rounded-full flex items-center justify-center">
-                    {unreadCount}
-                  </span>
-                )}
-              </button>
-            </PopoverTrigger>
-            <PopoverContent
-              className="w-72 sm:w-80 p-0 overflow-hidden"
-              align="end"
-              sideOffset={10}
-            >
-              <div className="px-4 py-3 border-b border-border">
-                <p className="text-sm font-semibold text-foreground">通知</p>
-              </div>
-              <div className="max-h-72 overflow-y-auto">
-                {userNotifications.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">
-                    通知はありません
-                  </p>
-                ) : (
-                  userNotifications.map((n) => (
-                    <div
-                      key={n.id}
-                      className={`px-4 py-3 border-b border-border hover:bg-muted cursor-pointer ${!n.is_read ? "bg-primary/5" : ""}`}
-                    >
-                      <p className="text-sm font-medium text-foreground">
-                        {n.title}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {n.body}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {new Date(n.created_at).toLocaleDateString("ja-JP")}
-                      </p>
-                    </div>
-                  ))
-                )}
-              </div>
-            </PopoverContent>
-          </Popover>
+          <button
+            onClick={() => navigate("/notifications")}
+            title="通知"
+            className={`relative ${iconSize} flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors outline-none`}
+          >
+            <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 w-4 h-4 bg-destructive text-background text-[10px] font-bold rounded-full flex items-center justify-center">
+                {unreadCount}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* プロフィール */}
@@ -313,9 +273,9 @@ export default function Header({ onMenuToggle }: HeaderProps) {
 
               <DropdownMenuGroup>
                 <DropdownMenuLabel>設定</DropdownMenuLabel>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/settings")}>
                   <Settings className="mr-2 h-4 w-4" />
-                  <span>基本設定 機能選択</span>
+                  <span>基本設定</span>
                 </DropdownMenuItem>
                 {effectiveMode === "manager" && (
                   <DropdownMenuItem>

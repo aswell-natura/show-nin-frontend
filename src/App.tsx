@@ -10,6 +10,7 @@ import CustomerList from './pages/customers'
 import ReportView from './pages/reports/[id]'
 import RecordingWindow from './pages/recording'
 import TaskBoard from './pages/tasks'
+import TaskDetail from './pages/tasks/[id]'
 import ProjectList from './pages/projects'
 import ManagerMembers from './pages/members'
 import BudgetPlanning from './pages/budget'
@@ -42,6 +43,7 @@ function AppRoutes() {
       <Route path="/risks" element={<ProtectedRoute><ManagerRisks /></ProtectedRoute>} />
       <Route path="/reports/:id" element={<ProtectedRoute><ReportView /></ProtectedRoute>} />
       <Route path="/tasks" element={<ProtectedRoute><TaskBoard /></ProtectedRoute>} />
+      <Route path="/tasks/:id" element={<ProtectedRoute><TaskDetail /></ProtectedRoute>} />
       <Route path="/recording" element={<RecordingWindow />} />
       <Route path="/minutes" element={<ProtectedRoute><AudioMinuteList /></ProtectedRoute>} />
       <Route path="/minutes/:id" element={<AudioMinuteDetail />} />

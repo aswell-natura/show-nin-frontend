@@ -16,11 +16,13 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import {
+  Calendar,
   ChevronRight,
   Clock,
   ExternalLink,
   Filter,
   Info,
+  ListChecks,
   Plus,
   RotateCcw,
   Search,
@@ -78,8 +80,9 @@ interface MinuteView {
   startTime: string;
   endTime: string;
   createdAt: string;
-  updatedAt: string;
   summary: string;
+  checklistDone: number;
+  checklistTotal: number;
   isUnlinked: boolean;
 }
 
@@ -95,14 +98,22 @@ const DEFAULT_COLUMNS: ListTableColumn[] = [
   { id: "customer", label: "企業名", width: "w-56" },
   { id: "project", label: "案件名", width: "w-64" },
   { id: "owner", label: "担当者", width: "w-36" },
+  { id: "recording_date", label: "取得日", width: "w-32" },
   { id: "start_time", label: "開始時刻", width: "w-28" },
   { id: "end_time", label: "終了時刻", width: "w-28" },
   { id: "created_at", label: "作成日時", width: "w-40" },
-  { id: "updated_at", label: "最終更新日", width: "w-40" },
 ];
 
 function normalizeSearch(value: string) {
   return value.toLowerCase().replace(/\s+/g, "");
+}
+
+function formatDate(value: string) {
+  return new Date(`${value}T00:00:00`).toLocaleDateString("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
 }
 
 function formatDateTime(value: string) {
@@ -140,10 +151,7 @@ export default function AudioMinuteList() {
   const [search, setSearch] = useState(() => searchParams.get("q") || "");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [sortKey, setSortKey] = useState<string>(
-    () => {
-      const key = searchParams.get("sort");
-      return key && key !== "recording_date" ? key : "updated_at";
-    },
+    () => searchParams.get("sort") || "recording_date",
   );
   const [sortOrder, setSortOrder] = useState<ListSortOrder>(
     () => (searchParams.get("order") as ListSortOrder) || "desc",
@@ -179,7 +187,7 @@ export default function AudioMinuteList() {
   useEffect(() => {
     const params = new URLSearchParams();
     if (search.trim()) params.set("q", search.trim());
-    if (sortKey !== "updated_at") params.set("sort", sortKey);
+    if (sortKey !== "recording_date") params.set("sort", sortKey);
     if (sortOrder !== "desc") params.set("order", sortOrder);
     if (currentPage > 1) params.set("page", currentPage.toString());
     filters.forEach((filter) => {
@@ -205,12 +213,11 @@ export default function AudioMinuteList() {
           ? projects.find((item) => item.id === minute.project_id)
           : null;
         const owner = profiles.find((profile) => profile.id === minute.user_id);
-        const timestamps = minute as AudioMinute & { updated_at?: string };
-        const isUnlinked = !customer || !project;
+        const checklistDone = minute.checklist.filter((item) => item.checked).length;
 
         return {
           id: minute.id,
-          title: minute.title.trim() || "-",
+          title: minute.title,
           customerId: minute.customer_id,
           customer: customer?.name ?? "未紐づけ",
           customerIndustry: customer?.industry?.join("、"),
@@ -222,9 +229,10 @@ export default function AudioMinuteList() {
           startTime: minute.start_time,
           endTime: minute.end_time,
           createdAt: minute.created_at,
-          updatedAt: timestamps.updated_at ?? minute.created_at,
           summary: minute.summary.replace(/\s+/g, " ").slice(0, 160),
-          isUnlinked,
+          checklistDone,
+          checklistTotal: minute.checklist.length,
+          isUnlinked: !customer || !project,
         };
       }),
     [customers, profiles, projects],
@@ -369,13 +377,13 @@ export default function AudioMinuteList() {
         if (sortKey === "customer") return a.customer.localeCompare(b.customer, "ja");
         if (sortKey === "project") return a.project.localeCompare(b.project, "ja");
         if (sortKey === "owner") return a.owner.localeCompare(b.owner, "ja");
+        if (sortKey === "recording_date") {
+          return new Date(a.recordingDate).getTime() - new Date(b.recordingDate).getTime();
+        }
         if (sortKey === "start_time") return a.startTime.localeCompare(b.startTime);
         if (sortKey === "end_time") return a.endTime.localeCompare(b.endTime);
         if (sortKey === "created_at") {
           return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        }
-        if (sortKey === "updated_at") {
-          return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
         }
         return 0;
       })();
@@ -704,6 +712,14 @@ export default function AudioMinuteList() {
                                   <TableCell key={column.id} className="px-4 py-3.5">
                                     <div className="flex min-w-0 flex-col gap-1">
                                       <div className="flex min-w-0 items-center gap-2">
+                                        {minute.isUnlinked && (
+                                          <Badge
+                                            variant="destructive"
+                                            className="border-0 px-2 py-0.5 text-[10px] font-bold"
+                                          >
+                                            未紐づけ
+                                          </Badge>
+                                        )}
                                         <span className="truncate text-sm font-bold text-foreground transition-colors group-hover:text-primary">
                                           {minute.title}
                                         </span>
@@ -759,6 +775,18 @@ export default function AudioMinuteList() {
                                     {minute.owner}
                                   </TableCell>
                                 );
+                              case "recording_date":
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className="px-4 py-3.5 text-xs font-bold text-foreground"
+                                  >
+                                    <span className="inline-flex items-center gap-1.5">
+                                      <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                                      {formatDate(minute.recordingDate)}
+                                    </span>
+                                  </TableCell>
+                                );
                               case "start_time":
                                 return (
                                   <TableCell
@@ -789,15 +817,26 @@ export default function AudioMinuteList() {
                                     </span>
                                   </TableCell>
                                 );
-                              case "updated_at":
+                              case "checklist":
+                                return (
+                                  <TableCell key={column.id} className="px-4 py-3.5">
+                                    <Badge
+                                      variant="outline"
+                                      className="gap-1 border-border px-2 py-0.5 text-[10px] font-bold"
+                                    >
+                                      <ListChecks className="h-3 w-3 text-primary" />
+                                      {minute.checklistDone}/{minute.checklistTotal}
+                                    </Badge>
+                                  </TableCell>
+                                );
+                              case "summary":
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="px-4 py-3.5 text-xs font-semibold text-muted-foreground"
+                                    className="px-4 py-3.5 text-xs text-muted-foreground"
                                   >
-                                    <span className="inline-flex items-center gap-1.5">
-                                      <Clock className="h-3.5 w-3.5" />
-                                      {formatDateTime(minute.updatedAt)}
+                                    <span className="line-clamp-2 max-w-[20rem]">
+                                      {minute.summary}
                                     </span>
                                   </TableCell>
                                 );

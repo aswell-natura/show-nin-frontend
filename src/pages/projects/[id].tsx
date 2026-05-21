@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   PanelRightClose,
   PanelRightOpen,
+  Plus,
   Building,
   User,
   Calendar,
@@ -12,7 +13,6 @@ import {
   Briefcase,
   Mic,
   ChevronRight,
-  ChevronDown,
   CheckSquare,
   ArrowLeft,
   ExternalLink,
@@ -37,12 +37,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-  TooltipProvider,
-} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { mockAudioMinutes } from "../../data/mock";
 import type { ProjectDocument } from "../../types";
@@ -50,6 +44,7 @@ import type { ProjectDocument } from "../../types";
 
 type MobileSection = "activities" | "tasks" | "documents" | "context";
 type CenterTab = "activities" | "tasks" | "documents";
+type DocumentActionMode = "menu" | "upload" | "memo" | null;
 
 const priorityLabel: Record<number, string> = {
   1: "高",
@@ -142,6 +137,7 @@ export default function ProjectDetail() {
   // Document states
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [documentActionMode, setDocumentActionMode] = useState<DocumentActionMode>(null);
 
   const project = allProjects.find((p) => p.id === id);
   const projectMemos = allMemos.filter((m) => m.project_id === id);
@@ -152,7 +148,6 @@ export default function ProjectDetail() {
   const [memoUseForAi, setMemoUseForAi] = useState(false);
   const [isSavingMemo, setIsSavingMemo] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
-  const [activeTool, setActiveTool] = useState<"upload" | "memo">("upload");
 
   const [prevId, setPrevId] = useState(id);
   if (id !== prevId) {
@@ -161,7 +156,7 @@ export default function ProjectDetail() {
     setMemoText("");
     setMemoUseForAi(false);
     setSaveStatus("idle");
-    setActiveTool("upload");
+    setDocumentActionMode(null);
   }
 
   const startEditingMemo = (memoId: string) => {
@@ -171,16 +166,36 @@ export default function ProjectDetail() {
       setMemoText(memo.content);
       setMemoUseForAi(memo.use_for_ai || false);
       setSaveStatus("idle");
-      setActiveTool("memo");
+      setDocumentActionMode("memo");
     }
   };
 
-  const cancelEditingMemo = () => {
+  const startNewMemo = () => {
     setEditingMemoId(null);
     setMemoText("");
     setMemoUseForAi(false);
     setSaveStatus("idle");
-    setActiveTool("upload");
+    setDocumentActionMode("memo");
+  };
+
+  const saveMemo = async () => {
+    if (!project || !memoText.trim()) return;
+    setIsSavingMemo(true);
+    setSaveStatus("saving");
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    if (editingMemoId) {
+      updateProjectMemo(editingMemoId, {
+        content: memoText,
+        use_for_ai: memoUseForAi,
+      });
+    } else {
+      addProjectMemo(project.id, memoText, memoUseForAi);
+      setMemoText("");
+      setMemoUseForAi(false);
+    }
+    setIsSavingMemo(false);
+    setSaveStatus("saved");
   };
 
   // Redirect if not found
@@ -255,7 +270,14 @@ export default function ProjectDetail() {
     },
   ];
 
-  const activeMobileSection = mobileSections.find((section) => section.id === mobileSection) ?? mobileSections[0];
+  const centerSections = mobileSections.filter(
+    (section): section is {
+      id: CenterTab;
+      label: string;
+      count: number;
+      icon: ReactNode;
+    } => section.id !== "context",
+  );
 
   const handleOpenEditProjectDialog = () => {
     const formId = "project-edit-form";
@@ -384,83 +406,173 @@ export default function ProjectDetail() {
     return <FileText className="w-8 h-8 text-blue-500" />;
   };
 
-
-
-  // 2. Center Column Tab Details
-  const ProjectDetailsContent = (
-    <div className="flex flex-col h-full bg-background">
-      {/* Tabs list inside Center column header — desktop only */}
-      <div className="hidden md:flex pt-2 border-b border-border/60 items-end justify-between shrink-0 bg-card/90 backdrop-blur-md sticky top-0 z-10 shadow-2xs transition-all duration-200 px-4 gap-4">
-        <div className="flex items-end gap-1.5 overflow-hidden -mb-px">
-          {(["activities", "tasks", "documents"] as CenterTab[]).map((tab) => {
-            const labelMap = {
-              activities: "活動履歴",
-              tasks: "タスク",
-              documents: "添付ファイル・メモ",
-            };
-            const countMap = {
-              activities: projectMinutes.length + projectActivities.length,
-              tasks: projectTasks.length,
-              documents: projectMemos.length + projectDocuments.length,
-            };
-            const isActive = centerTab === tab;
-            return (
-              <button
-                key={tab}
-                onClick={() => setCenterTab(tab)}
-                className={cn(
-                  "flex items-center justify-center gap-1.5 border-b-2 py-3 px-3 text-xs font-bold tracking-wide transition-colors whitespace-nowrap",
-                  isActive
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <span>{labelMap[tab]}</span>
-                {countMap[tab] > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="min-w-5 h-5 px-1.5 rounded-full flex items-center justify-center text-[10px] font-bold leading-none bg-muted-foreground/15 text-muted-foreground border-0 shadow-none"
-                  >
-                    {countMap[tab]}
-                  </Badge>
-                )}
-              </button>
-            );
-          })}
+  const DocumentUploadContent = (
+    <Card className="border border-primary/25 bg-card p-4 shadow-xs animate-in fade-in slide-in-from-top-2 duration-200">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Upload className="w-3.5 h-3.5 text-primary" />
+          <span className="text-xs font-bold text-foreground">ファイルをアップロード</span>
         </div>
+        <Badge variant="secondary" className="rounded-full border-0 bg-primary/10 px-2 py-0 text-[9px] font-bold text-primary">
+          追加フォーム
+        </Badge>
+      </div>
+      <div
+        onDragEnter={handleDrag}
+        onDragOver={handleDrag}
+        onDragLeave={handleDrag}
+        onDrop={handleDrop}
+        className={cn(
+          "border-2 border-dashed rounded-xl p-5 text-center transition-all duration-300 relative flex flex-col items-center justify-center min-h-[150px]",
+          dragActive
+            ? "border-primary bg-primary/5 scale-[0.99] dark:bg-primary/10"
+            : "border-border bg-muted/10 hover:bg-muted/20 dark:bg-muted/5",
+          uploading && "opacity-75 pointer-events-none"
+        )}
+      >
+        <input
+          type="file"
+          multiple
+          onChange={handleFileChange}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          disabled={uploading}
+          title=""
+          aria-label="ファイルをアップロード"
+        />
+        {uploading ? (
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+            <p className="text-xs font-bold text-primary">ファイルをアップロード中...</p>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-2 select-none pointer-events-none">
+            <div className="p-3 rounded-full bg-primary/10 text-primary dark:bg-primary/20 mb-1">
+              <Upload className="w-6 h-6" />
+            </div>
+            <p className="text-xs font-bold text-foreground">
+              ファイルをドラッグ＆ドロップするか、<br />クリックしてアップロード
+            </p>
+            <p className="text-[10px] text-muted-foreground font-medium">
+              PDF, Word, Excel, PowerPoint, 画像など (模擬保存)
+            </p>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
 
-        {/* Quick action button inside tab header (desktop) */}
-        <div className="shrink-0 pb-2.5 flex items-center">
-          <TooltipProvider delayDuration={200}>
-            {centerTab === "activities" && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => navigate("/recording")}
-                    className="h-8 w-8 px-0 justify-center gap-1.5 shrink-0 shadow-sm rounded-full"
-                  >
-                    <Mic className="w-4 h-4 shrink-0" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent
-                  side="bottom"
-                  align="end"
-                  className="px-3 py-1.5 backdrop-blur-xl bg-background/90 border border-border/60 shadow-xl rounded-xl text-xs font-bold text-foreground/90 animate-in zoom-in-95 duration-200 z-50"
-                >
-                  音声録音を開始
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </TooltipProvider>
+  const DocumentMemoContent = (
+    <Card className="border border-primary/25 bg-card p-4 shadow-xs animate-in fade-in slide-in-from-top-2 duration-200">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <FileText className="w-3.5 h-3.5 text-primary" />
+          <span className="text-xs font-bold text-foreground">
+            {editingMemoId ? "メモを編集" : "メモを追加"}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="rounded-full border-0 bg-primary/10 px-2 py-0 text-[9px] font-bold text-primary">
+            追加フォーム
+          </Badge>
+          {editingMemoId && (
+            <button
+              type="button"
+              onClick={() => startNewMemo()}
+              className="text-[10px] font-bold text-primary hover:underline cursor-pointer"
+            >
+              新規追加に戻る
+            </button>
+          )}
         </div>
       </div>
+      <textarea
+        value={memoText}
+        onChange={(e) => {
+          setMemoText(e.target.value);
+          if (saveStatus === "saved") setSaveStatus("idle");
+        }}
+        placeholder="案件のメモや、AIの学習用知識を入力してください..."
+        className="w-full min-h-[120px] resize-none rounded-lg border border-border bg-background p-3 text-xs text-foreground placeholder:text-muted-foreground/45 focus:outline-none focus:ring-2 focus:ring-primary/20 leading-relaxed font-medium"
+      />
+      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-1.5 select-none">
+          <Brain className={cn(
+            "w-3.5 h-3.5 transition-colors",
+            memoUseForAi ? "text-primary animate-pulse" : "text-muted-foreground/60"
+          )} />
+          <span className="text-[10px] font-bold text-muted-foreground">AIに使う</span>
+          <button
+            type="button"
+            onClick={() => setMemoUseForAi(!memoUseForAi)}
+            className={cn(
+              "relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+              memoUseForAi ? "bg-primary" : "bg-muted-foreground/30"
+            )}
+          >
+            <span
+              className={cn(
+                "pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out",
+                memoUseForAi ? "translate-x-3" : "translate-x-0"
+              )}
+            />
+          </button>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end">
+          <span className="text-[9px] text-muted-foreground/60 font-semibold">
+            {memoText.length}/2000 文字
+          </span>
+          {saveStatus === "saved" && (
+            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5 animate-in fade-in duration-200">
+              <Check className="w-3 h-3" /> 保存しました
+            </span>
+          )}
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={saveMemo}
+            disabled={isSavingMemo || !memoText.trim()}
+            className="h-7 px-3 font-bold text-[10px] gap-1 shadow-2xs"
+          >
+            {isSavingMemo ? (
+              <>
+                <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                <span>保存中...</span>
+              </>
+            ) : (
+              <span>{editingMemoId ? "保存" : "追加"}</span>
+            )}
+          </Button>
+        </div>
+      </div>
+    </Card>
+  );
 
+
+
+  // 2. Center Column Details
+  const ProjectDetailsContent = (
+    <div className="flex flex-col h-full bg-background">
       <div className="flex-1 overflow-y-auto p-4 md:p-6">
         {/* Activities and AudioMinutes Tab */}
         {centerTab === "activities" && (
           <div className="flex flex-col gap-4 animate-in fade-in duration-200">
+            <div className="hidden md:flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-base font-bold text-foreground">活動履歴</h2>
+                <p className="text-xs font-medium text-muted-foreground">
+                  議事録と案件活動を時系列で確認します
+                </p>
+              </div>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => navigate("/recording")}
+                className="gap-1.5 font-bold shadow-sm"
+              >
+                <Mic className="w-4 h-4" />
+                <span>音声録音</span>
+              </Button>
+            </div>
             {/* Mobile recording CTA row */}
             <Button
               variant="primary"
@@ -581,18 +693,14 @@ export default function ProjectDetail() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1 flex items-center gap-2.5">
-                      <input
-                        type="checkbox"
-                        checked={task.is_completed}
-                        onChange={() => {
-                          updateTask(task.id, {
-                            is_completed: !task.is_completed,
-                            progress_percent: !task.is_completed ? 100 : 0
-                          });
-                        }}
-                        className="h-4 w-4 rounded border-border text-primary focus:ring-primary/20 cursor-pointer accent-primary"
-                        aria-label="タスクの完了状態を切り替え"
-                      />
+                      <span className={cn(
+                        "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border text-[10px] font-bold",
+                        task.is_completed
+                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600"
+                          : "border-primary/20 bg-primary/10 text-primary",
+                      )}>
+                        {task.progress_percent ?? (task.is_completed ? 100 : 0)}%
+                      </span>
                       <p className={cn(
                         "text-sm font-bold text-foreground leading-tight truncate",
                         task.is_completed && "line-through text-muted-foreground"
@@ -611,23 +719,50 @@ export default function ProjectDetail() {
                   </div>
 
 
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {isOverdue && (
-                      <Badge variant="destructive" className="text-[9px] font-bold px-1.5 py-0.2 rounded border-0">
-                        期限切れ
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="h-2 min-w-0 flex-1 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-[width] duration-200",
+                            task.is_completed ? "bg-emerald-500" : "bg-primary",
+                          )}
+                          style={{ width: `${task.progress_percent ?? (task.is_completed ? 100 : 0)}%` }}
+                        />
+                      </div>
+                      <select
+                        value={task.progress_percent ?? (task.is_completed ? 100 : 0)}
+                        onChange={(e) => {
+                          const progress = Number(e.target.value);
+                          updateTask(task.id, {
+                            progress_percent: progress,
+                            is_completed: progress === 100,
+                          });
+                        }}
+                        className="h-8 rounded-md border border-border bg-background px-2 text-xs font-bold text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        aria-label={`${task.title} の進捗率`}
+                      >
+                        {Array.from({ length: 11 }, (_, index) => index * 10).map((progress) => (
+                          <option key={progress} value={progress}>
+                            {progress}%
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {isOverdue && (
+                        <Badge variant="destructive" className="text-[9px] font-bold px-1.5 py-0.2 rounded border-0">
+                          期限切れ
+                        </Badge>
+                      )}
+                      <Badge variant="secondary" className={cn(
+                        "text-[9px] font-bold px-1.5 py-0.2 rounded border-0",
+                        task.is_completed ? "bg-emerald-500/10 text-emerald-600" : "bg-blue-500/10 text-blue-600"
+                      )}>
+                        {task.is_completed ? "完了" : "進行中"}
                       </Badge>
-                    )}
-                    <Badge variant="secondary" className={cn(
-                      "text-[9px] font-bold px-1.5 py-0.2 rounded border-0",
-                      task.is_completed ? "bg-emerald-500/10 text-emerald-600" : "bg-blue-500/10 text-blue-600"
-                    )}>
-                      {task.is_completed ? "完了" : "進行中"}
-                    </Badge>
-                    {task.progress_percent !== undefined && (
-                      <Badge variant="outline" className="text-[9px] font-medium border-border px-1.5 py-0.2">
-                        進捗 {task.progress_percent}%
-                      </Badge>
-                    )}
+                    </div>
                   </div>
                 </Card>
               );
@@ -649,16 +784,65 @@ export default function ProjectDetail() {
 
         {/* Documents Tab (The Document Upload Section!) */}
         {centerTab === "documents" && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in duration-200">
-            {/* Left Section: Attachments & AI Sources */}
-            <div className="lg:col-span-7 flex flex-col gap-6">
-              {/* AI Sources & Uploaded Files List */}
-              <div className="flex flex-col gap-3">
-                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+          <div className="flex flex-col gap-4 animate-in fade-in duration-200">
+            <div className="relative flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-base font-bold text-foreground">添付ファイル・メモ</h2>
+                <p className="text-xs font-medium text-muted-foreground">
                   AI学習データ・添付ファイル一覧 ({projectMemos.length + projectDocuments.length})
-                </h4>
+                </p>
+              </div>
+              <div className="relative shrink-0">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  type="button"
+                  onClick={() => setDocumentActionMode((mode) => mode === "menu" ? null : "menu")}
+                  className={cn(
+                    "h-9 w-9 rounded-full px-0 shadow-sm transition-all",
+                    documentActionMode && "ring-2 ring-primary/20 ring-offset-2 ring-offset-background"
+                  )}
+                  title="添付ファイル・メモを追加"
+                  aria-label="添付ファイル・メモを追加"
+                  aria-expanded={documentActionMode === "menu"}
+                >
+                  <Plus className={cn(
+                    "w-4 h-4 transition-transform duration-200",
+                    documentActionMode && "rotate-45"
+                  )} />
+                </Button>
+                {documentActionMode === "menu" && (
+                  <div
+                    className="absolute right-0 top-full z-30 mt-2 w-56 overflow-hidden rounded-lg border border-border bg-background shadow-lg animate-in fade-in slide-in-from-top-1 duration-150"
+                    role="menu"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setDocumentActionMode("upload")}
+                      className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-xs font-bold text-foreground transition-colors hover:bg-muted"
+                      role="menuitem"
+                    >
+                      <Upload className="w-4 h-4 text-primary" />
+                      <span>ファイルをアップロード</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={startNewMemo}
+                      className="flex w-full items-center gap-2 border-t border-border/60 px-3 py-2.5 text-left text-xs font-bold text-foreground transition-colors hover:bg-muted"
+                      role="menuitem"
+                    >
+                      <FileText className="w-4 h-4 text-primary" />
+                      <span>新しいメモを書く</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {documentActionMode === "upload" && DocumentUploadContent}
+            {documentActionMode === "memo" && DocumentMemoContent}
                 
-                <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col gap-2.5">
                   {/* Memo Items */}
                   {projectMemos.map((memo) => {
                     const uploader = profiles.find((p) => p.id === memo.created_by);
@@ -833,355 +1017,19 @@ export default function ProjectDetail() {
                       </Card>
                     );
                   })}
-                </div>
-              </div>
-            </div>
 
-            {/* Right Section: Add Content Tool Panel */}
-            <div className="lg:col-span-5">
-              {/* Desktop: tabbed upload/memo panel */}
-              <Card className="border border-border bg-card rounded-2xl shadow-xs hidden lg:flex flex-col lg:sticky lg:top-4 overflow-hidden animate-in fade-in duration-200">
-                {/* Tab Selector (desktop only) */}
-                <div className="flex border-b border-border/40 bg-muted/20">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveTool("upload");
-                      cancelEditingMemo();
-                    }}
-                    className={cn(
-                      "flex-1 py-3 text-xs font-bold text-center border-b-2 transition-colors cursor-pointer",
-                      activeTool === "upload"
-                        ? "border-primary text-primary"
-                        : "border-transparent text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    ファイルをアップロード
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTool("memo")}
-                    className={cn(
-                      "flex-1 py-3 text-xs font-bold text-center border-b-2 transition-colors cursor-pointer",
-                      activeTool === "memo"
-                        ? "border-primary text-primary"
-                        : "border-transparent text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    {editingMemoId ? "メモを編集" : "メモを追加"}
-                  </button>
-                </div>
-
-                <div className="p-4">
-                  {activeTool === "upload" ? (
-                    /* Drag & Drop Upload Zone */
-                    <div
-                      onDragEnter={handleDrag}
-                      onDragOver={handleDrag}
-                      onDragLeave={handleDrag}
-                      onDrop={handleDrop}
-                      className={cn(
-                        "border-2 border-dashed rounded-xl p-6 text-center transition-all duration-300 relative flex flex-col items-center justify-center min-h-[220px]",
-                        dragActive
-                          ? "border-primary bg-primary/5 scale-[0.99] dark:bg-primary/10"
-                          : "border-border bg-muted/10 hover:bg-muted/20 dark:bg-muted/5",
-                        uploading && "opacity-75 pointer-events-none"
-                      )}
-                    >
-                      <input
-                        type="file"
-                        multiple
-                        onChange={handleFileChange}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        disabled={uploading}
-                        title=""
-                        aria-label="ファイルをアップロード"
-                      />
-                      {uploading ? (
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-                          <p className="text-xs font-bold text-primary">ファイルをアップロード中...</p>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center gap-2 select-none pointer-events-none">
-                          <div className="p-3 rounded-full bg-primary/10 text-primary dark:bg-primary/20 mb-1">
-                            <Upload className="w-6 h-6" />
-                          </div>
-                          <p className="text-xs font-bold text-foreground">
-                            ファイルをドラッグ＆ドロップするか、<br/>クリックしてアップロード
-                          </p>
-                          <p className="text-[10px] text-muted-foreground font-medium">
-                            PDF, Word, Excel, PowerPoint, 画像など (模擬保存)
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    /* Minimalist Memo Editor */
-                    <div className="flex flex-col gap-3.5 animate-in fade-in duration-200">
-                      {/* Quiet title row if editing */}
-                      {editingMemoId && (
-                        <div className="flex items-center justify-between border-b border-border/40 pb-2">
-                          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                            編集中のメモ
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              cancelEditingMemo();
-                              setActiveTool("upload");
-                            }}
-                            className="text-[10px] font-bold text-primary hover:underline cursor-pointer"
-                          >
-                            新規追加に戻る
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Seamless, borderless textarea */}
-                      <div className="relative">
-                        <textarea
-                          value={memoText}
-                          onChange={(e) => {
-                            setMemoText(e.target.value);
-                            if (saveStatus === "saved") setSaveStatus("idle");
-                          }}
-                          placeholder="案件のメモや、AIの学習用知識を入力してください..."
-                          className="w-full min-h-[180px] resize-none bg-transparent text-xs text-foreground placeholder:text-muted-foreground/45 focus:outline-none focus:ring-0 leading-relaxed font-medium"
-                        />
-                      </div>
-
-                      {/* Footer with AI toggle on the left, buttons/meta on the right */}
-                      <div className="flex items-center justify-between pt-2.5 border-t border-border/40">
-                        {/* AI toggle */}
-                        <div className="flex items-center gap-1.5 select-none">
-                          <Brain className={cn(
-                            "w-3.5 h-3.5 transition-colors",
-                            memoUseForAi ? "text-primary animate-pulse" : "text-muted-foreground/60"
-                          )} />
-                          <span className="text-[10px] font-bold text-muted-foreground">AIに使う</span>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const nextVal = !memoUseForAi;
-                              setMemoUseForAi(nextVal);
-                            }}
-                            className={cn(
-                              "relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
-                              memoUseForAi ? "bg-primary" : "bg-muted-foreground/30"
-                            )}
-                          >
-                            <span
-                              className={cn(
-                                "pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out",
-                                memoUseForAi ? "translate-x-3" : "translate-x-0"
-                              )}
-                            />
-                          </button>
-                        </div>
-
-                        {/* Actions & Status */}
-                        <div className="flex items-center gap-3">
-                          <span className="text-[9px] text-muted-foreground/60 font-semibold">
-                            {memoText.length}/2000 文字
-                          </span>
-
-                          {saveStatus === "saved" && (
-                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5 animate-in fade-in duration-200">
-                              <Check className="w-3 h-3" /> 保存しました
-                            </span>
-                          )}
-
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={async () => {
-                              if (!memoText.trim()) return;
-                              setIsSavingMemo(true);
-                              setSaveStatus("saving");
-                              await new Promise((resolve) => setTimeout(resolve, 600));
-                              
-                              if (editingMemoId) {
-                                updateProjectMemo(editingMemoId, {
-                                  content: memoText,
-                                  use_for_ai: memoUseForAi,
-                                });
-                              } else {
-                                addProjectMemo(project.id, memoText, memoUseForAi);
-                                setMemoText("");
-                                setMemoUseForAi(false);
-                              }
-                              setIsSavingMemo(false);
-                              setSaveStatus("saved");
-                            }}
-                            disabled={isSavingMemo || !memoText.trim()}
-                            className="h-7 px-3 font-bold text-[10px] gap-1 shadow-2xs"
-                          >
-                            {isSavingMemo ? (
-                              <>
-                                <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                                <span>保存中...</span>
-                              </>
-                            ) : (
-                              <span>{editingMemoId ? "保存" : "追加"}</span>
-                            )}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+                  {projectMemos.length === 0 && projectDocuments.length === 0 && (
+                    <Card className="p-8 border border-dashed border-border rounded-xl text-center bg-card/50 shadow-none py-12">
+                      <FileText className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-40" />
+                      <p className="text-sm font-bold text-foreground/70 mb-1">
+                        添付ファイル・メモはありません
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        右上の追加ボタンからファイルまたはメモを登録できます。
+                      </p>
+                    </Card>
                   )}
                 </div>
-              </Card>
-
-              {/* Mobile: stacked upload + memo (no inner tabs) */}
-              <div className="flex lg:hidden flex-col gap-4 animate-in fade-in duration-200">
-                {/* Upload Zone */}
-                <Card className="border border-border bg-card rounded-2xl shadow-xs overflow-hidden">
-                  <div className="flex items-center gap-2 px-4 pt-3.5 pb-2.5 border-b border-border/40 bg-muted/20">
-                    <Upload className="w-3.5 h-3.5 text-muted-foreground" />
-                    <span className="text-xs font-bold text-muted-foreground">ファイルをアップロード</span>
-                  </div>
-                  <div className="p-4">
-                    <div
-                      onDragEnter={handleDrag}
-                      onDragOver={handleDrag}
-                      onDragLeave={handleDrag}
-                      onDrop={handleDrop}
-                      className={cn(
-                        "border-2 border-dashed rounded-xl p-5 text-center transition-all duration-300 relative flex flex-col items-center justify-center min-h-[160px]",
-                        dragActive
-                          ? "border-primary bg-primary/5 scale-[0.99] dark:bg-primary/10"
-                          : "border-border bg-muted/10 hover:bg-muted/20 dark:bg-muted/5",
-                        uploading && "opacity-75 pointer-events-none"
-                      )}
-                    >
-                      <input
-                        type="file"
-                        multiple
-                        onChange={handleFileChange}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        disabled={uploading}
-                        title=""
-                        aria-label="ファイルをアップロード"
-                      />
-                      {uploading ? (
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-                          <p className="text-xs font-bold text-primary">ファイルをアップロード中...</p>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center gap-2 select-none pointer-events-none">
-                          <div className="p-3 rounded-full bg-primary/10 text-primary dark:bg-primary/20 mb-1">
-                            <Upload className="w-6 h-6" />
-                          </div>
-                          <p className="text-xs font-bold text-foreground">
-                            ファイルをドラッグ＆ドロップするか、<br/>クリックしてアップロード
-                          </p>
-                          <p className="text-[10px] text-muted-foreground font-medium">
-                            PDF, Word, Excel, PowerPoint, 画像など (模擬保存)
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Memo Editor */}
-                <Card className="border border-border bg-card rounded-2xl shadow-xs overflow-hidden">
-                  <div className="flex items-center justify-between px-4 pt-3.5 pb-2.5 border-b border-border/40 bg-muted/20">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-3.5 h-3.5 text-muted-foreground" />
-                      <span className="text-xs font-bold text-muted-foreground">
-                        {editingMemoId ? "メモを編集" : "メモを追加"}
-                      </span>
-                    </div>
-                    {editingMemoId && (
-                      <button
-                        type="button"
-                        onClick={() => { cancelEditingMemo(); }}
-                        className="text-[10px] font-bold text-primary hover:underline cursor-pointer"
-                      >
-                        新規追加に戻る
-                      </button>
-                    )}
-                  </div>
-                  <div className="p-4 flex flex-col gap-3.5">
-                    <div className="relative">
-                      <textarea
-                        value={memoText}
-                        onChange={(e) => {
-                          setMemoText(e.target.value);
-                          if (saveStatus === "saved") setSaveStatus("idle");
-                        }}
-                        placeholder="案件のメモや、AIの学習用知識を入力してください..."
-                        className="w-full min-h-[120px] resize-none bg-transparent text-xs text-foreground placeholder:text-muted-foreground/45 focus:outline-none focus:ring-0 leading-relaxed font-medium"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-3 pt-2.5 border-t border-border/40 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="flex items-center gap-1.5 select-none">
-                        <Brain className={cn(
-                          "w-3.5 h-3.5 transition-colors",
-                          memoUseForAi ? "text-primary animate-pulse" : "text-muted-foreground/60"
-                        )} />
-                        <span className="text-[10px] font-bold text-muted-foreground">AIに使う</span>
-                        <button
-                          type="button"
-                          onClick={() => setMemoUseForAi(!memoUseForAi)}
-                          className={cn(
-                            "relative inline-flex h-4 w-7 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
-                            memoUseForAi ? "bg-primary" : "bg-muted-foreground/30"
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out",
-                              memoUseForAi ? "translate-x-3" : "translate-x-0"
-                            )}
-                          />
-                        </button>
-                      </div>
-                      <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end">
-                        <span className="text-[9px] text-muted-foreground/60 font-semibold">
-                          {memoText.length}/2000 文字
-                        </span>
-                        {saveStatus === "saved" && (
-                          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5 animate-in fade-in duration-200">
-                            <Check className="w-3 h-3" /> 保存しました
-                          </span>
-                        )}
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          onClick={async () => {
-                            if (!memoText.trim()) return;
-                            setIsSavingMemo(true);
-                            setSaveStatus("saving");
-                            await new Promise((resolve) => setTimeout(resolve, 600));
-                            if (editingMemoId) {
-                              updateProjectMemo(editingMemoId, { content: memoText, use_for_ai: memoUseForAi });
-                            } else {
-                              addProjectMemo(project.id, memoText, memoUseForAi);
-                              setMemoText("");
-                              setMemoUseForAi(false);
-                            }
-                            setIsSavingMemo(false);
-                            setSaveStatus("saved");
-                          }}
-                          disabled={isSavingMemo || !memoText.trim()}
-                          className="h-7 px-3 font-bold text-[10px] gap-1 shadow-2xs"
-                        >
-                          {isSavingMemo ? (
-                            <><Loader2 className="w-2.5 h-2.5 animate-spin" /><span>保存中...</span></>
-                          ) : (
-                            <span>{editingMemoId ? "保存" : "追加"}</span>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-            </div>
           </div>
         )}
       </div>
@@ -1419,39 +1267,41 @@ export default function ProjectDetail() {
 
         {/* Mobile Section Switcher */}
         <div className="md:hidden border-b border-border bg-card px-4 py-3 shrink-0 z-10">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            表示
-          </label>
-          <div className="mt-1.5 flex items-center gap-2">
-            <div className="relative flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 shadow-2xs">
-              <span className="shrink-0 text-primary">{activeMobileSection.icon}</span>
-              <select
-                value={mobileSection}
-                onChange={(e) => {
-                  const nextSection = e.target.value as MobileSection;
-                  setMobileSection(nextSection);
-                  if (nextSection !== "context") setCenterTab(nextSection as CenterTab);
-                }}
-                className="min-w-0 flex-1 appearance-none bg-transparent pr-7 text-sm font-bold text-foreground outline-none"
-                aria-label="表示セクション"
-              >
-                {mobileSections.map((section) => (
-                  <option key={section.id} value={section.id}>
-                    {section.label}
-                    {section.count > 0 ? ` (${section.count})` : ""}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 h-4 w-4 text-muted-foreground" />
-            </div>
-            {activeMobileSection.count > 0 && (
-              <Badge
-                variant="secondary"
-                className="h-9 min-w-9 rounded-lg px-2 text-xs font-bold shadow-none"
-              >
-                {activeMobileSection.count}
-              </Badge>
-            )}
+          <div className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            <Briefcase className="w-3.5 h-3.5 text-primary" />
+            <span>案件メニュー</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {mobileSections.map((section) => {
+              const isActive = mobileSection === section.id;
+              return (
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => {
+                    setMobileSection(section.id);
+                    if (section.id !== "context") setCenterTab(section.id as CenterTab);
+                  }}
+                  className={cn(
+                    "flex min-w-0 items-center gap-2 rounded-lg border px-3 py-2 text-left transition-colors",
+                    isActive
+                      ? "border-primary/30 bg-primary/10 text-primary"
+                      : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  <span className="shrink-0">{section.icon}</span>
+                  <span className="min-w-0 flex-1 truncate text-xs font-bold">{section.label}</span>
+                  {section.count > 0 && (
+                    <span className={cn(
+                      "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold leading-none",
+                      isActive ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
+                    )}>
+                      {section.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -1461,8 +1311,51 @@ export default function ProjectDetail() {
           {mobileSection === "context" && renderProfileContent(null)}
         </div>
 
-        {/* Desktop View 2-Column Layout */}
+        {/* Desktop View 3-Column Layout */}
         <div className="hidden md:flex flex-1 overflow-hidden bg-muted/10 dark:bg-background">
+          {/* Left Navigation Column */}
+          <aside className="w-56 shrink-0 border-r border-border bg-card p-3">
+            <div className="mb-3 flex items-center gap-1.5 px-2">
+              <Briefcase className="w-3.5 h-3.5 text-primary" />
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                案件メニュー
+              </span>
+            </div>
+            <nav className="flex flex-col gap-1.5">
+              {centerSections.map((section) => {
+                const isActive = centerTab === section.id;
+                return (
+                  <button
+                    key={section.id}
+                    type="button"
+                    onClick={() => setCenterTab(section.id)}
+                    className={cn(
+                      "flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-xs font-bold transition-colors",
+                      isActive
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    )}
+                  >
+                    <span className={cn("shrink-0", isActive ? "text-primary" : "text-muted-foreground")}>
+                      {section.icon}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate">{section.label}</span>
+                    {section.count > 0 && (
+                      <span
+                        className={cn(
+                          "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold leading-none",
+                          isActive ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
+                        )}
+                      >
+                        {section.count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+          </aside>
+
           {/* Main Column */}
           <div className="min-w-0 flex-1 overflow-y-auto bg-background">
             {ProjectDetailsContent}

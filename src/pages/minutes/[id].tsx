@@ -115,18 +115,20 @@ function EntityPill({
   label,
   value,
   warning = false,
+  className = '',
 }: {
   icon: ReactNode
   label: string
   value: string
   warning?: boolean
+  className?: string
 }) {
   return (
-    <div className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${warning ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-gray-50'}`}>
+    <div className={`flex min-w-0 items-center gap-2 rounded-lg border px-3 py-2 ${warning ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-gray-50'} ${className}`}>
       <span className={warning ? 'text-amber-400' : 'text-gray-400'}>{icon}</span>
-      <div>
+      <div className="min-w-0">
         <p className={`text-xs ${warning ? 'text-amber-500' : 'text-gray-400'}`}>{label}</p>
-        <p className={`text-sm font-medium ${warning ? 'text-amber-700' : 'text-gray-800'}`}>{value}</p>
+        <p className={`truncate text-sm font-medium ${warning ? 'text-amber-700' : 'text-gray-800'}`}>{value}</p>
       </div>
     </div>
   )
@@ -512,10 +514,20 @@ export default function AudioMinuteDetail() {
                 variant="primary"
                 size="sm"
                 onClick={() => {
+                  const editPath = `/minutes/${minute.id}/documents/${document.id}/edit?type=${encodeURIComponent(document.templateTitle)}&date=${encodeURIComponent(document.generatedDate)}`
                   closeDialog()
-                  navigate(
-                    `/minutes/${minute.id}/documents/${document.id}/edit?type=${encodeURIComponent(document.templateTitle)}&date=${encodeURIComponent(document.generatedDate)}`,
-                  )
+                  if (window.opener && !window.opener.closed) {
+                    try {
+                      window.opener.history.pushState(null, '', editPath)
+                      window.opener.dispatchEvent(new PopStateEvent('popstate'))
+                      window.opener.focus()
+                    } catch {
+                      window.opener.location.href = `${window.location.origin}${editPath}`
+                      window.opener.focus()
+                    }
+                  } else {
+                    navigate(editPath)
+                  }
                 }}
               >
                 編集
@@ -605,14 +617,29 @@ export default function AudioMinuteDetail() {
           <button
             type="button"
             onClick={handleOpenEditDialog}
-            className="ml-auto h-8 rounded-lg border border-gray-200 bg-white px-3 text-xs font-bold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+            className="ml-auto hidden h-8 rounded-lg border border-gray-200 bg-white px-3 text-xs font-bold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 sm:inline-flex sm:items-center"
           >
             編集
           </button>
         </div>
 
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex flex-wrap gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1 text-sm text-gray-700 sm:hidden">
+            <p>
+              <span className="font-bold text-gray-500">顧客名：</span>
+              <span className="font-medium">{customer?.name ?? '未紐づけ'}</span>
+            </p>
+            <p>
+              <span className="font-bold text-gray-500">案件：</span>
+              <span className="font-medium">{project?.name ?? '未紐づけ'}</span>
+            </p>
+            <p>
+              <span className="font-bold text-gray-500">担当：</span>
+              <span className="font-medium">{owner?.name ?? '未担当'}</span>
+            </p>
+          </div>
+
+          <div className="hidden flex-wrap gap-3 sm:flex">
             <EntityPill
               icon={
                 <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
@@ -647,7 +674,24 @@ export default function AudioMinuteDetail() {
             )}
           </div>
 
-          <div className="ml-auto flex shrink-0 items-center gap-2">
+          <div className="flex items-center gap-2 sm:hidden">
+            <button
+              type="button"
+              onClick={handleOpenEditDialog}
+              className="h-9 flex-1 rounded-lg border border-gray-200 bg-white px-3 text-xs font-bold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+            >
+              編集
+            </button>
+            <button
+              type="button"
+              onClick={handleOpenDocumentDialog}
+              className="h-9 flex-1 rounded-lg bg-blue-600 px-3 text-xs font-bold text-white shadow-sm transition-colors hover:bg-blue-700"
+            >
+              ドキュメント生成
+            </button>
+          </div>
+
+          <div className="ml-auto hidden shrink-0 items-center gap-2 sm:flex">
             <button
               onClick={handleOpenDocumentDialog}
               className="h-9 rounded-lg bg-blue-600 px-3 text-xs font-bold text-white shadow-sm transition-colors hover:bg-blue-700"

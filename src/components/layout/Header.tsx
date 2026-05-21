@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useLayoutConfig } from "../../context/LayoutConfigContext";
 import { useDataStore } from "../../context/DataStoreContext";
@@ -42,6 +42,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
   const { playerConfig, managerConfig, openSettingsPanel } = useLayoutConfig();
   const { notifications, customers, resetToDefaults } = useDataStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
 
   if (!currentUser) return null;
@@ -212,7 +213,13 @@ export default function Header({ onMenuToggle }: HeaderProps) {
         {/* 通知 */}
         <div className="relative flex items-center justify-center">
           <button
-            onClick={() => navigate("/notifications")}
+            onClick={() => {
+              if (location.pathname === "/notifications") {
+                navigate(-1);
+              } else {
+                navigate("/notifications");
+              }
+            }}
             title="通知"
             className={`relative ${iconSize} flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition-colors outline-none`}
           >

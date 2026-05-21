@@ -90,10 +90,10 @@ export default function NotificationsPage() {
           ...notification,
           type: getNotificationType(notification.title, notification.body),
         }))
-        .sort(
-          (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-        ),
+        .sort((a, b) => {
+          if (a.is_read !== b.is_read) return a.is_read ? 1 : -1;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        }),
     [currentUser?.id, notifications],
   );
 
@@ -193,6 +193,11 @@ export default function NotificationsPage() {
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
+                          {!notification.is_read && (
+                            <Badge className="border-0 bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground">
+                              新規通知
+                            </Badge>
+                          )}
                           <h2 className="text-sm font-bold text-foreground">
                             {notification.title}
                           </h2>

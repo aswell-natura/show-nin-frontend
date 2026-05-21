@@ -370,7 +370,7 @@ export default function TaskDetail() {
       <div className="border-b border-border/60 bg-card/80 px-4 py-4 backdrop-blur-md">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-sm font-bold text-foreground">関連タスク</h2>
+            <h2 className="text-sm font-bold text-foreground">タスク一覧</h2>
             <p className="mt-1 text-xs text-muted-foreground">
               同じ企業または案件に紐づくタスク
             </p>

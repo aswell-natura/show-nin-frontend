@@ -583,7 +583,10 @@ export default function CustomerList() {
                     variant="primary"
                     size="md"
                     onClick={handleOpenAddCustomerDialog}
-                    className="gap-2 shadow-md h-10 px-4 shrink-0 w-full sm:w-auto justify-center"
+                    className={cn(
+                      "gap-2 shadow-md h-10 px-4 shrink-0 w-full sm:w-auto justify-center",
+                      isFilterOpen && "hidden sm:inline-flex",
+                    )}
                   >
                     <Plus className="w-4.5 h-4.5" />
                     <span className="text-sm font-bold">顧客を登録</span>
@@ -593,8 +596,9 @@ export default function CustomerList() {
 
               {/* 詳細フィルターエリア (スティッキー内) */}
               {isFilterOpen && (
-                <div className="p-3 md:p-4 bg-muted/40 border border-border/80 rounded-xl animate-in fade-in slide-in-from-top-2 duration-200 shadow-sm mt-3">
-                  <div className="grid grid-cols-2 sm:flex sm:flex-row sm:flex-wrap sm:items-center gap-3 w-full min-w-0">
+                <>
+                  <div className="p-3 md:p-4 bg-muted/40 border border-border/80 rounded-xl animate-in fade-in slide-in-from-top-2 duration-200 shadow-sm mt-3">
+                    <div className="grid grid-cols-2 sm:flex sm:flex-row sm:flex-wrap sm:items-center gap-3 w-full min-w-0">
                     {filters.map((filter) => (
                       <div
                         key={filter.id}
@@ -801,8 +805,18 @@ export default function CustomerList() {
                         </Button>
                       )}
                     </div>
+                    </div>
                   </div>
-                </div>
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={handleOpenAddCustomerDialog}
+                    className="mt-3 h-10 w-full justify-center gap-2 px-4 shadow-md sm:hidden"
+                  >
+                    <Plus className="w-4.5 h-4.5" />
+                    <span className="text-sm font-bold">鬘ｧ螳｢繧定ｿｽ蜉</span>
+                  </Button>
+                </>
               )}
             </div>
           </div>

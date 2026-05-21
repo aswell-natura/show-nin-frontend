@@ -38,6 +38,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   ListPagination,
   SortableListTableHead,
   type ListSortOrder,
@@ -82,6 +87,7 @@ interface MinuteView {
   endTime: string;
   createdAt: string;
   updatedAt: string;
+  generatedDocuments: GeneratedDocumentView[];
   summary: string;
   checklistDone: number;
   checklistTotal: number;
@@ -93,6 +99,12 @@ interface FilterRule {
   field: string;
   operator: string;
   value: string;
+}
+
+interface GeneratedDocumentView {
+  id: string;
+  type: string;
+  generatedDate: string;
 }
 
 interface FileAnalysisFormValues {
@@ -108,6 +120,7 @@ const DEFAULT_COLUMNS: ListTableColumn[] = [
   { id: "customer", label: "企業名", width: "w-56" },
   { id: "project", label: "案件名", width: "w-64" },
   { id: "owner", label: "担当者", width: "w-36" },
+  { id: "generated_documents", label: "生成ドキュメント", width: "w-40" },
   { id: "start_time", label: "開始時刻", width: "w-28" },
   { id: "end_time", label: "終了時刻", width: "w-28" },
   { id: "created_at", label: "作成日時", width: "w-40" },
@@ -134,6 +147,37 @@ function formatDateTime(value: string) {
   const hh = String(date.getHours()).padStart(2, "0");
   const mi = String(date.getMinutes()).padStart(2, "0");
   return `${yyyy}/${mm}/${dd} ${hh}:${mi}`;
+}
+
+function buildGeneratedDocuments(minute: AudioMinute): GeneratedDocumentView[] {
+  if (!minute.project_id && !minute.customer_id) return [];
+
+  const baseDate = formatDate(minute.recording_date);
+  const documents: GeneratedDocumentView[] = [
+    {
+      id: `${minute.id}-estimate`,
+      type: "見積書",
+      generatedDate: baseDate,
+    },
+  ];
+
+  if (minute.project_id) {
+    documents.push({
+      id: `${minute.id}-contract`,
+      type: "契約書",
+      generatedDate: baseDate,
+    });
+  }
+
+  if (minute.checklist.some((item) => item.checked)) {
+    documents.push({
+      id: `${minute.id}-invoice`,
+      type: "請求書",
+      generatedDate: baseDate,
+    });
+  }
+
+  return documents;
 }
 
 function openDetailWindow(id: string) {
@@ -353,6 +397,7 @@ export default function AudioMinuteList() {
     ),
   );
   const [columns, setColumns] = useState<ListTableColumn[]>(DEFAULT_COLUMNS);
+  const [openDocumentPopoverId, setOpenDocumentPopoverId] = useState<string | null>(null);
   const itemsPerPage = 8;
 
   useEffect(() => {
@@ -402,6 +447,7 @@ export default function AudioMinuteList() {
           endTime: minute.end_time,
           createdAt: minute.created_at,
           updatedAt: timestamps.updated_at ?? minute.created_at,
+          generatedDocuments: buildGeneratedDocuments(minute),
           summary: minute.summary.replace(/\s+/g, " ").slice(0, 160),
           checklistDone,
           checklistTotal: minute.checklist.length,
@@ -580,6 +626,9 @@ export default function AudioMinuteList() {
         if (sortKey === "customer") return a.customer.localeCompare(b.customer, "ja");
         if (sortKey === "project") return a.project.localeCompare(b.project, "ja");
         if (sortKey === "owner") return a.owner.localeCompare(b.owner, "ja");
+        if (sortKey === "generated_documents") {
+          return a.generatedDocuments.length - b.generatedDocuments.length;
+        }
         if (sortKey === "recording_date") {
           return new Date(a.recordingDate).getTime() - new Date(b.recordingDate).getTime();
         }
@@ -710,7 +759,10 @@ export default function AudioMinuteList() {
                     variant="primary"
                     size="md"
                     onClick={handleOpenFileAnalysisDialog}
-                    className="h-10 gap-2 px-3 shadow-sm"
+                    className={cn(
+                      "h-10 gap-2 px-3 shadow-sm",
+                      isFilterOpen && "hidden sm:inline-flex",
+                    )}
                   >
                     <Plus className="h-4 w-4" />
                     <span className="text-sm">ファイル解析</span>
@@ -719,8 +771,9 @@ export default function AudioMinuteList() {
               </div>
 
               {isFilterOpen && (
-                <div className="mt-3 rounded-xl border border-border/80 bg-muted/40 p-3 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200 md:p-4">
-                  <div className="grid w-full min-w-0 grid-cols-2 gap-3 sm:flex sm:flex-row sm:flex-wrap sm:items-center">
+                <>
+                  <div className="mt-3 rounded-xl border border-border/80 bg-muted/40 p-3 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200 md:p-4">
+                    <div className="grid w-full min-w-0 grid-cols-2 gap-3 sm:flex sm:flex-row sm:flex-wrap sm:items-center">
                     {filters.map((filter) => (
                       <div
                         key={filter.id}
@@ -857,8 +910,19 @@ export default function AudioMinuteList() {
                         </Button>
                       )}
                     </div>
+                    </div>
                   </div>
-                </div>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    onClick={handleOpenFileAnalysisDialog}
+                    className="mt-3 h-10 w-full justify-center gap-2 px-3 shadow-sm sm:hidden"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span className="text-sm">ファイル解析</span>
+                  </Button>
+                </>
               )}
             </div>
           </div>
@@ -984,6 +1048,80 @@ export default function AudioMinuteList() {
                                     {minute.owner}
                                   </TableCell>
                                 );
+                              case "generated_documents":
+                                return (
+                                  <TableCell key={column.id} className="px-4 py-3.5">
+                                    {minute.generatedDocuments.length > 0 ? (
+                                      <Popover open={openDocumentPopoverId === minute.id}>
+                                        <PopoverTrigger asChild>
+                                          <div
+                                            className="-m-1 inline-flex cursor-help items-center gap-1 rounded-md px-2 py-1 transition-all hover:bg-primary/10 hover:text-primary group/num"
+                                            onMouseEnter={() => setOpenDocumentPopoverId(minute.id)}
+                                            onMouseLeave={() => setOpenDocumentPopoverId(null)}
+                                            onClick={(event) => event.stopPropagation()}
+                                          >
+                                            <span className="text-sm font-bold text-foreground transition-colors group-hover/num:text-primary">
+                                              {minute.generatedDocuments.length}
+                                            </span>
+                                            <span className="text-xs font-medium text-muted-foreground transition-colors group-hover/num:text-primary">
+                                              件
+                                            </span>
+                                          </div>
+                                        </PopoverTrigger>
+                                        <PopoverContent
+                                          className="w-80 overflow-hidden border-border/40 bg-background/95 p-0 shadow-2xl backdrop-blur-xl animate-in zoom-in-95 duration-200"
+                                          onMouseEnter={() => setOpenDocumentPopoverId(minute.id)}
+                                          onMouseLeave={() => setOpenDocumentPopoverId(null)}
+                                        >
+                                          <div className="border-b border-border/40 bg-primary/5 px-4 py-3">
+                                            <div className="flex items-center justify-between">
+                                              <h4 className="text-[10px] font-bold uppercase tracking-widest text-primary">
+                                                生成ドキュメント
+                                              </h4>
+                                              <span className="text-[10px] font-bold text-muted-foreground/60">
+                                                {minute.generatedDocuments.length}件
+                                              </span>
+                                            </div>
+                                          </div>
+                                          <div className="p-2">
+                                            {minute.generatedDocuments.map((document) => (
+                                              <div
+                                                key={document.id}
+                                                className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-primary/5 group/item"
+                                                onClick={(event) => event.stopPropagation()}
+                                              >
+                                                <div className="min-w-0 flex-1">
+                                                  <p className="truncate text-xs font-bold text-foreground group-hover/item:text-primary">
+                                                    {document.type}
+                                                  </p>
+                                                  <p className="text-[10px] font-medium text-muted-foreground">
+                                                    生成日: {document.generatedDate}
+                                                  </p>
+                                                </div>
+                                                <button
+                                                  type="button"
+                                                  onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    setOpenDocumentPopoverId(null);
+                                                    window.location.href =
+                                                      `/minutes/${minute.id}/documents/${document.id}/edit?type=${encodeURIComponent(document.type)}&date=${encodeURIComponent(document.generatedDate)}`;
+                                                  }}
+                                                  className="shrink-0 rounded-md px-2 py-1 text-[10px] font-bold text-primary transition-colors hover:bg-primary/10"
+                                                >
+                                                  表示
+                                                </button>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </PopoverContent>
+                                      </Popover>
+                                    ) : (
+                                      <span className="text-sm font-bold text-muted-foreground/40">
+                                        0 <span className="text-xs font-medium">件</span>
+                                      </span>
+                                    )}
+                                  </TableCell>
+                                );
                               case "recording_date":
                                 return (
                                   <TableCell
@@ -1018,9 +1156,9 @@ export default function AudioMinuteList() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="px-4 py-3.5 text-xs font-semibold text-muted-foreground"
+                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-muted-foreground"
                                   >
-                                    <span className="inline-flex items-center gap-1.5">
+                                    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                                       <Clock className="h-3.5 w-3.5" />
                                       {formatDateTime(minute.createdAt)}
                                     </span>

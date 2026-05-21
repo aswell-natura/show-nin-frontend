@@ -613,7 +613,10 @@ export default function ProjectList() {
                     variant="primary"
                     size="md"
                     onClick={handleOpenAddProjectDialog}
-                    className="h-10 w-full shrink-0 justify-center gap-2 px-4 shadow-md sm:w-auto"
+                    className={cn(
+                      "h-10 w-full shrink-0 justify-center gap-2 px-4 shadow-md sm:w-auto",
+                      isFilterOpen && "hidden sm:inline-flex",
+                    )}
                   >
                     <Plus className="h-4.5 w-4.5" />
                     <span className="text-sm font-bold">案件を登録</span>
@@ -622,8 +625,9 @@ export default function ProjectList() {
               </div>
 
               {isFilterOpen && (
-                <div className="mt-3 rounded-xl border border-border/80 bg-muted/40 p-3 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200 md:p-4">
-                  <div className="grid grid-cols-2 sm:flex sm:flex-row sm:flex-wrap sm:items-center gap-3 w-full min-w-0">
+                <>
+                  <div className="mt-3 rounded-xl border border-border/80 bg-muted/40 p-3 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200 md:p-4">
+                    <div className="grid grid-cols-2 sm:flex sm:flex-row sm:flex-wrap sm:items-center gap-3 w-full min-w-0">
                     {filters.map((filter) => (
                       <div
                         key={filter.id}
@@ -703,8 +707,18 @@ export default function ProjectList() {
                         </Button>
                       )}
                     </div>
+                    </div>
                   </div>
-                </div>
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={handleOpenAddProjectDialog}
+                    className="mt-3 h-10 w-full justify-center gap-2 px-4 shadow-md sm:hidden"
+                  >
+                    <Plus className="h-4.5 w-4.5" />
+                    <span className="text-sm font-bold">譯井ｻｶ繧堤匳骭ｲ</span>
+                  </Button>
+                </>
               )}
             </div>
           </div>

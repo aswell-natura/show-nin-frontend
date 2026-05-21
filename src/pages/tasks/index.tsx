@@ -16,12 +16,12 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import {
-  ChevronRight,
   Filter,
   Info,
   Plus,
   RotateCcw,
   Search,
+  ChevronRight,
   X,
 } from "lucide-react";
 
@@ -499,7 +499,7 @@ export default function TaskBoard() {
           <div className="bg-background/95 backdrop-blur-md">
             <div className="px-4 pb-4 pt-6 md:px-6">
               <div className="flex flex-col items-stretch justify-between gap-4 md:flex-row md:items-center">
-                <div className="flex shrink-0 items-center gap-2 py-1">
+                <div className="flex w-full shrink-0 items-center gap-2 py-1 md:w-auto">
                   <h1 className="text-lg font-bold tracking-tight text-foreground md:text-xl">
                     タスク一覧
                   </h1>
@@ -521,6 +521,15 @@ export default function TaskBoard() {
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
+                  <Button
+                    variant="primary"
+                    size="icon"
+                    onClick={handleOpenAddTaskDialog}
+                    className="ml-auto h-9 w-9 shrink-0 rounded-full shadow-md md:hidden"
+                    aria-label="タスクを追加"
+                  >
+                    <Plus className="h-4.5 w-4.5" />
+                  </Button>
                 </div>
 
                 <div className="flex flex-1 flex-col items-stretch gap-3 sm:flex-row sm:items-center md:flex-initial md:justify-end">
@@ -616,10 +625,7 @@ export default function TaskBoard() {
                     variant="primary"
                     size="md"
                     onClick={handleOpenAddTaskDialog}
-                    className={cn(
-                      "h-10 w-full shrink-0 justify-center gap-2 px-4 shadow-md sm:w-auto",
-                      isFilterOpen && "hidden sm:inline-flex",
-                    )}
+                    className="hidden h-10 w-full shrink-0 justify-center gap-2 px-4 shadow-md sm:w-auto md:inline-flex"
                   >
                     <Plus className="h-4.5 w-4.5" />
                     <span className="text-sm font-bold">タスクを追加</span>
@@ -819,15 +825,6 @@ export default function TaskBoard() {
                     </div>
                     </div>
                   </div>
-                  <Button
-                    variant="primary"
-                    size="md"
-                    onClick={handleOpenAddTaskDialog}
-                    className="mt-3 h-10 w-full justify-center gap-2 px-4 shadow-md sm:hidden"
-                  >
-                    <Plus className="h-4.5 w-4.5" />
-                    <span className="text-sm font-bold">繧ｿ繧ｹ繧ｯ繧定ｿｽ蜉</span>
-                  </Button>
                 </>
               )}
             </div>
@@ -1007,7 +1004,7 @@ export default function TaskBoard() {
                           })}
                           <TableCell className="px-4 py-3.5 text-right">
                             <div className="flex items-center justify-end pr-4">
-                              <ChevronRight className="h-5 w-5 -translate-x-2 text-muted-foreground opacity-0 transition-all duration-300 ease-out group-hover:translate-x-0 group-hover:text-primary group-hover:opacity-100" />
+                              <ChevronRight className="h-4.5 w-4.5 -translate-x-2 text-muted-foreground opacity-0 transition-all duration-300 ease-out group-hover:translate-x-0 group-hover:text-primary group-hover:opacity-100" />
                             </div>
                           </TableCell>
                         </TableRow>

@@ -18,13 +18,13 @@ import {
 } from "@dnd-kit/sortable";
 import {
   Building2,
-  ChevronRight,
-  Eye,
   Filter,
   Info,
   Plus,
   RotateCcw,
   Search,
+  SquareArrowOutUpRight,
+  ChevronRight,
   X,
 } from "lucide-react";
 
@@ -512,7 +512,7 @@ export default function ProjectList() {
           <div className="bg-background/95 backdrop-blur-md">
             <div className="px-4 pb-4 pt-6 md:px-6">
               <div className="flex flex-col items-stretch justify-between gap-4 md:flex-row md:items-center">
-                <div className="flex shrink-0 items-center gap-2 py-1">
+                <div className="flex w-full shrink-0 items-center gap-2 py-1 md:w-auto">
                   <h1 className="text-lg font-bold tracking-tight text-foreground md:text-xl">
                     案件一覧
                   </h1>
@@ -534,6 +534,15 @@ export default function ProjectList() {
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
+                  <Button
+                    variant="primary"
+                    size="icon"
+                    onClick={handleOpenAddProjectDialog}
+                    className="ml-auto h-9 w-9 shrink-0 rounded-full shadow-md md:hidden"
+                    aria-label="案件を登録"
+                  >
+                    <Plus className="h-4.5 w-4.5" />
+                  </Button>
                 </div>
 
                 <div className="flex flex-1 flex-col items-stretch gap-3 sm:flex-row sm:items-center md:flex-initial md:justify-end">
@@ -614,10 +623,7 @@ export default function ProjectList() {
                     variant="primary"
                     size="md"
                     onClick={handleOpenAddProjectDialog}
-                    className={cn(
-                      "h-10 w-full shrink-0 justify-center gap-2 px-4 shadow-md sm:w-auto",
-                      isFilterOpen && "hidden sm:inline-flex",
-                    )}
+                    className="hidden h-10 w-full shrink-0 justify-center gap-2 px-4 shadow-md sm:w-auto md:inline-flex"
                   >
                     <Plus className="h-4.5 w-4.5" />
                     <span className="text-sm font-bold">案件を登録</span>
@@ -710,15 +716,6 @@ export default function ProjectList() {
                     </div>
                     </div>
                   </div>
-                  <Button
-                    variant="primary"
-                    size="md"
-                    onClick={handleOpenAddProjectDialog}
-                    className="mt-3 h-10 w-full justify-center gap-2 px-4 shadow-md sm:hidden"
-                  >
-                    <Plus className="h-4.5 w-4.5" />
-                    <span className="text-sm font-bold">案件を登録</span>
-                  </Button>
                 </>
               )}
             </div>
@@ -843,7 +840,7 @@ export default function ProjectList() {
                                             className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all duration-200 cursor-pointer border border-transparent hover:border-primary/20"
                                             title="顧客詳細を表示"
                                           >
-                                            <Eye className="h-3 w-3" />
+                                            <SquareArrowOutUpRight className="h-3 w-3" />
                                           </button>
                                         </div>
                                         <span className="text-xs text-muted-foreground truncate">
@@ -1055,7 +1052,7 @@ export default function ProjectList() {
                           })}
                           <TableCell className="px-4 py-3.5 text-right">
                             <div className="flex items-center justify-end pr-4">
-                              <ChevronRight className="h-5 w-5 -translate-x-2 text-muted-foreground opacity-0 transition-all duration-300 ease-out group-hover:translate-x-0 group-hover:text-primary group-hover:opacity-100" />
+                              <ChevronRight className="h-4.5 w-4.5 -translate-x-2 text-muted-foreground opacity-0 transition-all duration-300 ease-out group-hover:translate-x-0 group-hover:text-primary group-hover:opacity-100" />
                             </div>
                           </TableCell>
                         </TableRow>

@@ -471,7 +471,7 @@ export default function CustomerList() {
             <div className="px-4 md:px-6 pt-6 pb-4">
               <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
                 {/* 左側: タイトル＆ツールチップ */}
-                <div className="flex items-center gap-2 shrink-0 py-1">
+                <div className="flex w-full items-center gap-2 shrink-0 py-1 md:w-auto">
                   <h1 className="text-lg md:text-xl font-bold text-foreground tracking-tight">
                     顧客一覧
                   </h1>
@@ -493,6 +493,15 @@ export default function CustomerList() {
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
+                  <Button
+                    variant="primary"
+                    size="icon"
+                    onClick={handleOpenAddCustomerDialog}
+                    className="ml-auto h-9 w-9 shrink-0 rounded-full shadow-md md:hidden"
+                    aria-label="顧客を登録"
+                  >
+                    <Plus className="w-4.5 h-4.5" />
+                  </Button>
                 </div>
 
                 {/* 右側: 検索バー (コンパクト＆クリック拡張機能付き) ＆ 各種操作ボタン */}
@@ -584,10 +593,7 @@ export default function CustomerList() {
                     variant="primary"
                     size="md"
                     onClick={handleOpenAddCustomerDialog}
-                    className={cn(
-                      "gap-2 shadow-md h-10 px-4 shrink-0 w-full sm:w-auto justify-center",
-                      isFilterOpen && "hidden sm:inline-flex",
-                    )}
+                    className="hidden gap-2 shadow-md h-10 px-4 shrink-0 w-full sm:w-auto justify-center md:inline-flex"
                   >
                     <Plus className="w-4.5 h-4.5" />
                     <span className="text-sm font-bold">顧客を登録</span>
@@ -806,15 +812,6 @@ export default function CustomerList() {
                     </div>
                     </div>
                   </div>
-                  <Button
-                    variant="primary"
-                    size="md"
-                    onClick={handleOpenAddCustomerDialog}
-                    className="mt-3 h-10 w-full justify-center gap-2 px-4 shadow-md sm:hidden"
-                  >
-                    <Plus className="w-4.5 h-4.5" />
-                    <span className="text-sm font-bold">鬘ｧ螳｢繧定ｿｽ蜉</span>
-                  </Button>
                 </>
               )}
             </div>
@@ -1144,7 +1141,7 @@ export default function CustomerList() {
                                                         )}
                                                       </span>
                                                     </div>
-                                                    <ChevronRight className="w-3 h-3 ml-auto text-muted-foreground/30 group-hover/item:text-primary transition-colors" />
+                                                    <ChevronRight className="w-3.5 h-3.5 ml-auto text-muted-foreground/40 group-hover/item:text-primary transition-colors" />
                                                   </div>
                                                 ))}
                                               </div>
@@ -1178,7 +1175,7 @@ export default function CustomerList() {
                             })}
                             <TableCell className="px-4 py-3.5 text-right">
                               <div className="flex items-center justify-end pr-4">
-                                <ChevronRight className="w-5 h-5 text-muted-foreground opacity-0 -translate-x-2 transition-all duration-300 ease-out group-hover:opacity-100 group-hover:translate-x-0 group-hover:text-primary" />
+                                <ChevronRight className="w-4.5 h-4.5 text-muted-foreground opacity-0 -translate-x-2 transition-all duration-300 ease-out group-hover:opacity-100 group-hover:translate-x-0 group-hover:text-primary" />
                               </div>
                             </TableCell>
                           </TableRow>

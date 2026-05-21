@@ -59,7 +59,6 @@ export default function MinuteDocumentEdit() {
   )
 
   const [fields, setFields] = useState(initialFields)
-  const [realtime, setRealtime] = useState(false)
 
   const updateField = (key: keyof typeof fields, value: string) => {
     setFields(current => ({ ...current, [key]: value }))

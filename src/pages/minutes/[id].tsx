@@ -407,7 +407,7 @@ function DocumentIcon() {
 export default function AudioMinuteDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { customers, projects, profiles } = useDataStore()
+  const { customers, projects, profiles, activities } = useDataStore()
   const { openDialog, closeDialog } = useGlobalDialog()
   const [transcriptOpen, setTranscriptOpen] = useState(false)
   const [editingTranscript, setEditingTranscript] = useState(false)
@@ -415,7 +415,24 @@ export default function AudioMinuteDetail() {
   const [generatedDocuments, setGeneratedDocuments] = useState<GeneratedDocument[]>([])
   const [minuteEdits, setMinuteEdits] = useState<Partial<MinuteEditValues>>({})
 
-  const minute = mockAudioMinutes.find(m => m.id === id)
+  const rawMinute = mockAudioMinutes.find(m => m.id === id)
+  const rawActivity = !rawMinute ? activities.find(a => a.id === id) : null
+
+  const minute = rawMinute || (rawActivity ? {
+    id: rawActivity.id,
+    title: rawActivity.title,
+    customer_id: rawActivity.customer_id || null,
+    project_id: rawActivity.project_id || null,
+    user_id: rawActivity.user_id,
+    recording_date: rawActivity.created_at ? rawActivity.created_at.slice(0, 10) : new Date().toISOString().slice(0, 10),
+    start_time: rawActivity.created_at ? rawActivity.created_at.slice(11, 16) : "10:00",
+    end_time: rawActivity.created_at ? new Date(new Date(rawActivity.created_at).getTime() + 60 * 60 * 1000).toISOString().slice(11, 16) : "11:00",
+    audio_url: rawActivity.audio_url || null,
+    summary: rawActivity.content_json?.summary || "",
+    transcript: rawActivity.content_json?.transcript || null,
+    checklist: rawActivity.content_json?.checklist || [],
+    created_at: rawActivity.created_at || new Date().toISOString(),
+  } : null)
 
   if (!minute) {
     return (

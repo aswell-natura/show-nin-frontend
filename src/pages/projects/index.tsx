@@ -716,7 +716,7 @@ export default function ProjectList() {
                     className="mt-3 h-10 w-full justify-center gap-2 px-4 shadow-md sm:hidden"
                   >
                     <Plus className="h-4.5 w-4.5" />
-                    <span className="text-sm font-bold">譯井ｻｶ繧堤匳骭ｲ</span>
+                    <span className="text-sm font-bold">案件を登録</span>
                   </Button>
                 </>
               )}

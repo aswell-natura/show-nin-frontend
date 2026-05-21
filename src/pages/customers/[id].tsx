@@ -576,7 +576,7 @@ export default function CustomerDetail() {
                         priorityColor[proj.priority],
                       )}
                     >
-                      優先度 {priorityLabel[proj.priority]}
+                      確度 {priorityLabel[proj.priority]}
                     </Badge>
                   )}
                   <Badge

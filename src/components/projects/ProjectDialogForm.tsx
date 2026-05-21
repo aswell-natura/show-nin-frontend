@@ -365,10 +365,10 @@ export default function ProjectDialogForm({
           }
         />
 
-        {/* 優先度 */}
+        {/* 確度 */}
         <LinearDialogPill
           icon={<Star className="size-3.5" />}
-          label="優先度"
+          label="確度"
           value={priorityLabel[values.priority]}
           active={true}
           open={openPopover === "priority"}
@@ -376,7 +376,7 @@ export default function ProjectDialogForm({
           popoverContent={
             <div className="flex flex-col gap-1">
               <p className="text-xs font-bold text-muted-foreground px-2 py-1">
-                優先度を選択
+                確度を選択
               </p>
               {([1, 2, 3] as (1 | 2 | 3)[]).map((p) => (
                 <button
@@ -388,7 +388,7 @@ export default function ProjectDialogForm({
                   }}
                   className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold hover:bg-muted text-foreground transition-colors cursor-pointer w-full text-left"
                 >
-                  <span>優先度 {priorityLabel[p]}</span>
+                  <span>確度 {priorityLabel[p]}</span>
                   {values.priority === p && (
                     <Check className="size-3.5 text-primary" />
                   )}

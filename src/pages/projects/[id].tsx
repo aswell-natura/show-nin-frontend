@@ -48,6 +48,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 import { cn } from "@/lib/utils";
 import { mockAudioMinutes } from "../../data/mock";
 import type { ProjectDocument } from "../../types";
@@ -1321,17 +1322,15 @@ export default function ProjectDetail() {
                 ネクストアクション
               </span>
               {/* Datepicker inline */}
-              <div className="flex items-center gap-1.5 bg-background border border-border/70 rounded-lg px-2 py-1 shadow-3xs focus-within:border-primary/45 focus-within:ring-1 focus-within:ring-primary/10 transition-all">
-                <Calendar className="w-3 h-3 text-muted-foreground" />
-                <input
-                  type="date"
-                  value={project.next_action_date || ""}
-                  onChange={(e) => {
-                    updateProject(project.id, { next_action_date: e.target.value || undefined });
-                  }}
-                  className="bg-transparent text-[11px] font-bold text-foreground border-none outline-none focus:ring-0 p-0 cursor-pointer w-[110px]"
-                />
-              </div>
+              <DatePicker
+                value={project.next_action_date || ""}
+                onChange={(value) => {
+                  updateProject(project.id, { next_action_date: value || undefined });
+                }}
+                size="sm"
+                className="w-[150px]"
+                buttonClassName="h-7 rounded-lg border-border/70 px-2 py-1 text-[11px] font-bold shadow-3xs"
+              />
             </div>
             <textarea
               value={nextActionText}

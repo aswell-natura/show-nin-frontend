@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/linear-dialog";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
+import { DatePicker } from "@/components/ui/date-picker";
 import { useDataStore } from "../../context/DataStoreContext";
 import { useGlobalDialog } from "../../context/GlobalDialogContext";
 import CustomerDialogForm from "../customers/CustomerDialogForm";
@@ -699,15 +700,11 @@ export default function ProjectDialogForm({
               <label htmlFor="close_date" className="text-xs font-bold text-foreground/90">
                 完了予定日
               </label>
-              <div className="relative">
-                <input
-                  id="close_date"
-                  type="date"
-                  value={values.close_date}
-                  onChange={(e) => updateValue("close_date", e.target.value)}
-                  className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-all shadow-2xs"
-                />
-              </div>
+              <DatePicker
+                id="close_date"
+                value={values.close_date}
+                onChange={(value) => updateValue("close_date", value)}
+              />
             </div>
           </div>
         </div>
@@ -722,12 +719,10 @@ export default function ProjectDialogForm({
               <label htmlFor="next_action_date" className="text-xs font-bold text-foreground/90">
                 次回アクション日
               </label>
-              <input
+              <DatePicker
                 id="next_action_date"
-                type="date"
                 value={values.next_action_date}
-                onChange={(e) => updateValue("next_action_date", e.target.value)}
-                className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-all shadow-2xs"
+                onChange={(value) => updateValue("next_action_date", value)}
               />
             </div>
           </div>

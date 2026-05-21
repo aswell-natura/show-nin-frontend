@@ -49,6 +49,7 @@ import {
   type ListTableColumn,
 } from "@/components/ui/list-table";
 import { SearchBar } from "@/components/ui/search-bar";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -1102,28 +1103,30 @@ function FilterValueControl({
   if (filter.field === "updated_at" || filter.field === "next_action_date") {
     return (
       <div className="order-4 sm:order-3 flex items-center gap-1 w-full sm:w-auto min-w-0">
-        <input
-          type="date"
+        <DatePicker
           value={(filter.value.split(",")[0] || "").replace(/\//g, "-")}
-          onChange={(e) => {
+          onChange={(value) => {
             const parts = filter.value.split(",");
-            const dateVal = e.target.value ? e.target.value.replace(/-/g, "/") : "";
+            const dateVal = value ? value.replace(/-/g, "/") : "";
             onChange(`${dateVal},${parts[1] || ""}`);
           }}
-          className="h-8 flex-1 sm:flex-initial sm:w-32 rounded-lg border border-border bg-background px-2 text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium text-foreground min-w-0"
+          size="sm"
+          className="min-w-0 flex-1 sm:w-32 sm:flex-initial"
+          buttonClassName="text-xs"
         />
         <span className="text-xs text-muted-foreground font-bold shrink-0">
           〜
         </span>
-        <input
-          type="date"
+        <DatePicker
           value={(filter.value.split(",")[1] || "").replace(/\//g, "-")}
-          onChange={(e) => {
+          onChange={(value) => {
             const parts = filter.value.split(",");
-            const dateVal = e.target.value ? e.target.value.replace(/-/g, "/") : "";
+            const dateVal = value ? value.replace(/-/g, "/") : "";
             onChange(`${parts[0] || ""},${dateVal}`);
           }}
-          className="h-8 flex-1 sm:flex-initial sm:w-32 rounded-lg border border-border bg-background px-2 text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium text-foreground min-w-0"
+          size="sm"
+          className="min-w-0 flex-1 sm:w-32 sm:flex-initial"
+          buttonClassName="text-xs"
         />
       </div>
     );

@@ -41,6 +41,7 @@ import {
   type ListTableColumn,
 } from "@/components/ui/list-table";
 import { SearchBar } from "@/components/ui/search-bar";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -714,30 +715,32 @@ export default function TaskBoard() {
                           />
                         ) : filter.field === "date" ? (
                           <div className="order-4 flex w-full min-w-0 items-center gap-1 sm:order-3 sm:w-auto">
-                            <input
-                              type="date"
+                            <DatePicker
                               value={filter.value.split(",")[0] || ""}
-                              onChange={(event) => {
+                              onChange={(value) => {
                                 const parts = filter.value.split(",");
                                 updateFilter(filter.id, {
-                                  value: `${event.target.value},${parts[1] || ""}`,
+                                  value: `${value},${parts[1] || ""}`,
                                 });
                               }}
-                              className="h-8 min-w-0 flex-1 rounded-lg border border-border bg-background px-2 text-xs font-medium text-foreground outline-none transition-all focus:ring-2 focus:ring-primary/10 sm:w-32 sm:flex-initial"
+                              size="sm"
+                              className="min-w-0 flex-1 sm:w-32 sm:flex-initial"
+                              buttonClassName="text-xs"
                             />
                             <span className="shrink-0 text-xs font-bold text-muted-foreground">
                               -
                             </span>
-                            <input
-                              type="date"
+                            <DatePicker
                               value={filter.value.split(",")[1] || ""}
-                              onChange={(event) => {
+                              onChange={(value) => {
                                 const parts = filter.value.split(",");
                                 updateFilter(filter.id, {
-                                  value: `${parts[0] || ""},${event.target.value}`,
+                                  value: `${parts[0] || ""},${value}`,
                                 });
                               }}
-                              className="h-8 min-w-0 flex-1 rounded-lg border border-border bg-background px-2 text-xs font-medium text-foreground outline-none transition-all focus:ring-2 focus:ring-primary/10 sm:w-32 sm:flex-initial"
+                              size="sm"
+                              className="min-w-0 flex-1 sm:w-32 sm:flex-initial"
+                              buttonClassName="text-xs"
                             />
                           </div>
                         ) : filter.field === "progress" ? (

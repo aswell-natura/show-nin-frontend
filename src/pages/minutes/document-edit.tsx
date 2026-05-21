@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  CalendarDays,
   Check,
   ChevronLeft,
   Download,
@@ -11,6 +10,7 @@ import {
 
 import AppLayout from '@/components/layout/AppLayout'
 import { Button } from '@/components/ui/button'
+import { DatePicker } from '@/components/ui/date-picker'
 
 const previewScale = 0.72
 
@@ -221,15 +221,12 @@ export default function MinuteDocumentEdit() {
 
                 <div className="space-y-2">
                   <FieldLabel>商談日時</FieldLabel>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      value={fields.meetingDate}
-                      onChange={event => updateField('meetingDate', event.target.value)}
-                      className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 pr-11 text-base outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                    />
-                    <CalendarDays className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
-                  </div>
+                  <DatePicker
+                    value={fields.meetingDate}
+                    onChange={(value) => updateField('meetingDate', value)}
+                    placeholder="日付を選択"
+                    buttonClassName="h-12 rounded-xl border-slate-200 bg-white px-4 text-base shadow-none hover:border-blue-300 hover:bg-white focus-visible:border-blue-300 focus-visible:ring-blue-100"
+                  />
                 </div>
 
                 <div className="space-y-2">

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, useRef, type ReactNode } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   PanelLeftClose,
@@ -35,6 +35,12 @@ import { StatusBadge } from "../../components/dashboard/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Select,
   SelectContent,
@@ -177,7 +183,7 @@ export default function ProjectDetail() {
   const [mobileSection, setMobileSection] = useState<MobileSection>("context");
   const [centerTab, setCenterTab] = useState<CenterTab>("activities");
 
-  const [isContextPanelOpen, setIsContextPanelOpen] = useState(false);
+  const [isContextPanelOpen, setIsContextPanelOpen] = useState(true);
 
   // Document states
   const [uploading, setUploading] = useState(false);
@@ -201,6 +207,8 @@ export default function ProjectDetail() {
   >({});
 
   const [nextActionText, setNextActionText] = useState(() => project?.next_action || "");
+  const [nextActionSaveStatus, setNextActionSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const nextActionDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const toggleMemoExpand = (memoId: string) => {
     setExpandedMemoIds((prev) => ({
@@ -219,6 +227,7 @@ export default function ProjectDetail() {
     setDocumentActionMode(null);
     setExpandedMemoIds({});
     setNextActionText(project?.next_action || "");
+    setNextActionSaveStatus("idle");
   }
 
   const startEditingMemo = (memoId: string) => {
@@ -1304,118 +1313,165 @@ export default function ProjectDetail() {
 
         {/* Formatted metadata */}
         <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-muted/30 dark:bg-muted/10 border border-border/50 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 transition-all duration-200">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-              Next action
-            </span>
+          {/* 1. Next Action & Deadline Integration */}
+          <div className="relative flex flex-col gap-2.5 p-4 rounded-2xl bg-muted/40 dark:bg-muted/15 border border-border/70 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 transition-all duration-200 shadow-3xs">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                <CheckSquare className="w-3.5 h-3.5 text-primary" />
+                ネクストアクション
+              </span>
+              {/* Datepicker inline */}
+              <div className="flex items-center gap-1.5 bg-background border border-border/70 rounded-lg px-2 py-1 shadow-3xs focus-within:border-primary/45 focus-within:ring-1 focus-within:ring-primary/10 transition-all">
+                <Calendar className="w-3 h-3 text-muted-foreground" />
+                <input
+                  type="date"
+                  value={project.next_action_date || ""}
+                  onChange={(e) => {
+                    updateProject(project.id, { next_action_date: e.target.value || undefined });
+                  }}
+                  className="bg-transparent text-[11px] font-bold text-foreground border-none outline-none focus:ring-0 p-0 cursor-pointer w-[110px]"
+                />
+              </div>
+            </div>
             <textarea
               value={nextActionText}
               onChange={(e) => {
                 const val = e.target.value;
                 setNextActionText(val);
-                updateProject(project.id, { next_action: val });
+                setNextActionSaveStatus("idle");
+                if (nextActionDebounceRef.current) clearTimeout(nextActionDebounceRef.current);
+                nextActionDebounceRef.current = setTimeout(() => {
+                  setNextActionSaveStatus("saving");
+                  updateProject(project.id, { next_action: val });
+                  setNextActionSaveStatus("saved");
+                  setTimeout(() => setNextActionSaveStatus("idle"), 2000);
+                }, 600);
               }}
-              placeholder="ネクストアクションを入力してください..."
+              placeholder="次回のアクション予定を入力してください..."
               rows={2}
-              className="w-full bg-transparent text-xs text-foreground placeholder:text-muted-foreground/45 border-none outline-none resize-none p-0 focus:ring-0 focus:outline-none leading-relaxed font-medium"
+              className="w-full bg-transparent text-xs text-foreground placeholder:text-muted-foreground/45 border-none outline-none resize-none p-0 focus:ring-0 focus:outline-none leading-relaxed font-medium mt-1.5"
             />
-          </div>
-
-          <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-muted/30 dark:bg-muted/10 border border-border/50">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-              フェーズ
-            </span>
-            <div className="flex items-center">
-              <StatusBadge
-                status={project.status}
-                className="text-xs py-0.5 px-2"
-              />
+            {/* Floating save indicator */}
+            <div className={cn(
+              "absolute bottom-2.5 right-3 flex items-center gap-1 pointer-events-none transition-opacity duration-200",
+              nextActionSaveStatus === "idle" ? "opacity-0" : "opacity-100"
+            )}>
+              {nextActionSaveStatus === "saving" ? (
+                <>
+                  <Loader2 className="w-3 h-3 text-muted-foreground animate-spin" />
+                  <span className="text-[10px] font-semibold text-muted-foreground">保存中...</span>
+                </>
+              ) : (
+                <>
+                  <Check className="w-3 h-3 text-emerald-500" />
+                  <span className="text-[10px] font-bold text-emerald-500 dark:text-emerald-400">保存しました</span>
+                </>
+              )}
             </div>
           </div>
 
-          <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-muted/30 dark:bg-muted/10 border border-border/50">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-              確度
-            </span>
-            <div className="flex items-center">
-              <span
-                className={cn(
-                  "inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold border",
-                  priorityColor[project.priority],
-                )}
-              >
-                {priorityLabel[project.priority]}
+          {/* Grid layout for other items */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* 案件金額 */}
+            <div className="flex flex-col gap-1.5 p-3.5 rounded-xl bg-card border border-border/50 shadow-3xs">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                案件金額
+              </span>
+              <span className="text-base font-extrabold text-foreground tracking-tight">
+                {project.amount !== undefined
+                  ? `¥${project.amount.toLocaleString("ja-JP")}`
+                  : "¥0"}
               </span>
             </div>
-          </div>
 
-          <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-muted/30 dark:bg-muted/10 border border-border/50">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-              案件金額
-            </span>
-            <span className="text-lg font-bold text-foreground tracking-tight">
-              {project.amount !== undefined
-                ? `¥${project.amount.toLocaleString("ja-JP")}`
-                : "¥0"}
-            </span>
-          </div>
+            {/* 完了予定日 */}
+            <div className="flex flex-col gap-1.5 p-3.5 rounded-xl bg-card border border-border/50 shadow-3xs">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                完了予定日
+              </span>
+              <span className="text-xs font-bold text-foreground flex items-center gap-1.5 h-6">
+                <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                {project.close_date
+                  ? formatSimpleDate(project.close_date)
+                  : "未設定"}
+              </span>
+            </div>
 
-          <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-muted/30 dark:bg-muted/10 border border-border/50">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-              完了予定日
-            </span>
-            <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-              {project.close_date
-                ? formatSimpleDate(project.close_date)
-                : "未設定"}
-            </span>
-          </div>
-
-          <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-muted/30 dark:bg-muted/10 border border-border/50">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-              次回アクション日
-            </span>
-            <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-              {project.next_action_date
-                ? formatSimpleDate(project.next_action_date)
-                : "未設定"}
-            </span>
-          </div>
-
-          <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-muted/30 dark:bg-muted/10 border border-border/50">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-              担当メンバー
-            </span>
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold border border-primary/20 shrink-0">
-                {owner?.avatar || "未"}
+            {/* 担当メンバー */}
+            <div className="flex flex-col gap-1.5 p-3.5 rounded-xl bg-card border border-border/50 shadow-3xs">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                担当メンバー
+              </span>
+              <div className="flex items-center gap-2 h-6">
+                <div className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[9px] font-bold border border-primary/20 shrink-0">
+                  {owner?.avatar || "未"}
+                </div>
+                <span className="text-xs font-bold text-foreground truncate">
+                  {owner?.name || "未担当"}
+                </span>
               </div>
-              <span className="text-xs font-bold text-foreground">
-                {owner?.name || "未担当"}
-              </span>
             </div>
-          </div>
 
-          {project.labels && project.labels.length > 0 && (
-            <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-muted/30 dark:bg-muted/10 border border-border/50">
+            {/* ラベル */}
+            <div className="flex flex-col gap-1.5 p-3.5 rounded-xl bg-card border border-border/50 shadow-3xs">
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                 ラベル
               </span>
-              <div className="flex flex-wrap gap-1">
-                {project.labels.map((l) => (
-                  <Badge
-                    key={l}
-                    variant="outline"
-                    className="text-[9px] font-semibold border-border px-1.5 py-0.2 bg-background"
-                  >
-                    {l}
-                  </Badge>
-                ))}
+              <div className="flex flex-wrap gap-1 items-center min-h-6">
+                {project.labels && project.labels.length > 0 ? (
+                  project.labels.map((l) => (
+                    <Badge
+                      key={l}
+                      variant="outline"
+                      className="text-[9px] font-semibold border-border px-1.5 py-0.2 bg-background"
+                    >
+                      {l}
+                    </Badge>
+                  ))
+                ) : (
+                  <span className="text-xs text-muted-foreground">なし</span>
+                )}
               </div>
             </div>
-          )}
+          </div>
+
+          {/* Under other info: フェーズ and 確度 */}
+          <div className="border-t border-border/50 my-2 pt-4">
+            <h5 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2.5">
+              ステータス・評価
+            </h5>
+            <div className="grid grid-cols-2 gap-3">
+              {/* フェーズ */}
+              <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-muted/20 dark:bg-muted/10 border border-border/50">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  フェーズ
+                </span>
+                <div className="flex items-center h-6">
+                  <StatusBadge
+                    status={project.status}
+                    className="text-xs py-0.5 px-2"
+                  />
+                </div>
+              </div>
+
+              {/* 確度 */}
+              <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-muted/20 dark:bg-muted/10 border border-border/50">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  確度
+                </span>
+                <div className="flex items-center h-6">
+                  <span
+                    className={cn(
+                      "inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold border",
+                      priorityColor[project.priority],
+                    )}
+                  >
+                    {priorityLabel[project.priority]}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
 
         </div>
       </div>
@@ -1567,13 +1623,13 @@ export default function ProjectDetail() {
           {mobileSection === "context" && renderProfileContent(null)}
         </div>
 
-        {/* Desktop View 3-Column Layout */}
+        {/* Desktop View Column Layout */}
         <div className="hidden md:flex flex-1 overflow-hidden bg-muted/10 dark:bg-background">
           {/* Left Column (Collapsible Context Panel) */}
           <div
             className={cn(
               "shrink-0 bg-card border-r border-border overflow-hidden shadow-xs z-10 transition-[width] duration-200",
-              isContextPanelOpen ? "w-72" : "w-13",
+              isContextPanelOpen ? "w-1/2 min-w-[360px] max-w-[640px]" : "w-13",
             )}
           >
             {isContextPanelOpen ? (
@@ -1651,41 +1707,66 @@ export default function ProjectDetail() {
               {/* Action buttons next to the desktop tabs */}
               <div className="pb-2.5 flex items-center gap-2 shrink-0">
                 {centerTab === "activities" && (
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => openPopupWindow("/recording", "recording")}
-                    className="gap-1.5 font-bold shadow-xs h-8"
-                  >
-                    <Mic className="w-4 h-4" />
-                    <span>この案件で録音</span>
-                  </Button>
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => openPopupWindow("/recording", "recording")}
+                          className="h-8 w-8 rounded-full px-0 shadow-xs"
+                          aria-label="この案件で録音"
+                        >
+                          <Mic className="w-4 h-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="bottom"
+                        align="end"
+                        className="px-3 py-1.5 backdrop-blur-xl bg-background/90 border border-border/60 shadow-xl rounded-xl text-xs font-bold text-foreground/90 animate-in zoom-in-95 duration-200 z-50"
+                      >
+                        この案件で録音
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
                 {centerTab === "documents" && (
                   <div className="relative">
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      type="button"
-                      onClick={() =>
-                        setDocumentActionMode((mode) => (mode ? null : "menu"))
-                      }
-                      className={cn(
-                        "h-8 w-8 rounded-full px-0 shadow-sm transition-all",
-                        documentActionMode &&
-                          "ring-2 ring-primary/20 ring-offset-2 ring-offset-background",
-                      )}
-                      title="添付ファイルを追加"
-                      aria-label="添付ファイルを追加"
-                      aria-expanded={documentActionMode === "menu"}
-                    >
-                      <Plus
-                        className={cn(
-                          "w-4 h-4 transition-transform duration-200",
-                          documentActionMode && "rotate-45",
-                        )}
-                      />
-                    </Button>
+                    <TooltipProvider delayDuration={200}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            type="button"
+                            onClick={() =>
+                              setDocumentActionMode((mode) => (mode ? null : "menu"))
+                            }
+                            className={cn(
+                              "h-8 w-8 rounded-full px-0 shadow-sm transition-all",
+                              documentActionMode &&
+                                "ring-2 ring-primary/20 ring-offset-2 ring-offset-background",
+                            )}
+                            aria-label="添付ファイルを追加"
+                            aria-expanded={documentActionMode === "menu"}
+                          >
+                            <Plus
+                              className={cn(
+                                "w-4 h-4 transition-transform duration-200",
+                                documentActionMode && "rotate-45",
+                              )}
+                            />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent
+                          side="bottom"
+                          align="end"
+                          className="px-3 py-1.5 backdrop-blur-xl bg-background/90 border border-border/60 shadow-xl rounded-xl text-xs font-bold text-foreground/90 animate-in zoom-in-95 duration-200 z-50"
+                        >
+                          添付ファイルを追加
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                     {documentActionMode === "menu" && (
                       <div
                         className="absolute right-0 top-full z-30 mt-2 w-56 overflow-hidden rounded-lg border border-border bg-background shadow-lg animate-in fade-in slide-in-from-top-1 duration-150"
@@ -1719,6 +1800,8 @@ export default function ProjectDetail() {
               {ProjectDetailsContent}
             </div>
           </div>
+
+
         </div>
       </div>
     </AppLayout>

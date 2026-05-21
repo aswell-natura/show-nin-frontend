@@ -2,9 +2,9 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import {
   mockProfiles, mockCustomers, mockProjects, mockActivities,
-  mockTasks, mockTargets, mockNotifications,
+  mockTasks, mockTargets, mockNotifications, mockProjectDocuments,
 } from '../data/mock'
-import type { Profile, Customer, Project, Activity, Task, Target, Notification } from '../types'
+import type { Profile, Customer, Project, Activity, Task, Target, Notification, ProjectDocument, ProjectMemo } from '../types'
 
 // ─── ユーティリティ ──────────────────────────────────────────────────────────
 
@@ -102,7 +102,10 @@ const KEYS = {
   tasks:         'show-nin-tasks',
   targets:       'show-nin-targets',
   notifications: 'show-nin-notifications',
+  documents:     'show-nin-documents',
+  memos:         'show-nin-memos',
 }
+
 
 // ─── 型定義 ──────────────────────────────────────────────────────────────────
 
@@ -114,6 +117,13 @@ interface DataStoreContextValue {
   tasks:         Task[]
   targets:       Target[]
   notifications: Notification[]
+  documents:     ProjectDocument[]
+  memos:         ProjectMemo[]
+
+  // ProjectMemo CRUD
+  addProjectMemo:    (projectId: string, content: string, useForAi?: boolean) => ProjectMemo
+  updateProjectMemo: (id: string, data: Partial<ProjectMemo>) => void
+  deleteProjectMemo: (id: string) => void
 
   // Profile CRUD
   addProfile:    (data: Omit<Profile, 'id' | 'sidebar_settings' | 'dashboard_layout'>) => Profile
@@ -148,9 +158,15 @@ interface DataStoreContextValue {
   markNotificationRead:       (id: string) => void
   markAllNotificationsRead:   (userId: string) => void
 
+  // Document Operations
+  addProjectDocument:         (data: Omit<ProjectDocument, 'id' | 'uploaded_at'>) => ProjectDocument
+  updateProjectDocument:      (id: string, data: Partial<ProjectDocument>) => void
+  deleteProjectDocument:      (id: string) => void
+
   // デフォルトデータにリセット
   resetToDefaults: () => void
 }
+
 
 // ─── Context ─────────────────────────────────────────────────────────────────
 
@@ -164,6 +180,22 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
   const [tasks,         setTasks]         = useState<Task[]>        (() => loadTasks())
   const [targets,       setTargets]       = useState<Target[]>      (() => loadWithNewSeeds(KEYS.targets,       mockTargets))
   const [notifications, setNotifications] = useState<Notification[]>(() => loadWithNewSeeds(KEYS.notifications, mockNotifications))
+  const [documents,     setDocuments]     = useState<ProjectDocument[]>(() => loadWithNewSeeds(KEYS.documents, mockProjectDocuments))
+  const [memos,         setMemos]         = useState<ProjectMemo[]>(() => {
+    const loaded = load(KEYS.memos, [] as ProjectMemo[])
+    if (loaded.length > 0) return loaded
+    const seeds: ProjectMemo[] = mockProjects
+      .filter((p) => p.note)
+      .map((p) => ({
+        id: `memo-seed-${p.id}`,
+        project_id: p.id,
+        content: p.note || '',
+        created_at: p.updated_at || now(),
+        created_by: p.user_id,
+        use_for_ai: p.note_use_for_ai || false,
+      }))
+    return seeds
+  })
 
   // localStorage への自動保存
   useEffect(() => { localStorage.setItem(KEYS.profiles,      JSON.stringify(profiles)) },      [profiles])
@@ -173,6 +205,9 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => { localStorage.setItem(KEYS.tasks,         JSON.stringify(tasks)) },         [tasks])
   useEffect(() => { localStorage.setItem(KEYS.targets,       JSON.stringify(targets)) },       [targets])
   useEffect(() => { localStorage.setItem(KEYS.notifications, JSON.stringify(notifications)) }, [notifications])
+  useEffect(() => { localStorage.setItem(KEYS.documents,     JSON.stringify(documents)) },     [documents])
+  useEffect(() => { localStorage.setItem(KEYS.memos,         JSON.stringify(memos)) },         [memos])
+
 
   // ─── Customer CRUD ──────────────────────────────────────────────────────
 
@@ -307,6 +342,43 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
     setNotifications((prev) => prev.map((n) => n.user_id === userId ? { ...n, is_read: true } : n))
   }
 
+  // ─── Document Operations ─────────────────────────────────────────────────
+
+  function addProjectDocument(data: Omit<ProjectDocument, 'id' | 'uploaded_at'>): ProjectDocument {
+    const record: ProjectDocument = { ...data, id: genId(), uploaded_at: now() }
+    setDocuments((prev) => [...prev, record])
+    return record
+  }
+
+  function updateProjectDocument(id: string, data: Partial<ProjectDocument>) {
+    setDocuments((prev) => prev.map((d) => d.id === id ? { ...d, ...data } : d))
+  }
+
+  function deleteProjectDocument(id: string) {
+    setDocuments((prev) => prev.filter((d) => d.id !== id))
+  }
+
+  function addProjectMemo(projectId: string, content: string, useForAi = false): ProjectMemo {
+    const record: ProjectMemo = {
+      id: genId(),
+      project_id: projectId,
+      content,
+      created_at: now(),
+      created_by: 'user-001',
+      use_for_ai: useForAi,
+    }
+    setMemos((prev) => [...prev, record])
+    return record
+  }
+
+  function updateProjectMemo(id: string, data: Partial<ProjectMemo>) {
+    setMemos((prev) => prev.map((m) => m.id === id ? { ...m, ...data } : m))
+  }
+
+  function deleteProjectMemo(id: string) {
+    setMemos((prev) => prev.filter((m) => m.id !== id))
+  }
+
   // ─── デフォルトにリセット ────────────────────────────────────────────────
 
   function resetToDefaults() {
@@ -317,13 +389,26 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
     setTasks(mockTasks)
     setTargets(mockTargets)
     setNotifications(mockNotifications)
+    setDocuments(mockProjectDocuments)
+    setMemos(mockProjects
+      .filter((p) => p.note)
+      .map((p) => ({
+        id: `memo-seed-${p.id}`,
+        project_id: p.id,
+        content: p.note || '',
+        created_at: p.updated_at || now(),
+        created_by: p.user_id,
+        use_for_ai: p.note_use_for_ai || false,
+      }))
+    )
     Object.values(KEYS).forEach((key) => localStorage.removeItem(key))
   }
+
 
   return (
     <DataStoreContext.Provider value={{
       profiles,
-      customers, projects, activities, tasks, targets, notifications,
+      customers, projects, activities, tasks, targets, notifications, documents, memos,
       addProfile,
       addCustomer, updateCustomer, deleteCustomer,
       addProject, updateProject, deleteProject,
@@ -331,11 +416,14 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       addTask, updateTask, deleteTask,
       addTarget, updateTarget, deleteTarget,
       addNotification, markNotificationRead, markAllNotificationsRead,
+      addProjectDocument, updateProjectDocument, deleteProjectDocument,
+      addProjectMemo, updateProjectMemo, deleteProjectMemo,
       resetToDefaults,
     }}>
       {children}
     </DataStoreContext.Provider>
   )
+
 }
 
 export function useDataStore() {

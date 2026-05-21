@@ -625,7 +625,7 @@ export default function CustomerDetail() {
                   onClick={(e) => {
                     e.stopPropagation();
                     navigate(
-                      `/projects?search=${encodeURIComponent(proj.name)}`,
+                      `/projects/${proj.id}?from=/customers/${id}`,
                     );
                   }}
                   className="h-8 text-xs font-bold text-muted-foreground hover:text-primary hover:bg-primary/10 gap-1 px-2.5 transition-colors"

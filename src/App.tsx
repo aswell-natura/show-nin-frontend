@@ -12,6 +12,7 @@ import RecordingWindow from './pages/recording'
 import TaskBoard from './pages/tasks'
 import TaskDetail from './pages/tasks/[id]'
 import ProjectList from './pages/projects'
+import ProjectDetail from './pages/projects/[id]'
 import ManagerMembers from './pages/members'
 import BudgetPlanning from './pages/budget'
 import PlayerBudget from './pages/my-budget'
@@ -38,6 +39,7 @@ function AppRoutes() {
       <Route path="/customers" element={<ProtectedRoute><CustomerList /></ProtectedRoute>} />
       <Route path="/customers/:id" element={<ProtectedRoute><CustomerDetail /></ProtectedRoute>} />
       <Route path="/projects" element={<ProtectedRoute><ProjectList /></ProtectedRoute>} />
+      <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetail /></ProtectedRoute>} />
       <Route path="/members" element={<ProtectedRoute><ManagerMembers /></ProtectedRoute>} />
       <Route path="/budget" element={<ProtectedRoute><BudgetPlanning /></ProtectedRoute>} />
       <Route path="/my-budget" element={<ProtectedRoute><PlayerBudget /></ProtectedRoute>} />

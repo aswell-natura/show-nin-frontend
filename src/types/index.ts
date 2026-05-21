@@ -61,6 +61,7 @@ export interface Project {
   labels?: string[]
   next_action_date?: string
   note?: string
+  note_use_for_ai?: boolean
 }
 
 export interface ActivityContentJson {
@@ -136,3 +137,24 @@ export interface DashboardCardDef {
   unit: string
   color: string
 }
+
+export interface ProjectDocument {
+  id: string
+  project_id: string
+  name: string
+  file_size: number
+  uploaded_at: string
+  uploaded_by: string // Profile ID of the uploader
+  file_type: string
+  use_for_ai?: boolean
+}
+
+export interface ProjectMemo {
+  id: string
+  project_id: string
+  content: string
+  created_at: string
+  created_by: string
+  use_for_ai?: boolean
+}
+

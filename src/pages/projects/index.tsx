@@ -19,6 +19,7 @@ import {
 import {
   Building2,
   ChevronRight,
+  Eye,
   Filter,
   Info,
   Plus,
@@ -35,7 +36,11 @@ import ProjectDialogForm from "@/components/projects/ProjectDialogForm";
 import type { Project, ProjectStatus } from "../../types";
 import { StatusBadge } from "../../components/dashboard/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Combobox } from "@/components/ui/combobox";
 import {
   ListPagination,
@@ -93,9 +98,8 @@ const DEFAULT_COLUMNS: ListTableColumn[] = [
   { id: "amount", label: "金額", width: "w-36" },
   { id: "owner", label: "担当者", width: "w-36" },
   { id: "next_action_date", label: "次回アクション", width: "w-40" },
-  { id: "updated_at", label: "最終更新", width: "w-32" },
-  { id: "source", label: "登録元", width: "w-32" },
   { id: "note", label: "メモ", width: "w-80" },
+  { id: "updated_at", label: "最終更新", width: "w-32" },
 ];
 
 const statusLabel: Record<ProjectStatus, string> = {
@@ -122,11 +126,6 @@ const priorityColor: Record<Project["priority"], string> = {
   3: "bg-muted text-muted-foreground",
 };
 
-const sourceColor: Record<"recording" | "manual", string> = {
-  recording: "bg-primary/10 text-primary",
-  manual: "bg-emerald-500/10 text-emerald-600",
-};
-
 const statusOptions = [
   { label: "リード", value: "lead" },
   { label: "提案中", value: "proposing" },
@@ -140,15 +139,7 @@ const priorityOptions = [
   { label: "低", value: "3" },
 ];
 
-const sourceOptions = [
-  { label: "音声録音", value: "recording" },
-  { label: "手動登録", value: "manual" },
-];
 
-const linkOptions = [
-  { label: "企業紐付け済み", value: "linked" },
-  { label: "未紐付け", value: "unlinked" },
-];
 
 function normalizeSearch(value: string) {
   return value.toLowerCase().replace(/\s+/g, "");
@@ -156,11 +147,26 @@ function normalizeSearch(value: string) {
 
 function formatDate(value?: string) {
   if (!value) return "-";
-  return new Date(value.includes("T") ? value : `${value}T00:00:00`)
-    .toLocaleDateString("ja-JP", {
-      month: "short",
-      day: "numeric",
-    });
+  const date = new Date(
+    value.includes("T") ? value : `${value}T00:00:00`,
+  );
+  if (isNaN(date.getTime())) return "-";
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}/${mm}/${dd}`;
+}
+
+function formatDateTime(value?: string) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (isNaN(date.getTime())) return "-";
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  return `${yyyy}/${mm}/${dd} ${hh}:${min}`;
 }
 
 function formatAmount(value: number) {
@@ -168,10 +174,14 @@ function formatAmount(value: number) {
   return `${(value / 10000).toLocaleString()}万円`;
 }
 
-function compareValue(a: string | number | undefined, b: string | number | undefined) {
+function compareValue(
+  a: string | number | undefined,
+  b: string | number | undefined,
+) {
   const left = a ?? "";
   const right = b ?? "";
-  if (typeof left === "number" && typeof right === "number") return left - right;
+  if (typeof left === "number" && typeof right === "number")
+    return left - right;
   return String(left).localeCompare(String(right), "ja");
 }
 
@@ -179,37 +189,40 @@ export default function ProjectList() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-  const { projects, customers, profiles, addProject, updateProject } = useDataStore();
+  const { projects, customers, profiles, addProject, updateProject } =
+    useDataStore();
   const { openDialog, closeDialog } = useGlobalDialog();
 
   const [search, setSearch] = useState(() => searchParams.get("q") || "");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [sortKey, setSortKey] = useState<SortKey>(() => (searchParams.get("sort") as SortKey) || "updated_at");
-  const [sortOrder, setSortOrder] = useState<ListSortOrder>(() => (searchParams.get("order") as ListSortOrder) || "desc");
+  const [sortKey, setSortKey] = useState<SortKey>(
+    () => (searchParams.get("sort") as SortKey) || "updated_at",
+  );
+  const [sortOrder, setSortOrder] = useState<ListSortOrder>(
+    () => (searchParams.get("order") as ListSortOrder) || "desc",
+  );
   const [isFilterOpen, setIsFilterOpen] = useState(() => {
     const filterFields = [
+      "customer",
       "status",
       "priority",
-      "source",
-      "link",
-      "customer",
-      "owner",
-      "date",
       "amount",
+      "owner",
+      "next_action_date",
+      "updated_at",
     ];
     return filterFields.some((field) => searchParams.has(field));
   });
   const [filters, setFilters] = useState<FilterRule[]>(() => {
     const initialFilters: FilterRule[] = [];
     const filterFields = [
+      "customer",
       "status",
       "priority",
-      "source",
-      "link",
-      "customer",
-      "owner",
-      "date",
       "amount",
+      "owner",
+      "next_action_date",
+      "updated_at",
     ];
 
     filterFields.forEach((field) => {
@@ -287,51 +300,6 @@ export default function ProjectList() {
     });
   };
 
-  const handleOpenEditProjectDialog = (project: Project) => {
-    const formId = "edit-project-form";
-    openDialog({
-      mode: "edit",
-      eyebrow: "案件",
-      breadcrumbs: ["編集"],
-      title: "案件を編集",
-      hideHeaderTitle: true,
-      size: "xl",
-      content: (
-        <ProjectDialogForm
-          formId={formId}
-          submitLabel="変更を保存"
-          initialValues={{
-            name: project.name,
-            customer_id: project.customer_id,
-            status: project.status,
-            priority: project.priority,
-            amount: project.amount,
-            close_date: project.close_date || "",
-            note: project.note || "",
-            labels: project.labels || [],
-            user_id: project.user_id,
-            source: project.source || "manual",
-            next_action_date: project.next_action_date || "",
-          }}
-          onSubmit={(values) => {
-            updateProject(project.id, values);
-            closeDialog();
-          }}
-        />
-      ),
-      footer: (
-        <>
-          <Button type="button" variant="secondary" onClick={closeDialog}>
-            キャンセル
-          </Button>
-          <Button type="submit" form={formId} variant="primary">
-            変更を保存
-          </Button>
-        </>
-      ),
-    });
-  };
-
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: {
@@ -392,7 +360,7 @@ export default function ProjectList() {
       ...current,
       {
         id: Math.random().toString(36).slice(2, 11),
-        field: "status",
+        field: "customer",
         value: "",
       },
     ]);
@@ -417,7 +385,10 @@ export default function ProjectList() {
   const filteredProjects = useMemo(() => {
     const query = normalizeSearch(search);
     const list = projects.filter((project) => {
-      if (!project.customer_id && (project.source ?? "manual") === "recording") {
+      if (
+        !project.customer_id &&
+        (project.source ?? "manual") === "recording"
+      ) {
         return false;
       }
 
@@ -446,28 +417,11 @@ export default function ProjectList() {
 
       return filters.every((filter) => {
         if (!filter.value) return true;
+        if (filter.field === "customer")
+          return project.customer_id === filter.value;
         if (filter.field === "status") return project.status === filter.value;
-        if (filter.field === "priority") return String(project.priority) === filter.value;
-        if (filter.field === "source") return source === filter.value;
-        if (filter.field === "link") {
-          return filter.value === "linked"
-            ? Boolean(project.customer_id)
-            : !project.customer_id;
-        }
-        if (filter.field === "customer") return project.customer_id === filter.value;
-        if (filter.field === "owner") return project.user_id === filter.value;
-        if (filter.field === "date") {
-          if (!filter.value || filter.value === ",") return true;
-          const dateTime = new Date(project.updated_at).getTime();
-          const parts = filter.value.split(",");
-          const fromStr = parts[0] || "";
-          const untilStr = parts[1] || "";
-          const fromTime = fromStr ? new Date(fromStr).getTime() : 0;
-          const untilTime = untilStr
-            ? new Date(untilStr).getTime() + 24 * 60 * 60 * 1000 - 1
-            : Infinity;
-          return dateTime >= fromTime && dateTime <= untilTime;
-        }
+        if (filter.field === "priority")
+          return String(project.priority) === filter.value;
         if (filter.field === "amount") {
           if (!filter.value || filter.value === ",") return true;
           const parts = filter.value.split(",");
@@ -476,6 +430,36 @@ export default function ProjectList() {
           const fromVal = fromStr.trim() ? Number(fromStr) : 0;
           const untilVal = untilStr.trim() ? Number(untilStr) : Infinity;
           return project.amount >= fromVal && project.amount <= untilVal;
+        }
+        if (filter.field === "owner") return project.user_id === filter.value;
+        if (filter.field === "next_action_date") {
+          if (!filter.value || filter.value === ",") return true;
+          if (!project.next_action_date) return false;
+          const dateTime = new Date(
+            project.next_action_date.includes("T")
+              ? project.next_action_date
+              : `${project.next_action_date}T00:00:00`,
+          ).getTime();
+          const parts = filter.value.split(",");
+          const fromStr = parts[0] || "";
+          const untilStr = parts[1] || "";
+          const fromTime = fromStr ? new Date(fromStr.replace(/\//g, "-")).getTime() : 0;
+          const untilTime = untilStr
+            ? new Date(untilStr.replace(/\//g, "-")).getTime() + 24 * 60 * 60 * 1000 - 1
+            : Infinity;
+          return dateTime >= fromTime && dateTime <= untilTime;
+        }
+        if (filter.field === "updated_at") {
+          if (!filter.value || filter.value === ",") return true;
+          const dateTime = new Date(project.updated_at).getTime();
+          const parts = filter.value.split(",");
+          const fromStr = parts[0] || "";
+          const untilStr = parts[1] || "";
+          const fromTime = fromStr ? new Date(fromStr.replace(/\//g, "-")).getTime() : 0;
+          const untilTime = untilStr
+            ? new Date(untilStr.replace(/\//g, "-")).getTime() + 24 * 60 * 60 * 1000 - 1
+            : Infinity;
+          return dateTime >= fromTime && dateTime <= untilTime;
         }
         return true;
       });
@@ -492,7 +476,10 @@ export default function ProjectList() {
       const ownerB = profiles.find((profile) => profile.id === b.user_id)?.name;
       const sourceA = a.source ?? "manual";
       const sourceB = b.source ?? "manual";
-      const values: Record<SortKey, [string | number | undefined, string | number | undefined]> = {
+      const values: Record<
+        SortKey,
+        [string | number | undefined, string | number | undefined]
+      > = {
         updated_at: [a.updated_at, b.updated_at],
         name: [a.name, b.name],
         customer: [customerA, customerB],
@@ -583,7 +570,9 @@ export default function ProjectList() {
                                   : "ghost"
                             }
                             size="md"
-                            onClick={() => setIsFilterOpen((current) => !current)}
+                            onClick={() =>
+                              setIsFilterOpen((current) => !current)
+                            }
                             className={cn(
                               "h-10 justify-center border border-border/50 shadow-sm transition-all sm:flex-initial",
                               filters.length === 0
@@ -597,7 +586,9 @@ export default function ProjectList() {
                             )}
                           >
                             <Filter className="h-4 w-4" />
-                            <span className="text-sm md:hidden">フィルター</span>
+                            <span className="text-sm md:hidden">
+                              フィルター
+                            </span>
                             {filters.length > 0 && (
                               <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
                                 {filters.length}
@@ -653,14 +644,13 @@ export default function ProjectList() {
                             <SelectValue placeholder="項目" />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="customer">顧客名</SelectItem>
                             <SelectItem value="status">フェーズ</SelectItem>
                             <SelectItem value="priority">確度</SelectItem>
-                            <SelectItem value="source">登録元</SelectItem>
-                            <SelectItem value="link">紐付け状態</SelectItem>
-                            <SelectItem value="customer">顧客</SelectItem>
+                            <SelectItem value="amount">金額</SelectItem>
                             <SelectItem value="owner">担当者</SelectItem>
-                            <SelectItem value="date">最終更新</SelectItem>
-                            <SelectItem value="amount">案件金額</SelectItem>
+                            <SelectItem value="next_action_date">次回アクション</SelectItem>
+                            <SelectItem value="updated_at">最終更新</SelectItem>
                           </SelectContent>
                         </Select>
 
@@ -670,7 +660,9 @@ export default function ProjectList() {
                           filter={filter}
                           customerOptions={customerOptions}
                           ownerOptions={ownerOptions}
-                          onChange={(value) => updateFilter(filter.id, { value })}
+                          onChange={(value) =>
+                            updateFilter(filter.id, { value })
+                          }
                         />
 
                         <Button
@@ -722,7 +714,9 @@ export default function ProjectList() {
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
                 <Search className="h-6 w-6 opacity-20" />
               </div>
-              <p className="text-sm font-medium">条件に一致する案件がありません</p>
+              <p className="text-sm font-medium">
+                条件に一致する案件がありません
+              </p>
               <Button
                 variant="ghost"
                 size="sm"
@@ -765,244 +759,295 @@ export default function ProjectList() {
                     </TableHeader>
                   </DndContext>
                   <TableBody>
-                      {paginatedProjects.map((project) => {
-                        const source = project.source ?? "manual";
-                        const customer = project.customer_id
-                          ? customers.find((item) => item.id === project.customer_id)
-                          : null;
-                        const owner = profiles.find(
-                          (profile) => profile.id === project.user_id,
-                        );
-                        const isUnlinked = !project.customer_id;
+                    {paginatedProjects.map((project) => {
+                      const customer = project.customer_id
+                        ? customers.find(
+                            (item) => item.id === project.customer_id,
+                          )
+                        : null;
+                      const owner = profiles.find(
+                        (profile) => profile.id === project.user_id,
+                      );
+                      const isUnlinked = !project.customer_id;
 
-                        return (
-                          <TableRow
-                            key={project.id}
-                            onClick={() => handleOpenEditProjectDialog(project)}
-                            className={cn(
-                              "group cursor-pointer border-b border-border/70 bg-card transition-colors duration-200 last:border-b-0 hover:bg-muted/40",
-                              isUnlinked && "bg-destructive/[0.035] hover:bg-destructive/6",
-                            )}
-                          >
-                            {columns.map((column) => {
-                              switch (column.id) {
-                                case "name":
-                                  return (
-                                    <TableCell key={column.id} className="px-4 py-3.5">
-                                      <div className="flex min-w-0 flex-col gap-0.5">
-                                        <div className="flex min-w-0 items-center gap-2">
-                                          {isUnlinked && (
-                                            <span className="shrink-0 rounded-md bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
-                                              要紐付け
-                                            </span>
-                                          )}
-                                          <span className="max-w-[18rem] truncate text-sm font-bold text-foreground transition-colors group-hover:text-primary">
-                                            {project.name || "録音メモ（案件名未設定）"}
+                      return (
+                        <TableRow
+                          key={project.id}
+                          onClick={() => navigate(`/projects/${project.id}`)}
+                          className={cn(
+                            "group cursor-pointer border-b border-border/70 bg-card transition-colors duration-200 last:border-b-0 hover:bg-muted/40",
+                            isUnlinked &&
+                              "bg-destructive/[0.035] hover:bg-destructive/6",
+                          )}
+                        >
+                          {columns.map((column) => {
+                            switch (column.id) {
+                              case "name":
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className="px-4 py-3.5"
+                                  >
+                                    <div className="flex min-w-0 flex-col gap-0.5">
+                                      <div className="flex min-w-0 items-center gap-2">
+                                        {isUnlinked && (
+                                          <span className="shrink-0 rounded-md bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
+                                            要紐付け
                                           </span>
-                                        </div>
-                                        <span className="text-xs text-muted-foreground">
-                                          {project.labels?.join("、") || "ラベルなし"}
+                                        )}
+                                        <span className="max-w-[18rem] truncate text-sm font-bold text-foreground transition-colors group-hover:text-primary">
+                                          {project.name ||
+                                            "録音メモ（案件名未設定）"}
                                         </span>
                                       </div>
-                                    </TableCell>
-                                  );
-                                case "customer":
-                                  return (
-                                    <TableCell
-                                      key={column.id}
-                                      className="px-4 py-3.5"
-                                      onClick={(e) => {
-                                        if (customer) {
-                                          e.stopPropagation();
-                                          navigate(`/customers/${customer.id}`);
-                                        }
-                                      }}
-                                    >
-                                      {customer ? (
-                                        <div className="flex min-w-0 flex-col gap-0.5 hover:opacity-80">
-                                          <span className="truncate text-sm font-bold text-primary hover:underline">
+                                      <span className="text-xs text-muted-foreground">
+                                        {project.labels?.join("、") ||
+                                          "ラベルなし"}
+                                      </span>
+                                    </div>
+                                  </TableCell>
+                                );
+                              case "customer":
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className="px-4 py-3.5"
+                                  >
+                                    {customer ? (
+                                      <div className="flex min-w-0 flex-col gap-0.5">
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                          <span className="truncate text-sm font-bold text-foreground">
                                             {customer.name}
                                           </span>
-                                          <span className="text-xs text-muted-foreground">
-                                            {customer.industry?.join("、")}
-                                          </span>
-                                        </div>
-                                      ) : (
-                                        <div className="inline-flex items-center gap-1.5 rounded-md bg-destructive/10 px-2 py-1 text-xs font-bold text-destructive">
-                                          <Building2 className="h-3.5 w-3.5" />
-                                          企業未紐付け
-                                        </div>
-                                      )}
-                                    </TableCell>
-                                  );
-                                case "status":
-                                  return (
-                                    <TableCell key={column.id} className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
-                                      <Popover>
-                                        <PopoverTrigger asChild>
-                                          <button className="h-8 border border-transparent hover:border-border hover:bg-muted/50 px-2 shadow-none focus:ring-0 w-auto gap-1.5 rounded-lg flex items-center">
-                                            <StatusBadge status={project.status} />
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              navigate(`/customers/${customer.id}`);
+                                            }}
+                                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all duration-200 cursor-pointer border border-transparent hover:border-primary/20"
+                                            title="顧客詳細を表示"
+                                          >
+                                            <Eye className="h-3 w-3" />
                                           </button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-56 p-3 bg-background border border-border shadow-md rounded-xl" align="start">
-                                          <div className="space-y-3">
-                                            <div className="space-y-1">
-                                              <h4 className="font-bold text-xs text-foreground">フェーズ変更</h4>
-                                              <p className="text-[11px] text-muted-foreground">案件のフェーズを選択してください。</p>
-                                            </div>
-                                            <Select
-                                              value={project.status}
-                                              onValueChange={(val) => updateProject(project.id, { status: val as ProjectStatus })}
-                                            >
-                                              <SelectTrigger className="h-8 bg-muted/30 border-border/60 text-xs w-full justify-between">
-                                                <SelectValue placeholder="フェーズを選択" />
-                                              </SelectTrigger>
-                                              <SelectContent>
-                                                <SelectItem value="lead">
-                                                  <StatusBadge status="lead" />
-                                                </SelectItem>
-                                                <SelectItem value="proposing">
-                                                  <StatusBadge status="proposing" />
-                                                </SelectItem>
-                                                <SelectItem value="negotiating">
-                                                  <StatusBadge status="negotiating" />
-                                                </SelectItem>
-                                                <SelectItem value="closed">
-                                                  <StatusBadge status="closed" />
-                                                </SelectItem>
-                                              </SelectContent>
-                                            </Select>
-                                          </div>
-                                        </PopoverContent>
-                                      </Popover>
-                                    </TableCell>
-                                  );
-                                case "priority":
-                                  return (
-                                    <TableCell key={column.id} className="px-4 py-3.5" onClick={(e) => e.stopPropagation()}>
-                                      <Popover>
-                                        <PopoverTrigger asChild>
-                                          <button className="h-8 border border-transparent hover:border-border hover:bg-muted/50 px-2 shadow-none focus:ring-0 w-auto gap-1.5 rounded-lg flex items-center">
-                                            <span
-                                              className={cn(
-                                                "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
-                                                priorityColor[project.priority],
-                                              )}
-                                            >
-                                              {priorityLabel[project.priority]}
-                                            </span>
-                                          </button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-56 p-3 bg-background border border-border shadow-md rounded-xl" align="start">
-                                          <div className="space-y-3">
-                                            <div className="space-y-1">
-                                              <h4 className="font-bold text-xs text-foreground">確度変更</h4>
-                                              <p className="text-[11px] text-muted-foreground">案件の確度を選択してください。</p>
-                                            </div>
-                                            <Select
-                                              value={String(project.priority)}
-                                              onValueChange={(val) => updateProject(project.id, { priority: Number(val) as Project["priority"] })}
-                                            >
-                                              <SelectTrigger className="h-8 bg-muted/30 border-border/60 text-xs w-full justify-between">
-                                                <SelectValue placeholder="確度を選択" />
-                                              </SelectTrigger>
-                                              <SelectContent>
-                                                <SelectItem value="1">
-                                                  <span className={cn("inline-flex rounded-full px-2.5 py-1 text-xs font-medium", priorityColor[1])}>
-                                                    高
-                                                  </span>
-                                                </SelectItem>
-                                                <SelectItem value="2">
-                                                  <span className={cn("inline-flex rounded-full px-2.5 py-1 text-xs font-medium", priorityColor[2])}>
-                                                    中
-                                                  </span>
-                                                </SelectItem>
-                                                <SelectItem value="3">
-                                                  <span className={cn("inline-flex rounded-full px-2.5 py-1 text-xs font-medium", priorityColor[3])}>
-                                                    低
-                                                  </span>
-                                                </SelectItem>
-                                              </SelectContent>
-                                            </Select>
-                                          </div>
-                                        </PopoverContent>
-                                      </Popover>
-                                    </TableCell>
-                                  );
-                                case "amount":
-                                  return (
-                                    <TableCell
-                                      key={column.id}
-                                      className="whitespace-nowrap px-4 py-3.5 text-sm font-semibold text-foreground/90"
-                                    >
-                                      {formatAmount(project.amount)}
-                                    </TableCell>
-                                  );
-                                case "owner":
-                                  return (
-                                    <TableCell
-                                      key={column.id}
-                                      className="whitespace-nowrap px-4 py-3.5 text-sm font-semibold text-foreground/80"
-                                    >
-                                      {owner?.name ?? "未担当"}
-                                    </TableCell>
-                                  );
-                                case "next_action_date":
-                                  return (
-                                    <TableCell
-                                      key={column.id}
-                                      className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-muted-foreground"
-                                    >
-                                      {formatDate(project.next_action_date)}
-                                    </TableCell>
-                                  );
-                                case "updated_at":
-                                  return (
-                                    <TableCell
-                                      key={column.id}
-                                      className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-muted-foreground"
-                                    >
-                                      {formatDate(project.updated_at)}
-                                    </TableCell>
-                                  );
-                                case "source":
-                                  return (
-                                    <TableCell key={column.id} className="px-4 py-3.5">
-                                      <span
-                                        className={cn(
-                                          "inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium",
-                                          sourceColor[source],
-                                        )}
+                                        </div>
+                                        <span className="text-xs text-muted-foreground truncate">
+                                          {customer.industry?.join("、")}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <div className="inline-flex items-center gap-1.5 rounded-md bg-destructive/10 px-2 py-1 text-xs font-bold text-destructive">
+                                        <Building2 className="h-3.5 w-3.5" />
+                                        企業未紐付け
+                                      </div>
+                                    )}
+                                  </TableCell>
+                                );
+                              case "status":
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className="px-4 py-3.5"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <button className="h-8 border border-transparent hover:border-border hover:bg-muted/50 px-2 shadow-none focus:ring-0 w-auto gap-1.5 rounded-lg flex items-center">
+                                          <StatusBadge
+                                            status={project.status}
+                                          />
+                                        </button>
+                                      </PopoverTrigger>
+                                      <PopoverContent
+                                        className="w-56 p-3 bg-background border border-border shadow-md rounded-xl"
+                                        align="start"
                                       >
-                                        {sourceLabel[source]}
-                                      </span>
-                                    </TableCell>
-                                  );
-                                case "note":
-                                  return (
-                                    <TableCell
-                                      key={column.id}
-                                      className="px-4 py-3.5 text-xs font-medium text-muted-foreground"
-                                    >
-                                      <span className="block max-w-[20rem] truncate">
-                                        {project.note ?? "-"}
-                                      </span>
-                                    </TableCell>
-                                  );
-                                default:
-                                  return null;
-                              }
-                            })}
-                            <TableCell className="px-4 py-3.5 text-right">
-                              <div className="flex items-center justify-end pr-4">
-                                <ChevronRight className="h-5 w-5 -translate-x-2 text-muted-foreground opacity-0 transition-all duration-300 ease-out group-hover:translate-x-0 group-hover:text-primary group-hover:opacity-100" />
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+                                        <div className="space-y-3">
+                                          <div className="space-y-1">
+                                            <h4 className="font-bold text-xs text-foreground">
+                                              フェーズ変更
+                                            </h4>
+                                            <p className="text-[11px] text-muted-foreground">
+                                              案件のフェーズを選択してください。
+                                            </p>
+                                          </div>
+                                          <Select
+                                            value={project.status}
+                                            onValueChange={(val) =>
+                                              updateProject(project.id, {
+                                                status: val as ProjectStatus,
+                                              })
+                                            }
+                                          >
+                                            <SelectTrigger className="h-8 bg-muted/30 border-border/60 text-xs w-full justify-between">
+                                              <SelectValue placeholder="フェーズを選択" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="lead">
+                                                <StatusBadge status="lead" />
+                                              </SelectItem>
+                                              <SelectItem value="proposing">
+                                                <StatusBadge status="proposing" />
+                                              </SelectItem>
+                                              <SelectItem value="negotiating">
+                                                <StatusBadge status="negotiating" />
+                                              </SelectItem>
+                                              <SelectItem value="closed">
+                                                <StatusBadge status="closed" />
+                                              </SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                      </PopoverContent>
+                                    </Popover>
+                                  </TableCell>
+                                );
+                              case "priority":
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className="px-4 py-3.5"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <button className="h-8 border border-transparent hover:border-border hover:bg-muted/50 px-2 shadow-none focus:ring-0 w-auto gap-1.5 rounded-lg flex items-center">
+                                          <span
+                                            className={cn(
+                                              "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
+                                              priorityColor[project.priority],
+                                            )}
+                                          >
+                                            {priorityLabel[project.priority]}
+                                          </span>
+                                        </button>
+                                      </PopoverTrigger>
+                                      <PopoverContent
+                                        className="w-56 p-3 bg-background border border-border shadow-md rounded-xl"
+                                        align="start"
+                                      >
+                                        <div className="space-y-3">
+                                          <div className="space-y-1">
+                                            <h4 className="font-bold text-xs text-foreground">
+                                              確度変更
+                                            </h4>
+                                            <p className="text-[11px] text-muted-foreground">
+                                              案件の確度を選択してください。
+                                            </p>
+                                          </div>
+                                          <Select
+                                            value={String(project.priority)}
+                                            onValueChange={(val) =>
+                                              updateProject(project.id, {
+                                                priority: Number(
+                                                  val,
+                                                ) as Project["priority"],
+                                              })
+                                            }
+                                          >
+                                            <SelectTrigger className="h-8 bg-muted/30 border-border/60 text-xs w-full justify-between">
+                                              <SelectValue placeholder="確度を選択" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="1">
+                                                <span
+                                                  className={cn(
+                                                    "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
+                                                    priorityColor[1],
+                                                  )}
+                                                >
+                                                  高
+                                                </span>
+                                              </SelectItem>
+                                              <SelectItem value="2">
+                                                <span
+                                                  className={cn(
+                                                    "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
+                                                    priorityColor[2],
+                                                  )}
+                                                >
+                                                  中
+                                                </span>
+                                              </SelectItem>
+                                              <SelectItem value="3">
+                                                <span
+                                                  className={cn(
+                                                    "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
+                                                    priorityColor[3],
+                                                  )}
+                                                >
+                                                  低
+                                                </span>
+                                              </SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                      </PopoverContent>
+                                    </Popover>
+                                  </TableCell>
+                                );
+                              case "amount":
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className="whitespace-nowrap px-4 py-3.5 text-sm font-semibold text-foreground/90"
+                                  >
+                                    {formatAmount(project.amount)}
+                                  </TableCell>
+                                );
+                              case "owner":
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className="whitespace-nowrap px-4 py-3.5 text-sm font-semibold text-foreground/80"
+                                  >
+                                    {owner?.name ?? "未担当"}
+                                  </TableCell>
+                                );
+                              case "next_action_date":
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-muted-foreground"
+                                  >
+                                    {formatDate(project.next_action_date)}
+                                  </TableCell>
+                                );
+                              case "updated_at":
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-muted-foreground"
+                                  >
+                                    {formatDateTime(project.updated_at)}
+                                  </TableCell>
+                                );
+
+                              case "note":
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className="px-4 py-3.5 text-xs font-medium text-muted-foreground"
+                                  >
+                                    <span className="block max-w-[20rem] truncate">
+                                      {project.note ?? "-"}
+                                    </span>
+                                  </TableCell>
+                                );
+                              default:
+                                return null;
+                            }
+                          })}
+                          <TableCell className="px-4 py-3.5 text-right">
+                            <div className="flex items-center justify-end pr-4">
+                              <ChevronRight className="h-5 w-5 -translate-x-2 text-muted-foreground opacity-0 transition-all duration-300 ease-out group-hover:translate-x-0 group-hover:text-primary group-hover:opacity-100" />
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               </div>
 
               <ListPagination
@@ -1036,21 +1081,20 @@ function FilterValueControl({
   const optionMap: Record<string, { label: string; value: string }[]> = {
     status: statusOptions,
     priority: priorityOptions,
-    source: sourceOptions,
-    link: linkOptions,
     customer: customerOptions,
     owner: ownerOptions,
   };
 
-  if (filter.field === "date") {
+  if (filter.field === "updated_at" || filter.field === "next_action_date") {
     return (
       <div className="order-4 sm:order-3 flex items-center gap-1 w-full sm:w-auto min-w-0">
         <input
           type="date"
-          value={filter.value.split(",")[0] || ""}
+          value={(filter.value.split(",")[0] || "").replace(/\//g, "-")}
           onChange={(e) => {
             const parts = filter.value.split(",");
-            onChange(`${e.target.value},${parts[1] || ""}`);
+            const dateVal = e.target.value ? e.target.value.replace(/-/g, "/") : "";
+            onChange(`${dateVal},${parts[1] || ""}`);
           }}
           className="h-8 flex-1 sm:flex-initial sm:w-32 rounded-lg border border-border bg-background px-2 text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium text-foreground min-w-0"
         />
@@ -1059,10 +1103,11 @@ function FilterValueControl({
         </span>
         <input
           type="date"
-          value={filter.value.split(",")[1] || ""}
+          value={(filter.value.split(",")[1] || "").replace(/\//g, "-")}
           onChange={(e) => {
             const parts = filter.value.split(",");
-            onChange(`${parts[0] || ""},${e.target.value}`);
+            const dateVal = e.target.value ? e.target.value.replace(/-/g, "/") : "";
+            onChange(`${parts[0] || ""},${dateVal}`);
           }}
           className="h-8 flex-1 sm:flex-initial sm:w-32 rounded-lg border border-border bg-background px-2 text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium text-foreground min-w-0"
         />

@@ -55,6 +55,7 @@ import {
   Search,
   RotateCcw,
   Info,
+  AlertCircle,
 } from "lucide-react";
 import {
   DndContext,
@@ -72,17 +73,20 @@ import {
 } from "@dnd-kit/sortable";
 import type { DragEndEvent } from "@dnd-kit/core";
 
-function formatRelative(iso: string) {
-  const diff = Math.floor(
-    (Date.now() - new Date(iso).getTime()) / 1000 / 60 / 60 / 24,
-  );
-  if (diff === 0) return "今日";
-  if (diff === 1) return "昨日";
-  if (diff < 7) return `${diff}日前`;
-  return new Date(iso).toLocaleDateString("ja-JP", {
-    month: "short",
-    day: "numeric",
-  });
+function formatDateTime(iso: string) {
+  if (!iso) return "-";
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const hh = String(d.getHours()).padStart(2, "0");
+    const min = String(d.getMinutes()).padStart(2, "0");
+    return `${yyyy}/${mm}/${dd} ${hh}:${min}`;
+  } catch {
+    return iso;
+  }
 }
 
 const DEFAULT_COLUMNS: ListTableColumn[] = [
@@ -97,7 +101,7 @@ const DEFAULT_COLUMNS: ListTableColumn[] = [
   { id: "acquisition_source", label: "流入経路", width: "w-36" },
   { id: "amount", label: "案件金額", width: "w-36" },
   { id: "projects", label: "進行中の案件数", width: "w-40" },
-  { id: "accessed", label: "最終アクセス", width: "w-32" },
+  { id: "accessed", label: "最終更新", width: "w-32" },
 ];
 
 interface FilterRule {
@@ -111,14 +115,17 @@ export default function CustomerList() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { currentUser } = useAuth();
-  const { customers, projects, addCustomer, updateCustomer } =
-    useDataStore();
+  const { customers, projects, addCustomer, updateCustomer } = useDataStore();
   const { openDialog, closeDialog } = useGlobalDialog();
 
   const [search, setSearch] = useState(() => searchParams.get("q") || "");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [sortKey, setSortKey] = useState<string>(() => searchParams.get("sort") || "accessed");
-  const [sortOrder, setSortOrder] = useState<ListSortOrder>(() => (searchParams.get("order") as ListSortOrder) || "desc");
+  const [sortKey, setSortKey] = useState<string>(
+    () => searchParams.get("sort") || "accessed",
+  );
+  const [sortOrder, setSortOrder] = useState<ListSortOrder>(
+    () => (searchParams.get("order") as ListSortOrder) || "desc",
+  );
   const [currentPage, setCurrentPage] = useState(() => {
     const page = searchParams.get("page");
     return page ? parseInt(page, 10) : 1;
@@ -127,7 +134,6 @@ export default function CustomerList() {
     const initialFilters: FilterRule[] = [];
     const filterFields = [
       "rank",
-      "status",
       "labels",
       "industry",
       "acquisition_source",
@@ -154,7 +160,6 @@ export default function CustomerList() {
   const [isFilterOpen, setIsFilterOpen] = useState(() => {
     const filterFields = [
       "rank",
-      "status",
       "labels",
       "industry",
       "acquisition_source",
@@ -239,13 +244,13 @@ export default function CustomerList() {
       mode: "add",
       eyebrow: "顧客",
       breadcrumbs: ["新規作成"],
-      title: "顧客を追加",
+      title: "顧客を登録",
       hideHeaderTitle: true,
       size: "xl",
       content: (
         <CustomerDialogForm
           formId={formId}
-          submitLabel="顧客を追加"
+          submitLabel="顧客を登録"
           onSubmit={(values) => {
             const record = addCustomer({
               ...values,
@@ -262,7 +267,7 @@ export default function CustomerList() {
             キャンセル
           </Button>
           <Button type="submit" form={formId} variant="primary">
-            顧客を追加
+            顧客を登録
           </Button>
         </>
       ),
@@ -342,8 +347,6 @@ export default function CustomerList() {
         switch (filter.field) {
           case "rank":
             return c.rank === val;
-          case "status":
-            return c.status === val;
           case "labels":
             return (c.labels?.join("、") ?? "").includes(val);
           case "industry":
@@ -370,9 +373,13 @@ export default function CustomerList() {
             const parts = val.split(",");
             const fromStr = parts[0] || "";
             const untilStr = parts[1] || "";
-            const fromTime = fromStr ? new Date(fromStr).getTime() : 0;
+            const fromTime = fromStr
+              ? new Date(fromStr.replace(/\//g, "-")).getTime()
+              : 0;
             const untilTime = untilStr
-              ? new Date(untilStr).getTime() + 24 * 60 * 60 * 1000 - 1
+              ? new Date(untilStr.replace(/\//g, "-")).getTime() +
+                24 * 60 * 60 * 1000 -
+                1
               : Infinity;
             return dateTime >= fromTime && dateTime <= untilTime;
           }
@@ -412,9 +419,6 @@ export default function CustomerList() {
         }
         if (sortKey === "email") {
           return (a.email ?? "").localeCompare(b.email ?? "");
-        }
-        if (sortKey === "status") {
-          return (a.status ?? "").localeCompare(b.status ?? "");
         }
         if (sortKey === "acquisition_source") {
           return (a.acquisition_source ?? "").localeCompare(
@@ -574,7 +578,7 @@ export default function CustomerList() {
                     </div>
                   </div>
 
-                  {/* 顧客を追加ボタン */}
+                  {/* 顧客を登録ボタン */}
                   <Button
                     variant="primary"
                     size="md"
@@ -582,7 +586,7 @@ export default function CustomerList() {
                     className="gap-2 shadow-md h-10 px-4 shrink-0 w-full sm:w-auto justify-center"
                   >
                     <Plus className="w-4.5 h-4.5" />
-                    <span className="text-sm font-bold">顧客を追加</span>
+                    <span className="text-sm font-bold">顧客を登録</span>
                   </Button>
                 </div>
               </div>
@@ -619,7 +623,7 @@ export default function CustomerList() {
                               流入経路
                             </SelectItem>
                             <SelectItem value="amount">案件金額</SelectItem>
-                            <SelectItem value="date">最終アクセス</SelectItem>
+                            <SelectItem value="date">最終更新</SelectItem>
                           </SelectContent>
                         </Select>
 
@@ -679,11 +683,17 @@ export default function CustomerList() {
                           <div className="order-4 sm:order-3 flex items-center gap-1 w-full sm:w-auto min-w-0">
                             <input
                               type="date"
-                              value={filter.value.split(",")[0] || ""}
+                              value={(filter.value.split(",")[0] || "").replace(
+                                /\//g,
+                                "-",
+                              )}
                               onChange={(e) => {
                                 const parts = filter.value.split(",");
+                                const dateVal = e.target.value
+                                  ? e.target.value.replace(/-/g, "/")
+                                  : "";
                                 updateFilter(filter.id, {
-                                  value: `${e.target.value},${parts[1] || ""}`,
+                                  value: `${dateVal},${parts[1] || ""}`,
                                 });
                               }}
                               className="h-8 flex-1 sm:flex-initial sm:w-32 rounded-lg border border-border bg-background px-2 text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium text-foreground min-w-0"
@@ -693,11 +703,17 @@ export default function CustomerList() {
                             </span>
                             <input
                               type="date"
-                              value={filter.value.split(",")[1] || ""}
+                              value={(filter.value.split(",")[1] || "").replace(
+                                /\//g,
+                                "-",
+                              )}
                               onChange={(e) => {
                                 const parts = filter.value.split(",");
+                                const dateVal = e.target.value
+                                  ? e.target.value.replace(/-/g, "/")
+                                  : "";
                                 updateFilter(filter.id, {
-                                  value: `${parts[0] || ""},${e.target.value}`,
+                                  value: `${parts[0] || ""},${dateVal}`,
                                 });
                               }}
                               className="h-8 flex-1 sm:flex-initial sm:w-32 rounded-lg border border-border bg-background px-2 text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium text-foreground min-w-0"
@@ -847,6 +863,16 @@ export default function CustomerList() {
                             p.status !== "closed",
                         );
 
+                        const isMinimalCustomer =
+                          !customer.phone &&
+                          !customer.email &&
+                          !customer.company_code &&
+                          !customer.acquisition_source &&
+                          (!customer.labels || customer.labels.length === 0) &&
+                          !customer.address &&
+                          !customer.website &&
+                          !customer.employee_count;
+
                         return (
                           <TableRow
                             key={customer.id}
@@ -925,6 +951,32 @@ export default function CustomerList() {
                                           <span className="max-w-[18rem] truncate text-sm font-bold text-foreground transition-colors group-hover:text-primary">
                                             {customer.name}
                                           </span>
+                                          {isMinimalCustomer && (
+                                            <TooltipProvider
+                                              delayDuration={100}
+                                            >
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <span
+                                                    className="inline-flex items-center text-amber-500 cursor-help"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                    }}
+                                                  >
+                                                    <AlertCircle className="w-4 h-4 animate-pulse" />
+                                                  </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent
+                                                  side="top"
+                                                  className="bg-popover text-popover-foreground border border-border shadow-md"
+                                                >
+                                                  <p>
+                                                    詳細情報が不足しています
+                                                  </p>
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            </TooltipProvider>
+                                          )}
                                         </div>
                                         <span className="text-xs text-muted-foreground">
                                           {customer.industry?.join("、")}
@@ -948,39 +1000,6 @@ export default function CustomerList() {
                                       className="px-4 py-3.5 text-xs text-muted-foreground truncate max-w-[14rem]"
                                     >
                                       {customer.email || "-"}
-                                    </TableCell>
-                                  );
-                                case "status":
-                                  return (
-                                    <TableCell
-                                      key={column.id}
-                                      className="px-4 py-3.5"
-                                    >
-                                      <span
-                                        className={cn(
-                                          "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border shadow-2xs whitespace-nowrap",
-                                          customer.status === "active" &&
-                                            "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400",
-                                          customer.status === "negotiating" &&
-                                            "bg-blue-500/10 text-blue-600 border-blue-500/20 dark:text-blue-400",
-                                          customer.status === "proposing" &&
-                                            "bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400",
-                                          customer.status === "lead" &&
-                                            "bg-purple-500/10 text-purple-600 border-purple-500/20 dark:text-purple-400",
-                                          customer.status === "dormant" &&
-                                            "bg-muted text-muted-foreground border-border",
-                                        )}
-                                      >
-                                        {
-                                          {
-                                            lead: "リード",
-                                            proposing: "提案中",
-                                            negotiating: "商談中",
-                                            active: "既存顧客",
-                                            dormant: "休眠",
-                                          }[customer.status || "lead"]
-                                        }
-                                      </span>
                                     </TableCell>
                                   );
                                 case "labels":
@@ -1091,7 +1110,9 @@ export default function CustomerList() {
                                                     onClick={(e) => {
                                                       e.stopPropagation();
                                                       setOpenPopoverId(null);
-                                                      navigate("/projects");
+                                                      navigate(
+                                                        `/projects/${p.id}?from=/customers`,
+                                                      );
                                                     }}
                                                     className="flex items-center gap-3 p-2 rounded-lg hover:bg-primary/5 transition-colors group/item cursor-pointer"
                                                   >
@@ -1104,7 +1125,7 @@ export default function CustomerList() {
                                                       </span>
                                                       <span className="text-[10px] text-muted-foreground font-medium">
                                                         最終更新:{" "}
-                                                        {formatRelative(
+                                                        {formatDateTime(
                                                           p.updated_at ||
                                                             p.created_at,
                                                         )}
@@ -1133,7 +1154,7 @@ export default function CustomerList() {
                                       key={column.id}
                                       className="px-4 py-3.5 text-xs font-semibold text-muted-foreground"
                                     >
-                                      {formatRelative(
+                                      {formatDateTime(
                                         customer.last_accessed_at,
                                       )}
                                     </TableCell>

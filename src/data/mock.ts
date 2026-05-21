@@ -8,6 +8,7 @@ import type {
   Notification,
   DashboardCardDef,
   AudioMinute,
+  ProjectDocument,
 } from "../types";
 
 // ─── Profiles ────────────────────────────────────────────────────────────────
@@ -1922,3 +1923,34 @@ export const managerSidebarMenuItems = [
   { id: "reviews", label: "レビュー", icon: "file-text" },
   { id: "risks", label: "リスク", icon: "alert" },
 ];
+
+export const mockProjectDocuments: ProjectDocument[] = [
+  {
+    id: "doc-001",
+    project_id: "proj-001",
+    name: "要件定義書_v1.0.pdf",
+    file_size: 2450000,
+    uploaded_at: "2026-05-07T10:15:00Z",
+    uploaded_by: "user-001",
+    file_type: "application/pdf"
+  },
+  {
+    id: "doc-002",
+    project_id: "proj-001",
+    name: "システム構成構成案.xlsx",
+    file_size: 892000,
+    uploaded_at: "2026-05-08T14:30:00Z",
+    uploaded_by: "user-001",
+    file_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  },
+  {
+    id: "doc-003",
+    project_id: "proj-003",
+    name: "提案資料_生産管理刷新.pptx",
+    file_size: 5420000,
+    uploaded_at: "2026-05-06T11:00:00Z",
+    uploaded_by: "user-001",
+    file_type: "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+  }
+];
+

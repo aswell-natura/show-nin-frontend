@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   DndContext,
@@ -31,6 +31,7 @@ import {
 
 import AppLayout from "../../components/layout/AppLayout";
 import { useDataStore } from "../../context/DataStoreContext";
+import { useGlobalDialog } from "../../context/GlobalDialogContext";
 import { mockAudioMinutes } from "../../data/mock";
 import type { AudioMinute } from "../../types";
 import { Badge } from "@/components/ui/badge";
@@ -80,6 +81,7 @@ interface MinuteView {
   startTime: string;
   endTime: string;
   createdAt: string;
+  updatedAt: string;
   summary: string;
   checklistDone: number;
   checklistTotal: number;
@@ -93,15 +95,23 @@ interface FilterRule {
   value: string;
 }
 
+interface FileAnalysisFormValues {
+  fileType: "audio" | "text";
+  title: string;
+  customerId: string;
+  projectId: string;
+  fileName: string;
+}
+
 const DEFAULT_COLUMNS: ListTableColumn[] = [
   { id: "title", label: "議事録名", width: "w-72" },
   { id: "customer", label: "企業名", width: "w-56" },
   { id: "project", label: "案件名", width: "w-64" },
   { id: "owner", label: "担当者", width: "w-36" },
-  { id: "recording_date", label: "取得日", width: "w-32" },
   { id: "start_time", label: "開始時刻", width: "w-28" },
   { id: "end_time", label: "終了時刻", width: "w-28" },
   { id: "created_at", label: "作成日時", width: "w-40" },
+  { id: "updated_at", label: "最終更新日", width: "w-40" },
 ];
 
 function normalizeSearch(value: string) {
@@ -117,13 +127,13 @@ function formatDate(value: string) {
 }
 
 function formatDateTime(value: string) {
-  return new Date(value).toLocaleString("ja-JP", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const date = new Date(value);
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mi = String(date.getMinutes()).padStart(2, "0");
+  return `${yyyy}/${mm}/${dd} ${hh}:${mi}`;
 }
 
 function openDetailWindow(id: string) {
@@ -144,14 +154,175 @@ function openDetailWindow(id: string) {
   else window.open(`/minutes/${id}`, "_blank");
 }
 
+function FileAnalysisForm({
+  formId,
+  onSubmit,
+}: {
+  formId: string;
+  onSubmit: (values: FileAnalysisFormValues) => void;
+}) {
+  const { customers, projects } = useDataStore();
+  const [values, setValues] = useState<FileAnalysisFormValues>({
+    fileType: "audio",
+    title: "",
+    customerId: "",
+    projectId: "",
+    fileName: "",
+  });
+
+  const customerOptions = useMemo(
+    () =>
+      customers
+        .map((customer) => ({ label: customer.name, value: customer.id }))
+        .sort((a, b) => a.label.localeCompare(b.label, "ja")),
+    [customers],
+  );
+
+  const projectOptions = useMemo(() => {
+    const visibleProjects = values.customerId
+      ? projects.filter((project) => project.customer_id === values.customerId)
+      : projects;
+
+    return visibleProjects
+      .map((project) => ({ label: project.name, value: project.id }))
+      .sort((a, b) => a.label.localeCompare(b.label, "ja"));
+  }, [projects, values.customerId]);
+
+  const updateValue = <K extends keyof FileAnalysisFormValues>(
+    key: K,
+    value: FileAnalysisFormValues[K],
+  ) => {
+    setValues((current) => ({ ...current, [key]: value }));
+  };
+
+  const fileAccept =
+    values.fileType === "audio"
+      ? "audio/*,.m4a,.mp3,.wav,.aac"
+      : "text/plain,.txt,.md,.csv,.json,.doc,.docx";
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    onSubmit({
+      ...values,
+      title: values.title.trim() || values.fileName.replace(/\.[^.]+$/, "") || "新規議事録",
+    });
+  };
+
+  return (
+    <form id={formId} onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid gap-3 sm:grid-cols-2">
+        {[
+          { value: "audio" as const, label: "音声ファイル", note: "mp3 / wav / m4a など" },
+          { value: "text" as const, label: "テキストファイル", note: "txt / md / doc など" },
+        ].map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => {
+              updateValue("fileType", option.value);
+              updateValue("fileName", "");
+            }}
+            className={cn(
+              "rounded-xl border p-4 text-left transition-all",
+              values.fileType === option.value
+                ? "border-primary bg-primary/5 text-primary shadow-sm"
+                : "border-border bg-card text-foreground hover:border-primary/40",
+            )}
+          >
+            <span className="block text-sm font-bold">{option.label}</span>
+            <span className="mt-1 block text-xs font-medium text-muted-foreground">
+              {option.note}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/30 px-4 py-6 text-center transition hover:border-primary/50 hover:bg-primary/5">
+        <input
+          type="file"
+          accept={fileAccept}
+          className="sr-only"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            updateValue("fileName", file?.name ?? "");
+            if (file?.name && !values.title.trim()) {
+              updateValue("title", file.name.replace(/\.[^.]+$/, ""));
+            }
+          }}
+        />
+        <Plus className="mb-3 h-6 w-6 text-primary" />
+        <span className="text-sm font-bold text-foreground">
+          {values.fileName || "解析するファイルを選択"}
+        </span>
+        <span className="mt-1 text-xs font-medium text-muted-foreground">
+          {values.fileType === "audio"
+            ? "音声ファイルをアップロードして文字起こしから議事録化します"
+            : "テキストファイルをアップロードして要約と議事録化を行います"}
+        </span>
+      </label>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2 md:col-span-2">
+          <label htmlFor="minute-upload-title" className="text-xs font-bold text-muted-foreground">
+            議事録タイトル
+          </label>
+          <input
+            id="minute-upload-title"
+            value={values.title}
+            onChange={(event) => updateValue("title", event.target.value)}
+            placeholder="議事録タイトルを入力"
+            className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground shadow-sm outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-muted-foreground">顧客名</label>
+          <Combobox
+            options={customerOptions}
+            value={values.customerId}
+            onValueChange={(value) => {
+              updateValue("customerId", value);
+              const nextProject = projects.find((project) => project.customer_id === value);
+              updateValue("projectId", nextProject?.id ?? "");
+            }}
+            placeholder="顧客名を選択"
+            className="h-11 rounded-xl border border-input bg-background text-sm font-medium shadow-sm"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-muted-foreground">案件名</label>
+          <Combobox
+            options={[{ label: "未設定", value: "" }, ...projectOptions]}
+            value={values.projectId}
+            onValueChange={(value) => {
+              updateValue("projectId", value);
+              const selectedProject = projects.find((project) => project.id === value);
+              if (selectedProject?.customer_id) {
+                updateValue("customerId", selectedProject.customer_id);
+              }
+            }}
+            placeholder="案件名を選択"
+            className="h-11 rounded-xl border border-input bg-background text-sm font-medium shadow-sm"
+          />
+        </div>
+      </div>
+    </form>
+  );
+}
+
 export default function AudioMinuteList() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { customers, projects, profiles } = useDataStore();
+  const { openDialog, closeDialog } = useGlobalDialog();
 
   const [search, setSearch] = useState(() => searchParams.get("q") || "");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [sortKey, setSortKey] = useState<string>(
-    () => searchParams.get("sort") || "recording_date",
+    () => {
+      const key = searchParams.get("sort");
+      return key && key !== "recording_date" ? key : "updated_at";
+    },
   );
   const [sortOrder, setSortOrder] = useState<ListSortOrder>(
     () => (searchParams.get("order") as ListSortOrder) || "desc",
@@ -187,7 +358,7 @@ export default function AudioMinuteList() {
   useEffect(() => {
     const params = new URLSearchParams();
     if (search.trim()) params.set("q", search.trim());
-    if (sortKey !== "recording_date") params.set("sort", sortKey);
+    if (sortKey !== "updated_at") params.set("sort", sortKey);
     if (sortOrder !== "desc") params.set("order", sortOrder);
     if (currentPage > 1) params.set("page", currentPage.toString());
     filters.forEach((filter) => {
@@ -214,10 +385,11 @@ export default function AudioMinuteList() {
           : null;
         const owner = profiles.find((profile) => profile.id === minute.user_id);
         const checklistDone = minute.checklist.filter((item) => item.checked).length;
+        const timestamps = minute as AudioMinute & { updated_at?: string };
 
         return {
           id: minute.id,
-          title: minute.title,
+          title: minute.title.trim() || "-",
           customerId: minute.customer_id,
           customer: customer?.name ?? "未紐づけ",
           customerIndustry: customer?.industry?.join("、"),
@@ -229,6 +401,7 @@ export default function AudioMinuteList() {
           startTime: minute.start_time,
           endTime: minute.end_time,
           createdAt: minute.created_at,
+          updatedAt: timestamps.updated_at ?? minute.created_at,
           summary: minute.summary.replace(/\s+/g, " ").slice(0, 160),
           checklistDone,
           checklistTotal: minute.checklist.length,
@@ -317,6 +490,36 @@ export default function AudioMinuteList() {
     });
   };
 
+  const handleOpenFileAnalysisDialog = () => {
+    const formId = "minute-file-analysis-form";
+    openDialog({
+      mode: "add",
+      eyebrow: "議事録",
+      breadcrumbs: ["ファイル解析"],
+      title: "ファイル解析",
+      description: "音声またはテキストファイルから議事録を作成します。",
+      size: "lg",
+      content: (
+        <FileAnalysisForm
+          formId={formId}
+          onSubmit={() => {
+            closeDialog();
+          }}
+        />
+      ),
+      footer: (
+        <>
+          <Button type="button" variant="secondary" onClick={closeDialog}>
+            キャンセル
+          </Button>
+          <Button type="submit" form={formId} variant="primary">
+            解析を開始
+          </Button>
+        </>
+      ),
+    });
+  };
+
   const filtered = useMemo(() => {
     let list = [...minuteViews];
 
@@ -384,6 +587,9 @@ export default function AudioMinuteList() {
         if (sortKey === "end_time") return a.endTime.localeCompare(b.endTime);
         if (sortKey === "created_at") {
           return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        }
+        if (sortKey === "updated_at") {
+          return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
         }
         return 0;
       })();
@@ -498,6 +704,17 @@ export default function AudioMinuteList() {
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
+
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="md"
+                    onClick={handleOpenFileAnalysisDialog}
+                    className="h-10 gap-2 px-3 shadow-sm"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span className="text-sm">ファイル解析</span>
+                  </Button>
                 </div>
               </div>
 
@@ -712,14 +929,6 @@ export default function AudioMinuteList() {
                                   <TableCell key={column.id} className="px-4 py-3.5">
                                     <div className="flex min-w-0 flex-col gap-1">
                                       <div className="flex min-w-0 items-center gap-2">
-                                        {minute.isUnlinked && (
-                                          <Badge
-                                            variant="destructive"
-                                            className="border-0 px-2 py-0.5 text-[10px] font-bold"
-                                          >
-                                            未紐づけ
-                                          </Badge>
-                                        )}
                                         <span className="truncate text-sm font-bold text-foreground transition-colors group-hover:text-primary">
                                           {minute.title}
                                         </span>
@@ -770,7 +979,7 @@ export default function AudioMinuteList() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="px-4 py-3.5 text-xs font-semibold text-muted-foreground"
+                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-muted-foreground"
                                   >
                                     {minute.owner}
                                   </TableCell>
@@ -814,6 +1023,18 @@ export default function AudioMinuteList() {
                                     <span className="inline-flex items-center gap-1.5">
                                       <Clock className="h-3.5 w-3.5" />
                                       {formatDateTime(minute.createdAt)}
+                                    </span>
+                                  </TableCell>
+                                );
+                              case "updated_at":
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-muted-foreground"
+                                  >
+                                    <span className="inline-flex items-center gap-1.5">
+                                      <Clock className="h-3.5 w-3.5" />
+                                      {formatDateTime(minute.updatedAt)}
                                     </span>
                                   </TableCell>
                                 );

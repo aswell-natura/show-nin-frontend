@@ -510,7 +510,7 @@ export default function ProjectList() {
         <div className="custom-scrollbar flex-1 overflow-auto bg-muted/5">
           <div className="bg-background/95 backdrop-blur-md">
             <div className="px-4 pb-4 pt-6 md:px-6">
-              <div className="flex flex-col items-stretch justify-between gap-4 xl:flex-row xl:items-center">
+              <div className="flex flex-col items-stretch justify-between gap-4 md:flex-row md:items-center">
                 <div className="flex shrink-0 items-center gap-2 py-1">
                   <h1 className="text-lg font-bold tracking-tight text-foreground md:text-xl">
                     案件一覧
@@ -535,8 +535,8 @@ export default function ProjectList() {
                   </TooltipProvider>
                 </div>
 
-                <div className="flex flex-1 flex-col items-stretch gap-3 sm:flex-row sm:items-center xl:flex-initial xl:justify-end">
-                  <div className="flex flex-1 flex-col items-stretch justify-end gap-3 sm:flex-row sm:items-center sm:gap-2 xl:flex-initial">
+                <div className="flex flex-1 flex-col items-stretch gap-3 sm:flex-row sm:items-center md:flex-initial md:justify-end">
+                  <div className="flex flex-1 flex-col items-stretch justify-end gap-3 sm:flex-row sm:items-center sm:gap-2 md:flex-initial">
                     <div
                       className={cn(
                         "max-w-full shrink-0 transition-all duration-300 ease-in-out",

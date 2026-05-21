@@ -1305,7 +1305,7 @@ export default function ProjectDetail() {
       <div className="h-full flex flex-col bg-card">
         {/* Header */}
         <div className="p-4 border-b border-border flex items-center justify-between shrink-0">
-          <span className="font-bold text-xs text-foreground tracking-wider uppercase flex items-center gap-1.5">
+          <span className="font-bold text-xs text-foreground tracking-wider uppercase flex items-center gap-2">
             <Folder className="w-4 h-4 text-primary" />
             案件概要
           </span>
@@ -1317,7 +1317,7 @@ export default function ProjectDetail() {
           {/* 1. Next Action & Deadline Integration */}
           <div className="relative flex flex-col gap-2.5 p-4 rounded-2xl bg-muted/40 dark:bg-muted/15 border border-border/70 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 transition-all duration-200 shadow-3xs">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                 <CheckSquare className="w-3.5 h-3.5 text-primary" />
                 ネクストアクション
               </span>
@@ -1329,7 +1329,7 @@ export default function ProjectDetail() {
                 }}
                 size="sm"
                 className="w-[150px]"
-                buttonClassName="h-7 rounded-lg border-border/70 px-2 py-1 text-[11px] font-bold shadow-3xs"
+                buttonClassName="h-8 rounded-lg border-border/70 px-2.5 py-1 text-xs font-bold shadow-3xs"
               />
             </div>
             <textarea
@@ -1358,12 +1358,12 @@ export default function ProjectDetail() {
               {nextActionSaveStatus === "saving" ? (
                 <>
                   <Loader2 className="w-3 h-3 text-muted-foreground animate-spin" />
-                  <span className="text-[10px] font-semibold text-muted-foreground">保存中...</span>
+                  <span className="text-xs font-semibold text-muted-foreground">保存中...</span>
                 </>
               ) : (
                 <>
                   <Check className="w-3 h-3 text-emerald-500" />
-                  <span className="text-[10px] font-bold text-emerald-500 dark:text-emerald-400">保存しました</span>
+                  <span className="text-xs font-bold text-emerald-500 dark:text-emerald-400">保存しました</span>
                 </>
               )}
             </div>
@@ -1373,7 +1373,7 @@ export default function ProjectDetail() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* 案件金額 */}
             <div className="flex flex-col gap-1.5 p-3.5 rounded-xl bg-card border border-border/50 shadow-3xs">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+              <span className="text-xs text-muted-foreground font-medium">
                 案件金額
               </span>
               <span className="text-base font-extrabold text-foreground tracking-tight">
@@ -1385,7 +1385,7 @@ export default function ProjectDetail() {
 
             {/* 完了予定日 */}
             <div className="flex flex-col gap-1.5 p-3.5 rounded-xl bg-card border border-border/50 shadow-3xs">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+              <span className="text-xs text-muted-foreground font-medium">
                 完了予定日
               </span>
               <span className="text-xs font-bold text-foreground flex items-center gap-1.5 h-6">
@@ -1398,7 +1398,7 @@ export default function ProjectDetail() {
 
             {/* 担当メンバー */}
             <div className="flex flex-col gap-1.5 p-3.5 rounded-xl bg-card border border-border/50 shadow-3xs">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+              <span className="text-xs text-muted-foreground font-medium">
                 担当メンバー
               </span>
               <div className="flex items-center gap-2 h-6">
@@ -1413,7 +1413,7 @@ export default function ProjectDetail() {
 
             {/* ラベル */}
             <div className="flex flex-col gap-1.5 p-3.5 rounded-xl bg-card border border-border/50 shadow-3xs">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+              <span className="text-xs text-muted-foreground font-medium">
                 ラベル
               </span>
               <div className="flex flex-wrap gap-1 items-center min-h-6">
@@ -1422,7 +1422,7 @@ export default function ProjectDetail() {
                     <Badge
                       key={l}
                       variant="outline"
-                      className="text-[9px] font-semibold border-border px-1.5 py-0.2 bg-background"
+                      className="text-xs font-medium border-border px-2 py-0.5 bg-background"
                     >
                       {l}
                     </Badge>
@@ -1436,13 +1436,13 @@ export default function ProjectDetail() {
 
           {/* Under other info: フェーズ and 確度 */}
           <div className="border-t border-border/50 my-2 pt-4">
-            <h5 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2.5">
+            <h5 className="text-xs font-bold text-muted-foreground mb-2.5">
               ステータス・評価
             </h5>
             <div className="grid grid-cols-2 gap-3">
               {/* フェーズ */}
               <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-muted/20 dark:bg-muted/10 border border-border/50">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                <span className="text-xs text-muted-foreground font-medium">
                   フェーズ
                 </span>
                 <div className="flex items-center h-6">
@@ -1455,7 +1455,7 @@ export default function ProjectDetail() {
 
               {/* 確度 */}
               <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-muted/20 dark:bg-muted/10 border border-border/50">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                <span className="text-xs text-muted-foreground font-medium">
                   確度
                 </span>
                 <div className="flex items-center h-6">

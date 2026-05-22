@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+<<<<<<< HEAD
 import { Check, ChevronLeft, Download, Lock, Printer, Unlock } from 'lucide-react'
 
 import AppLayout from '@/components/layout/AppLayout'
@@ -10,6 +11,21 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+=======
+import {
+  Check,
+  ChevronLeft,
+  Download,
+  Pencil,
+  Printer,
+} from 'lucide-react'
+
+import AppLayout from '@/components/layout/AppLayout'
+import { Button } from '@/components/ui/button'
+import { DatePicker } from '@/components/ui/date-picker'
+
+const previewScale = 0.72
+>>>>>>> ad7912f9c0ebf86067f25abd270dacdfc10f91dd
 
 function todayLabel() {
   const now = new Date()
@@ -142,6 +158,7 @@ export default function MinuteDocumentEdit() {
               </p>
             </section>
 
+<<<<<<< HEAD
             <section className="border-b border-slate-200 px-7 py-8">
               <h3 className="mb-5 inline-flex rounded bg-teal-700 px-2 py-1 text-lg font-bold text-white">
                 次のアクション
@@ -152,6 +169,17 @@ export default function MinuteDocumentEdit() {
                 <li>次回会議までの対応事項を確認する</li>
               </ul>
             </section>
+=======
+                <div className="space-y-2">
+                  <FieldLabel>商談日時</FieldLabel>
+                  <DatePicker
+                    value={fields.meetingDate}
+                    onChange={(value) => updateField('meetingDate', value)}
+                    placeholder="日付を選択"
+                    buttonClassName="h-12 rounded-xl border-slate-200 bg-white px-4 text-base shadow-none hover:border-blue-300 hover:bg-white focus-visible:border-blue-300 focus-visible:ring-blue-100"
+                  />
+                </div>
+>>>>>>> ad7912f9c0ebf86067f25abd270dacdfc10f91dd
 
             <section className="px-7 py-8">
               <h3 className="mb-5 inline-flex rounded bg-teal-700 px-2 py-1 text-lg font-bold text-white">

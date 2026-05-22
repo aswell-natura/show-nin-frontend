@@ -110,7 +110,40 @@ Inline helpful text and micro-copy should use the `Tooltip` component from `src/
 - Wrap the trigger and content in `<TooltipProvider delayDuration={200}>`.
 - Use an `Info` icon (`w-4 h-4 text-muted-foreground/60 hover:text-primary`) inside `<TooltipTrigger asChild>` as the trigger button.
 - Style `<TooltipContent>` with `backdrop-blur-xl bg-background/90 border border-border/60 shadow-xl rounded-xl text-xs text-foreground/90 leading-relaxed animate-in zoom-in-95 duration-200 z-50`.
+- Always set `side="bottom"` and `align="end"` on `<TooltipContent>` when used next to tab bars or action rows so the popup doesn't obscure adjacent controls.
 - Reserve `Popover` from `src/components/ui/popover.tsx` for complex interactive metrics (like project counts) or click-driven dropdown menus.
+
+#### Icon-Button Tooltip Pattern
+
+When an action button contains only an icon (no visible label), the tooltip **replaces** the label and is mandatory for accessibility. Follow this pattern:
+
+```tsx
+<TooltipProvider delayDuration={200}>
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Button
+        variant="primary"
+        size="sm"
+        className="h-8 w-8 rounded-full px-0 shadow-xs"
+        aria-label="ボタンの説明"  {/* always include aria-label */}
+      >
+        <Icon className="w-4 h-4" />
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent
+      side="bottom"
+      align="end"
+      className="px-3 py-1.5 backdrop-blur-xl bg-background/90 border border-border/60 shadow-xl rounded-xl text-xs font-bold text-foreground/90 animate-in zoom-in-95 duration-200 z-50"
+    >
+      ボタンの説明
+    </TooltipContent>
+  </Tooltip>
+</TooltipProvider>
+```
+
+- Do **not** use the native `title` attribute — use `TooltipContent` instead.
+- The `aria-label` on the button must match the `TooltipContent` text.
+- Icon-only buttons must be square (`h-8 w-8 px-0`) and use `rounded-full` for action bars, or `rounded-md` for inline contexts.
 
 ### High-Density Tables & Column Reordering
 

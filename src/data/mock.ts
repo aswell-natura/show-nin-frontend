@@ -1950,6 +1950,24 @@ export const mockProjectDocuments: ProjectDocument[] = [
     uploaded_at: "2026-05-06T11:00:00Z",
     uploaded_by: "user-001",
     file_type: "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+  },
+  {
+    id: "doc-004",
+    project_id: "proj-001",
+    name: "キックオフ会議議事録_20260507.pdf",
+    file_size: 1120000,
+    uploaded_at: "2026-05-07T11:15:00Z",
+    uploaded_by: "user-001",
+    file_type: "application/pdf"
+  },
+  {
+    id: "doc-005",
+    project_id: "proj-001",
+    name: "要件定義フェーズタスク一覧.xlsx",
+    file_size: 254000,
+    uploaded_at: "2026-05-09T09:30:00Z",
+    uploaded_by: "user-001",
+    file_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
   }
 ];
 

@@ -18,12 +18,17 @@ import {
 } from "@dnd-kit/sortable";
 import {
   Building2,
+<<<<<<< HEAD
   ChevronRight,
+=======
+>>>>>>> ad7912f9c0ebf86067f25abd270dacdfc10f91dd
   Filter,
   Info,
   Plus,
   RotateCcw,
   Search,
+  SquareArrowOutUpRight,
+  ChevronRight,
   X,
 } from "lucide-react";
 
@@ -42,6 +47,7 @@ import {
   type ListTableColumn,
 } from "@/components/ui/list-table";
 import { SearchBar } from "@/components/ui/search-bar";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -503,8 +509,8 @@ export default function ProjectList() {
         <div className="custom-scrollbar flex-1 overflow-auto bg-muted/5">
           <div className="bg-background/95 backdrop-blur-md">
             <div className="px-4 pb-4 pt-6 md:px-6">
-              <div className="flex flex-col items-stretch justify-between gap-4 xl:flex-row xl:items-center">
-                <div className="flex shrink-0 items-center gap-2 py-1">
+              <div className="flex flex-col items-stretch justify-between gap-4 md:flex-row md:items-center">
+                <div className="flex w-full shrink-0 items-center gap-2 py-1 md:w-auto">
                   <h1 className="text-lg font-bold tracking-tight text-foreground md:text-xl">
                     案件一覧
                   </h1>
@@ -526,10 +532,19 @@ export default function ProjectList() {
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
+                  <Button
+                    variant="primary"
+                    size="icon"
+                    onClick={handleOpenAddProjectDialog}
+                    className="ml-auto h-9 w-9 shrink-0 rounded-full shadow-md md:hidden"
+                    aria-label="案件を登録"
+                  >
+                    <Plus className="h-4.5 w-4.5" />
+                  </Button>
                 </div>
 
-                <div className="flex flex-1 flex-col items-stretch gap-3 sm:flex-row sm:items-center xl:flex-initial xl:justify-end">
-                  <div className="flex flex-1 flex-col items-stretch justify-end gap-3 sm:flex-row sm:items-center sm:gap-2 xl:flex-initial">
+                <div className="flex flex-1 flex-col items-stretch gap-3 sm:flex-row sm:items-center md:flex-initial md:justify-end">
+                  <div className="flex flex-1 flex-col items-stretch justify-end gap-3 sm:flex-row sm:items-center sm:gap-2 md:flex-initial">
                     <div
                       className={cn(
                         "max-w-full shrink-0 transition-all duration-300 ease-in-out",
@@ -606,10 +621,7 @@ export default function ProjectList() {
                     variant="primary"
                     size="md"
                     onClick={handleOpenAddProjectDialog}
-                    className={cn(
-                      "h-10 w-full shrink-0 justify-center gap-2 px-4 shadow-md sm:w-auto",
-                      isFilterOpen && "hidden sm:inline-flex",
-                    )}
+                    className="hidden h-10 w-full shrink-0 justify-center gap-2 px-4 shadow-md sm:w-auto md:inline-flex"
                   >
                     <Plus className="h-4.5 w-4.5" />
                     <span className="text-sm font-bold">案件を登録</span>
@@ -702,15 +714,6 @@ export default function ProjectList() {
                     </div>
                     </div>
                   </div>
-                  <Button
-                    variant="primary"
-                    size="md"
-                    onClick={handleOpenAddProjectDialog}
-                    className="mt-3 h-10 w-full justify-center gap-2 px-4 shadow-md sm:hidden"
-                  >
-                    <Plus className="h-4.5 w-4.5" />
-                    <span className="text-sm font-bold">譯井ｻｶ繧堤匳骭ｲ</span>
-                  </Button>
                 </>
               )}
             </div>
@@ -826,6 +829,20 @@ export default function ProjectList() {
                                           <span className="truncate text-sm font-bold text-foreground">
                                             {customer.name}
                                           </span>
+<<<<<<< HEAD
+=======
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              navigate(`/customers/${customer.id}`);
+                                            }}
+                                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all duration-200 cursor-pointer border border-transparent hover:border-primary/20"
+                                            title="顧客詳細を表示"
+                                          >
+                                            <SquareArrowOutUpRight className="h-3 w-3" />
+                                          </button>
+>>>>>>> ad7912f9c0ebf86067f25abd270dacdfc10f91dd
                                         </div>
                                         <span className="text-xs text-muted-foreground truncate">
                                           {customer.industry?.join("、")}
@@ -944,7 +961,7 @@ export default function ProjectList() {
                           })}
                           <TableCell className="px-4 py-3.5 text-right">
                             <div className="flex items-center justify-end pr-4">
-                              <ChevronRight className="h-5 w-5 -translate-x-2 text-muted-foreground opacity-0 transition-all duration-300 ease-out group-hover:translate-x-0 group-hover:text-primary group-hover:opacity-100" />
+                              <ChevronRight className="h-4.5 w-4.5 -translate-x-2 text-muted-foreground opacity-0 transition-all duration-300 ease-out group-hover:translate-x-0 group-hover:text-primary group-hover:opacity-100" />
                             </div>
                           </TableCell>
                         </TableRow>
@@ -992,28 +1009,30 @@ function FilterValueControl({
   if (filter.field === "updated_at" || filter.field === "next_action_date") {
     return (
       <div className="order-4 sm:order-3 flex items-center gap-1 w-full sm:w-auto min-w-0">
-        <input
-          type="date"
+        <DatePicker
           value={(filter.value.split(",")[0] || "").replace(/\//g, "-")}
-          onChange={(e) => {
+          onChange={(value) => {
             const parts = filter.value.split(",");
-            const dateVal = e.target.value ? e.target.value.replace(/-/g, "/") : "";
+            const dateVal = value ? value.replace(/-/g, "/") : "";
             onChange(`${dateVal},${parts[1] || ""}`);
           }}
-          className="h-8 flex-1 sm:flex-initial sm:w-32 rounded-lg border border-border bg-background px-2 text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium text-foreground min-w-0"
+          size="sm"
+          className="min-w-0 flex-1 sm:w-32 sm:flex-initial"
+          buttonClassName="text-xs"
         />
         <span className="text-xs text-muted-foreground font-bold shrink-0">
           〜
         </span>
-        <input
-          type="date"
+        <DatePicker
           value={(filter.value.split(",")[1] || "").replace(/\//g, "-")}
-          onChange={(e) => {
+          onChange={(value) => {
             const parts = filter.value.split(",");
-            const dateVal = e.target.value ? e.target.value.replace(/-/g, "/") : "";
+            const dateVal = value ? value.replace(/-/g, "/") : "";
             onChange(`${parts[0] || ""},${dateVal}`);
           }}
-          className="h-8 flex-1 sm:flex-initial sm:w-32 rounded-lg border border-border bg-background px-2 text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium text-foreground min-w-0"
+          size="sm"
+          className="min-w-0 flex-1 sm:w-32 sm:flex-initial"
+          buttonClassName="text-xs"
         />
       </div>
     );

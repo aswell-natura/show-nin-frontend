@@ -12,6 +12,7 @@ import MemberDialogForm from "@/components/members/MemberDialogForm";
 import ProjectDialogForm from "@/components/projects/ProjectDialogForm";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   LinearDialogHeader,
   LinearDialogMetadataBar,
@@ -427,12 +428,10 @@ export default function TaskDialogForm({
               <label htmlFor="task_due_date" className="text-xs font-bold text-foreground/90">
                 期限日
               </label>
-              <input
+              <DatePicker
                 id="task_due_date"
-                type="date"
                 value={values.due_date}
-                onChange={(event) => updateValue("due_date", event.target.value)}
-                className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground shadow-2xs outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20"
+                onChange={(value) => updateValue("due_date", value)}
               />
             </div>
           </div>

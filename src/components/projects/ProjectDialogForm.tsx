@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/linear-dialog";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
+import { DatePicker } from "@/components/ui/date-picker";
 import { useDataStore } from "../../context/DataStoreContext";
 import { useGlobalDialog } from "../../context/GlobalDialogContext";
 import CustomerDialogForm from "../customers/CustomerDialogForm";
@@ -365,10 +366,10 @@ export default function ProjectDialogForm({
           }
         />
 
-        {/* 優先度 */}
+        {/* 確度 */}
         <LinearDialogPill
           icon={<Star className="size-3.5" />}
-          label="優先度"
+          label="確度"
           value={priorityLabel[values.priority]}
           active={true}
           open={openPopover === "priority"}
@@ -376,7 +377,7 @@ export default function ProjectDialogForm({
           popoverContent={
             <div className="flex flex-col gap-1">
               <p className="text-xs font-bold text-muted-foreground px-2 py-1">
-                優先度を選択
+                確度を選択
               </p>
               {([1, 2, 3] as (1 | 2 | 3)[]).map((p) => (
                 <button
@@ -388,7 +389,7 @@ export default function ProjectDialogForm({
                   }}
                   className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold hover:bg-muted text-foreground transition-colors cursor-pointer w-full text-left"
                 >
-                  <span>優先度 {priorityLabel[p]}</span>
+                  <span>確度 {priorityLabel[p]}</span>
                   {values.priority === p && (
                     <Check className="size-3.5 text-primary" />
                   )}
@@ -699,15 +700,11 @@ export default function ProjectDialogForm({
               <label htmlFor="close_date" className="text-xs font-bold text-foreground/90">
                 完了予定日
               </label>
-              <div className="relative">
-                <input
-                  id="close_date"
-                  type="date"
-                  value={values.close_date}
-                  onChange={(e) => updateValue("close_date", e.target.value)}
-                  className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-all shadow-2xs"
-                />
-              </div>
+              <DatePicker
+                id="close_date"
+                value={values.close_date}
+                onChange={(value) => updateValue("close_date", value)}
+              />
             </div>
           </div>
         </div>
@@ -722,12 +719,10 @@ export default function ProjectDialogForm({
               <label htmlFor="next_action_date" className="text-xs font-bold text-foreground/90">
                 次回アクション日
               </label>
-              <input
+              <DatePicker
                 id="next_action_date"
-                type="date"
                 value={values.next_action_date}
-                onChange={(e) => updateValue("next_action_date", e.target.value)}
-                className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-all shadow-2xs"
+                onChange={(value) => updateValue("next_action_date", value)}
               />
             </div>
           </div>

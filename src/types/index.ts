@@ -60,6 +60,7 @@ export interface Project {
   source?: 'recording' | 'manual'
   labels?: string[]
   next_action_date?: string
+  next_action?: string
   note?: string
   note_use_for_ai?: boolean
 }

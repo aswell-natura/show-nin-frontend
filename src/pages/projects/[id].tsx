@@ -364,10 +364,15 @@ export default function ProjectDetail() {
   );
 
   const handleMobileContentScroll = (event: UIEvent<HTMLDivElement>) => {
-    const shouldCompact = event.currentTarget.scrollTop > 64;
-    setIsMobileHeaderCompact((current) =>
-      current === shouldCompact ? current : shouldCompact,
-    );
+    const scrollElement = event.target as HTMLDivElement;
+    const { scrollTop, scrollHeight, clientHeight } = scrollElement;
+    const scrollableDistance = scrollHeight - clientHeight;
+
+    setIsMobileHeaderCompact((current) => {
+      if (current) return scrollTop > 8;
+      if (scrollableDistance < 160) return false;
+      return scrollTop > 64;
+    });
   };
 
   const handleOpenEditProjectDialog = () => {
@@ -1523,7 +1528,6 @@ export default function ProjectDetail() {
                 }}
                 className={cn(
                   "mt-0.5 shrink-0 text-muted-foreground hover:text-foreground h-9 w-9 rounded-full bg-muted/40 hover:bg-muted",
-                  isMobileHeaderCompact && "hidden md:inline-flex",
                 )}
                 title="戻る"
                 aria-label="戻る"
@@ -1702,7 +1706,7 @@ export default function ProjectDetail() {
         {/* Mobile Content Area */}
         <div
           className="md:hidden flex-1 overflow-y-auto bg-background/50"
-          onScroll={handleMobileContentScroll}
+          onScrollCapture={handleMobileContentScroll}
         >
           {mobileSection !== "context" && ProjectDetailsContent}
           {mobileSection === "context" && renderProfileContent(null)}

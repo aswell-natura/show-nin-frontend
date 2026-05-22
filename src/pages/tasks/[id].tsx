@@ -240,10 +240,15 @@ export default function TaskDetail() {
   const selectedTask = tasks.find((item) => item.id === selectedTaskId) ?? task;
 
   const handleMobileContentScroll = (event: UIEvent<HTMLDivElement>) => {
-    const shouldCompact = event.currentTarget.scrollTop > 64;
-    setIsMobileHeaderCompact((current) =>
-      current === shouldCompact ? current : shouldCompact,
-    );
+    const scrollElement = event.target as HTMLDivElement;
+    const { scrollTop, scrollHeight, clientHeight } = scrollElement;
+    const scrollableDistance = scrollHeight - clientHeight;
+
+    setIsMobileHeaderCompact((current) => {
+      if (current) return scrollTop > 8;
+      if (scrollableDistance < 160) return false;
+      return scrollTop > 64;
+    });
   };
 
   const taskView = useMemo(() => {
@@ -628,7 +633,6 @@ export default function TaskDetail() {
                 onClick={() => navigate(-1)}
                 className={cn(
                   "mt-0.5 h-9 w-9 shrink-0 rounded-full bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground",
-                  isMobileHeaderCompact && "hidden md:inline-flex",
                 )}
               >
                 <ArrowLeft className="h-5 w-5" />
@@ -719,7 +723,7 @@ export default function TaskDetail() {
 
         <div
           className="flex-1 overflow-y-auto bg-background/50 md:hidden"
-          onScroll={handleMobileContentScroll}
+          onScrollCapture={handleMobileContentScroll}
         >
           {activeTab === "related" && RelatedContent}
           {activeTab === "record" && RecordContent}

@@ -279,10 +279,15 @@ export default function CustomerDetail() {
   const owner = profiles.find((p) => p.id === customer.created_by);
 
   const handleMobileContentScroll = (event: UIEvent<HTMLDivElement>) => {
-    const shouldCompact = event.currentTarget.scrollTop > 64;
-    setIsMobileHeaderCompact((current) =>
-      current === shouldCompact ? current : shouldCompact,
-    );
+    const scrollElement = event.target as HTMLDivElement;
+    const { scrollTop, scrollHeight, clientHeight } = scrollElement;
+    const scrollableDistance = scrollHeight - clientHeight;
+
+    setIsMobileHeaderCompact((current) => {
+      if (current) return scrollTop > 8;
+      if (scrollableDistance < 160) return false;
+      return scrollTop > 64;
+    });
   };
 
   // ─── 右パネル：企業概要コンテンツ ────────────────────────────────────────────────
@@ -1229,7 +1234,6 @@ export default function CustomerDetail() {
                 onClick={() => navigate(-1)}
                 className={cn(
                   "mt-0.5 shrink-0 text-muted-foreground hover:text-foreground h-9 w-9 rounded-full bg-muted/40 hover:bg-muted",
-                  isMobileHeaderCompact && "hidden md:inline-flex",
                 )}
               >
                 <ArrowLeft className="w-5 h-5" />
@@ -1375,7 +1379,7 @@ export default function CustomerDetail() {
         {/* モバイル：タブに対応した単一カラム */}
         <div
           className="md:hidden flex-1 overflow-y-auto bg-background/50"
-          onScroll={handleMobileContentScroll}
+          onScrollCapture={handleMobileContentScroll}
         >
           {activeTab === "projects" && ProjectsContent}
           {activeTab === "details" && ProjectDetailsContent}

@@ -56,6 +56,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tabs,
+  TabsContent,
+  TabsContents,
+} from "@/components/ui/motion-tabs";
 import { cn } from "@/lib/utils";
 import { mockAudioMinutes } from "../../data/mock";
 
@@ -277,6 +282,12 @@ export default function CustomerDetail() {
   });
 
   const owner = profiles.find((p) => p.id === customer.created_by);
+
+  const handleSelectProject = (projectId: string) => {
+    setSelectedProjectId(projectId);
+    setActiveTab("details");
+    setIsMobileHeaderCompact(false);
+  };
 
   const handleMobileContentScroll = (event: UIEvent<HTMLDivElement>) => {
     const scrollElement = event.target as HTMLDivElement;
@@ -627,7 +638,7 @@ export default function CustomerDetail() {
       <div className="flex flex-col gap-3 mb-8">
         {/* すべての案件・全社活動 カード */}
         <Card
-          onClick={() => setSelectedProjectId("all")}
+          onClick={() => handleSelectProject("all")}
           className={cn(
             "p-4 rounded-xl text-left transition-all duration-200 cursor-pointer relative shadow-sm hover:shadow-md py-4 gap-3",
             selectedProjectId === "all"
@@ -665,7 +676,7 @@ export default function CustomerDetail() {
           return (
             <Card
               key={proj.id}
-              onClick={() => setSelectedProjectId(proj.id)}
+              onClick={() => handleSelectProject(proj.id)}
               className={cn(
                 "p-4 rounded-xl text-left transition-all duration-200 cursor-pointer relative shadow-sm hover:shadow-md py-4 gap-3 flex flex-col justify-between",
                 isSelected
@@ -1350,41 +1361,51 @@ export default function CustomerDetail() {
           </div>
         </div>
 
-        {/* モバイルタブバー */}
-        <div
-          className={cn(
-            "md:hidden flex border-b border-border bg-muted/5 shrink-0 px-2 overflow-x-auto scrollbar-none z-10",
-            isMobileHeaderCompact && "hidden",
-          )}
-        >
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "flex-1 min-w-[80px] py-3.5 text-xs font-bold tracking-wider transition-colors truncate px-2 text-center border-b-2",
-                  isActive
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-
         {/* モバイル：タブに対応した単一カラム */}
-        <div
-          className="md:hidden flex-1 overflow-y-auto bg-background/50"
-          onScrollCapture={handleMobileContentScroll}
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => setActiveTab(value as Tab)}
+          className="md:hidden flex-1 min-h-0 gap-0"
         >
-          {activeTab === "projects" && ProjectsContent}
-          {activeTab === "details" && ProjectDetailsContent}
-          {activeTab === "profile" && ProfileContent}
-        </div>
+          <div className="flex border-b border-border bg-muted/5 shrink-0 px-2 overflow-x-auto scrollbar-none z-10">
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  data-state={isActive ? "active" : "inactive"}
+                key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    "flex-1 min-w-[80px] py-3.5 text-xs font-bold tracking-wider transition-colors truncate px-2 text-center border-b-2",
+                    isActive
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          <TabsContents
+            className="flex-1 min-h-0 bg-background/50"
+            onScrollCapture={handleMobileContentScroll}
+          >
+            <TabsContent value="projects" className="h-full overflow-y-auto">
+              {ProjectsContent}
+            </TabsContent>
+            <TabsContent value="details" className="h-full overflow-y-auto">
+              {ProjectDetailsContent}
+            </TabsContent>
+            <TabsContent value="profile" className="h-full overflow-y-auto">
+              {ProfileContent}
+            </TabsContent>
+          </TabsContents>
+        </Tabs>
 
         {/* デスクトップ：3カラムレイアウト */}
         <div className="hidden md:flex flex-1 overflow-hidden bg-muted/10 dark:bg-background">

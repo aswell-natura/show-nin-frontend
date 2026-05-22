@@ -28,6 +28,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tabs,
+  TabsContent,
+  TabsContents,
+} from "@/components/ui/motion-tabs";
 import { cn } from "@/lib/utils";
 
 type TaskStatus = "not_started" | "in_progress" | "completed" | "overdue";
@@ -699,35 +704,47 @@ export default function TaskDetail() {
           </div>
         </div>
 
-        <div
-          className={cn(
-            "flex shrink-0 overflow-x-auto border-b border-border bg-muted/5 px-2 md:hidden",
-            isMobileHeaderCompact && "hidden",
-          )}
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => setActiveTab(value as MobileTab)}
+          className="flex-1 min-h-0 gap-0 md:hidden"
         >
-          {mobileTabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                "min-w-[80px] flex-1 truncate border-b-2 px-2 py-3.5 text-center text-xs font-bold tracking-wider transition-colors",
-                activeTab === tab.id
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+          <div className="flex shrink-0 overflow-x-auto border-b border-border bg-muted/5 px-2">
+            {mobileTabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  data-state={isActive ? "active" : "inactive"}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    "min-w-[80px] flex-1 truncate border-b-2 px-2 py-3.5 text-center text-xs font-bold tracking-wider transition-colors",
+                    isActive
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
 
-        <div
-          className="flex-1 overflow-y-auto bg-background/50 md:hidden"
-          onScrollCapture={handleMobileContentScroll}
-        >
-          {activeTab === "related" && RelatedContent}
-          {activeTab === "record" && RecordContent}
-        </div>
+          <TabsContents
+            className="flex-1 min-h-0 bg-background/50"
+            onScrollCapture={handleMobileContentScroll}
+          >
+            <TabsContent value="record" className="h-full overflow-y-auto">
+              {RecordContent}
+            </TabsContent>
+            <TabsContent value="related" className="h-full overflow-y-auto">
+              {RelatedContent}
+            </TabsContent>
+          </TabsContents>
+        </Tabs>
 
         <div className="hidden flex-1 overflow-hidden bg-muted/10 md:flex dark:bg-background">
           <div className="min-w-0 flex-[0.85_1_18rem] overflow-y-auto border-r border-border bg-muted/5">

@@ -48,6 +48,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tabs,
+  TabsContent,
+  TabsContents,
+} from "@/components/ui/motion-tabs";
 import { DatePicker } from "@/components/ui/date-picker";
 import { cn } from "@/lib/utils";
 import { mockAudioMinutes } from "../../data/mock";
@@ -684,11 +689,11 @@ export default function ProjectDetail() {
   );
 
   // 2. Center Column Details
-  const ProjectDetailsContent = (
+  const renderProjectDetailsContent = (visibleCenterTab: CenterTab) => (
     <div className="flex flex-col h-full bg-background">
       <div className="flex-1 overflow-y-auto p-4 md:p-6">
         {/* Activities and AudioMinutes Tab */}
-        {centerTab === "activities" && (
+        {visibleCenterTab === "activities" && (
           <div className="flex flex-col gap-4 animate-in fade-in duration-200">
 
             {/* Mobile recording CTA row */}
@@ -795,7 +800,7 @@ export default function ProjectDetail() {
         )}
 
         {/* Tasks Tab */}
-        {centerTab === "tasks" && (
+        {visibleCenterTab === "tasks" && (
           <div className="flex flex-col gap-3 animate-in fade-in duration-200">
             {projectTasks.map((task) => {
               const isOverdue =
@@ -932,7 +937,7 @@ export default function ProjectDetail() {
         )}
 
         {/* Documents Tab (The Document Upload Section!) */}
-        {centerTab === "documents" && (
+        {visibleCenterTab === "documents" && (
           <div className="flex flex-col animate-in fade-in duration-200">
             {/* Mobile-only header with upload action button */}
             <div className="relative flex md:hidden items-center justify-end gap-3 mb-4">
@@ -1314,6 +1319,8 @@ export default function ProjectDetail() {
     </div>
   );
 
+  const ProjectDetailsContent = renderProjectDetailsContent(centerTab);
+
   // 3. Right Collapsible Context Panel Content
   const renderProfileContent = (closeButton: ReactNode) => {
     return (
@@ -1661,56 +1668,74 @@ export default function ProjectDetail() {
         </div>
 
         {/* Mobile Section Switcher */}
-        <div
-          className={cn(
-            "md:hidden flex border-b border-border bg-card shrink-0 px-2 overflow-x-auto scrollbar-none z-10",
-            isMobileHeaderCompact && "hidden",
-          )}
+        <Tabs
+          value={mobileSection}
+          onValueChange={(value) => {
+            const nextSection = value as MobileSection;
+            setMobileSection(nextSection);
+            if (nextSection !== "context") setCenterTab(nextSection as CenterTab);
+          }}
+          className="md:hidden flex-1 min-h-0 gap-0"
         >
-          {mobileSections.map((section) => {
-            const isActive = mobileSection === section.id;
-            return (
-              <button
-                key={section.id}
-                type="button"
-                onClick={() => {
-                  setMobileSection(section.id);
-                  if (section.id !== "context")
-                    setCenterTab(section.id as CenterTab);
-                }}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-1.5 min-w-[75px] py-3.5 text-xs font-bold tracking-wider transition-colors whitespace-nowrap px-2.5 text-center border-b-2 relative",
-                  isActive
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <span>{section.label}</span>
-                {section.count > 0 && (
-                  <span
-                    className={cn(
-                      "inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold leading-none shrink-0",
-                      isActive
-                        ? "bg-primary/15 text-primary"
-                        : "bg-muted text-muted-foreground",
-                    )}
-                  >
-                    {section.count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+          <div className="flex border-b border-border bg-card shrink-0 px-2 overflow-x-auto scrollbar-none z-10">
+            {mobileSections.map((section) => {
+              const isActive = mobileSection === section.id;
+              return (
+                <button
+                  key={section.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  data-state={isActive ? "active" : "inactive"}
+                  onClick={() => {
+                    setMobileSection(section.id);
+                    if (section.id !== "context")
+                      setCenterTab(section.id as CenterTab);
+                  }}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-1.5 min-w-[75px] py-3.5 text-xs font-bold tracking-wider transition-colors whitespace-nowrap px-2.5 text-center border-b-2 relative",
+                    isActive
+                      ? "border-primary text-primary"
+                      : "border-transparent text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <span>{section.label}</span>
+                  {section.count > 0 && (
+                    <span
+                      className={cn(
+                        "inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold leading-none shrink-0",
+                        isActive
+                          ? "bg-primary/15 text-primary"
+                          : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {section.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
 
-        {/* Mobile Content Area */}
-        <div
-          className="md:hidden flex-1 overflow-y-auto bg-background/50"
-          onScrollCapture={handleMobileContentScroll}
-        >
-          {mobileSection !== "context" && ProjectDetailsContent}
-          {mobileSection === "context" && renderProfileContent(null)}
-        </div>
+          {/* Mobile Content Area */}
+          <TabsContents
+            className="flex-1 min-h-0 bg-background/50"
+            onScrollCapture={handleMobileContentScroll}
+          >
+            <TabsContent value="context" className="h-full overflow-y-auto">
+              {renderProfileContent(null)}
+            </TabsContent>
+            {centerSections.map((section) => (
+              <TabsContent
+                key={section.id}
+                value={section.id}
+                className="h-full overflow-y-auto"
+              >
+                {renderProjectDetailsContent(section.id)}
+              </TabsContent>
+            ))}
+          </TabsContents>
+        </Tabs>
 
         {/* Desktop View Column Layout */}
         <div className="hidden md:flex flex-1 overflow-hidden bg-muted/10 dark:bg-background">

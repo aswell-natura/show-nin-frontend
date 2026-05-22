@@ -22,6 +22,9 @@ import {
   ExternalLink,
   Info,
   ListFilter,
+  Mail,
+  Copy,
+  Check,
 } from "lucide-react";
 import AppLayout from "../../components/layout/AppLayout";
 import { useDataStore } from "../../context/DataStoreContext";
@@ -126,8 +129,22 @@ export default function CustomerDetail() {
   const { openDialog, closeDialog } = useGlobalDialog();
 
   const [activeTab, setActiveTab] = useState<Tab>("projects");
-  const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(false);
+  const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(true);
   const [isMobileHeaderCompact, setIsMobileHeaderCompact] = useState(false);
+  const [copiedBusinessNumber, setCopiedBusinessNumber] = useState(false);
+  const [copiedCompanyCode, setCopiedCompanyCode] = useState(false);
+
+  const handleCopyBusinessNumber = (val: string) => {
+    navigator.clipboard.writeText(val);
+    setCopiedBusinessNumber(true);
+    setTimeout(() => setCopiedBusinessNumber(false), 2000);
+  };
+
+  const handleCopyCompanyCode = (val: string) => {
+    navigator.clipboard.writeText(val);
+    setCopiedCompanyCode(true);
+    setTimeout(() => setCopiedCompanyCode(false), 2000);
+  };
 
   // 案件フィルター & 選択状態
   const [projectFilter, setProjectFilter] = useState<
@@ -171,6 +188,7 @@ export default function CustomerDetail() {
             business_number: customer.business_number,
             address: customer.address,
             phone: customer.phone,
+            email: customer.email,
             website: customer.website,
             employee_count: customer.employee_count,
             labels: customer.labels,
@@ -269,152 +287,241 @@ export default function CustomerDetail() {
 
   // ─── 右パネル：企業概要コンテンツ ────────────────────────────────────────────────
 
-  const renderProfileContent = (panelAction?: ReactNode) => (
-    <div className="px-4 py-5 flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-3 pb-4 border-b border-border/60">
-        <p className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
-          <Building className="w-4 h-4 text-primary" /> 企業概要
-        </p>
-        {panelAction}
-      </div>
-
-      {/* ラベル・獲得経路 */}
-      <div className="flex flex-col gap-2">
-        {customer.acquisition_source && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 dark:bg-muted/10 p-2.5 rounded-xl border border-border/50 font-medium">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-primary">
-              流入経路:
-            </span>
-            <span className="text-foreground font-semibold">
-              {customer.acquisition_source}
-            </span>
-          </div>
-        )}
-        {customer.labels && customer.labels.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-1">
-            {customer.labels.map((lbl, i) => (
-              <Badge
-                key={i}
-                variant="secondary"
-                className="text-xs px-2.5 py-1 font-medium bg-primary/10 text-primary border border-primary/20 shadow-2xs"
-              >
-                {lbl}
-              </Badge>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <dl className="flex flex-col gap-4 text-sm">
-        {customer.company_code && (
-          <div className="flex flex-col gap-1 bg-muted/30 dark:bg-muted/10 p-3 rounded-xl border border-border/50">
-            <dt className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
-              <FileText className="w-3.5 h-3.5 text-primary/80" /> 企業コード
-            </dt>
-            <dd className="text-foreground font-semibold text-xs pl-5">
-              {customer.company_code}
-            </dd>
-          </div>
-        )}
-        {customer.business_number && (
-          <div className="flex flex-col gap-1 bg-muted/30 dark:bg-muted/10 p-3 rounded-xl border border-border/50">
-            <dt className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
-              <Briefcase className="w-3.5 h-3.5 text-primary/80" /> 事業者番号
-            </dt>
-            <dd className="text-foreground font-semibold text-xs pl-5 tracking-wider font-mono">
-              {customer.business_number}
-            </dd>
-          </div>
-        )}
-        {customer.employee_count && (
-          <div className="flex flex-col gap-1 bg-muted/30 dark:bg-muted/10 p-3 rounded-xl border border-border/50">
-            <dt className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
-              <Users className="w-3.5 h-3.5 text-primary/80" /> 従業員数
-            </dt>
-            <dd className="text-foreground font-semibold text-xs pl-5">
-              {customer.employee_count.toLocaleString()}名
-            </dd>
-          </div>
-        )}
-        {customer.address && (
-          <div className="flex flex-col gap-1 bg-muted/30 dark:bg-muted/10 p-3 rounded-xl border border-border/50">
-            <dt className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-primary/80" /> 所在地
-            </dt>
-            <dd className="text-foreground text-xs leading-relaxed pl-5">
-              {customer.address}
-            </dd>
-          </div>
-        )}
-        {customer.phone && (
-          <div className="flex flex-col gap-1 bg-muted/30 dark:bg-muted/10 p-3 rounded-xl border border-border/50">
-            <dt className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
-              <Phone className="w-3.5 h-3.5 text-primary/80" /> 電話番号
-            </dt>
-            <dd className="text-foreground font-semibold text-xs pl-5">
-              {customer.phone}
-            </dd>
-          </div>
-        )}
-        {customer.website && (
-          <div className="flex flex-col gap-1 bg-muted/30 dark:bg-muted/10 p-3 rounded-xl border border-border/50">
-            <dt className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
-              <Globe className="w-3.5 h-3.5 text-primary/80" /> Webサイト
-            </dt>
-            <dd className="text-primary text-xs break-all hover:underline cursor-pointer pl-5 font-medium">
-              {customer.website}
-            </dd>
-          </div>
-        )}
-      </dl>
-
-      {customer.note && (
-        <div className="pt-5 border-t border-border/60 flex flex-col gap-3">
-          <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-            <FileText className="w-3.5 h-3.5 text-primary" /> メモ
-          </p>
-          <Card className="p-3.5 bg-muted/40 dark:bg-muted/20 border border-border/60 rounded-xl text-xs text-foreground/90 leading-relaxed shadow-none py-3.5">
-            {customer.note}
-          </Card>
+  const renderProfileContent = (closeButton: ReactNode) => {
+    return (
+      <div className="h-full flex flex-col bg-card">
+        {/* Header */}
+        <div className="p-4 border-b border-border flex items-center justify-between shrink-0">
+          <span className="font-bold text-xs text-foreground tracking-wider uppercase flex items-center gap-2">
+            <Building className="w-4 h-4 text-primary" />
+            企業概要
+          </span>
+          {closeButton}
         </div>
-      )}
 
-      <div className="pt-5 border-t border-border/60 flex flex-col gap-3">
-        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-          <Users className="w-3.5 h-3.5 text-primary" /> 名刺情報
-        </p>
-        <div className="flex flex-col gap-3">
-          {[
-            {
-              name: "山田 智",
-              dept: "DX推進室 室長",
-              email: "yamada@example.com",
-            },
-            {
-              name: "佐々木 誠",
-              dept: "情報システム部",
-              email: "sasaki@example.com",
-            },
-          ].map((card, i) => (
-            <Card
-              key={i}
-              className="p-3.5 bg-muted/30 dark:bg-muted/10 border border-border/60 rounded-xl text-xs hover:bg-muted/50 dark:hover:bg-muted/20 transition-all cursor-pointer shadow-none hover:shadow-sm py-3.5 gap-1.5"
-            >
-              <p className="font-bold text-foreground text-sm">{card.name}</p>
-              <p className="text-muted-foreground text-[11px] font-medium">
-                {card.dept}
-              </p>
-              <p className="text-primary font-medium text-[11px] mt-1 flex items-center gap-1.5">
-                <Globe className="w-3 h-3" /> {card.email}
-              </p>
-            </Card>
-          ))}
+        {/* Formatted metadata */}
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+          {/* 流入経路 (Acquisition Source) */}
+          {customer.acquisition_source && (
+            <div className="relative flex flex-col gap-1.5 p-3.5 rounded-2xl bg-muted/40 dark:bg-muted/15 border border-border/70 shadow-3xs">
+              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5 text-primary" />
+                獲得・流入経路
+              </span>
+              <span className="text-sm font-bold text-foreground mt-0.5">
+                {customer.acquisition_source}
+              </span>
+            </div>
+          )}
+
+          {/* Grid layout for other items */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* 企業コード */}
+            {customer.company_code && (
+              <div className="flex flex-col gap-1.5 p-3.5 rounded-xl bg-card border border-border/50 shadow-3xs col-span-1 sm:col-span-2">
+                <span className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                  <FileText className="w-3.5 h-3.5 text-muted-foreground/75" />
+                  企業コード
+                </span>
+                <div className="flex items-center justify-between gap-2 mt-0.5">
+                  <span className="text-sm font-bold text-foreground truncate select-all">
+                    {customer.company_code}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyCompanyCode(customer.company_code!)}
+                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer shrink-0"
+                    title="企業コードをコピー"
+                    aria-label="企業コードをコピー"
+                  >
+                    {copiedCompanyCode ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-500 animate-in zoom-in duration-200" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 事業者番号 */}
+            {customer.business_number && (
+              <div className="flex flex-col gap-1.5 p-3.5 rounded-xl bg-card border border-border/50 shadow-3xs col-span-1 sm:col-span-2">
+                <span className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                  <Briefcase className="w-3.5 h-3.5 text-muted-foreground/75" />
+                  事業者番号
+                </span>
+                <div className="flex items-center justify-between gap-2 mt-0.5">
+                  <span className="text-sm font-bold text-foreground tracking-wider font-mono select-all truncate">
+                    {customer.business_number}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyBusinessNumber(customer.business_number!)}
+                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer shrink-0"
+                    title="事業者番号をコピー"
+                    aria-label="事業者番号をコピー"
+                  >
+                    {copiedBusinessNumber ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-500 animate-in zoom-in duration-200" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 従業員数 */}
+            {customer.employee_count && (
+              <div className="flex flex-col gap-1.5 p-3.5 rounded-xl bg-card border border-border/50 shadow-3xs">
+                <span className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                  <Users className="w-3.5 h-3.5 text-muted-foreground/75" />
+                  従業員数
+                </span>
+                <span className="text-sm font-bold text-foreground truncate">
+                  {customer.employee_count.toLocaleString()}名
+                </span>
+              </div>
+            )}
+
+            {/* 電話番号 */}
+            {customer.phone && (
+              <div className="flex flex-col gap-1.5 p-3.5 rounded-xl bg-card border border-border/50 shadow-3xs">
+                <span className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                  <Phone className="w-3.5 h-3.5 text-muted-foreground/75" />
+                  電話番号
+                </span>
+                <span className="text-sm font-bold text-foreground truncate">
+                  {customer.phone}
+                </span>
+              </div>
+            )}
+
+            {/* メールアドレス */}
+            {customer.email && (
+              <div className="flex flex-col gap-1.5 p-3.5 rounded-xl bg-card border border-border/50 shadow-3xs col-span-1 sm:col-span-2">
+                <span className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                  <Mail className="w-3.5 h-3.5 text-muted-foreground/75" />
+                  メールアドレス
+                </span>
+                <a
+                  href={`mailto:${customer.email}`}
+                  className="text-xs text-primary font-bold hover:underline truncate"
+                >
+                  {customer.email}
+                </a>
+              </div>
+            )}
+
+            {/* Webサイト */}
+            {customer.website && (
+              <div className="flex flex-col gap-1.5 p-3.5 rounded-xl bg-card border border-border/50 shadow-3xs col-span-1 sm:col-span-2">
+                <span className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                  <Globe className="w-3.5 h-3.5 text-muted-foreground/75" />
+                  Webサイト
+                </span>
+                <a
+                  href={customer.website.startsWith("http") ? customer.website : `https://${customer.website}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary font-bold hover:underline truncate flex items-center gap-1 w-full"
+                >
+                  <span className="truncate">{customer.website}</span>
+                  <ExternalLink className="w-3 h-3 inline shrink-0" />
+                </a>
+              </div>
+            )}
+
+            {/* 所在地 */}
+            {customer.address && (
+              <div className="flex flex-col gap-1.5 p-3.5 rounded-xl bg-card border border-border/50 shadow-3xs col-span-1 sm:col-span-2">
+                <span className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-muted-foreground/75" />
+                  所在地
+                </span>
+                <span className="text-xs font-bold text-foreground leading-relaxed">
+                  {customer.address}
+                </span>
+              </div>
+            )}
+
+            {/* ラベル */}
+            <div className="flex flex-col gap-1.5 p-3.5 rounded-xl bg-card border border-border/50 shadow-3xs col-span-1 sm:col-span-2">
+              <span className="text-xs text-muted-foreground font-medium">
+                ラベル
+              </span>
+              <div className="flex flex-wrap gap-1.5 items-center min-h-6">
+                {customer.labels && customer.labels.length > 0 ? (
+                  customer.labels.map((lbl, i) => (
+                    <Badge
+                      key={i}
+                      variant="outline"
+                      className="text-xs font-medium border-border px-2 py-0.5 bg-background"
+                    >
+                      {lbl}
+                    </Badge>
+                  ))
+                ) : (
+                  <span className="text-xs text-muted-foreground">なし</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* メモ */}
+          {customer.note && (
+            <div className="border-t border-border/50 my-2 pt-4">
+              <h5 className="text-xs font-bold text-muted-foreground mb-2.5 flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-primary" />
+                メモ・特記事項
+              </h5>
+              <Card className="p-3.5 bg-muted/20 dark:bg-muted/10 border border-border/50 rounded-xl text-xs text-foreground/90 leading-relaxed font-medium shadow-3xs">
+                {customer.note}
+              </Card>
+            </div>
+          )}
+
+          {/* 名刺情報 */}
+          <div className="border-t border-border/50 my-2 pt-4">
+            <h5 className="text-xs font-bold text-muted-foreground mb-2.5 flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-primary" />
+              名刺情報
+            </h5>
+            <div className="flex flex-col gap-3">
+              {[
+                {
+                  name: "山田 智",
+                  dept: "DX推進室 室長",
+                  email: "yamada@example.com",
+                },
+                {
+                  name: "佐々木 誠",
+                  dept: "情報システム部",
+                  email: "sasaki@example.com",
+                },
+              ].map((card, i) => (
+                <Card
+                  key={i}
+                  className="p-3.5 bg-muted/20 dark:bg-muted/10 border border-border/50 rounded-xl text-xs hover:bg-muted/30 dark:hover:bg-muted/20 transition-all cursor-pointer shadow-3xs flex flex-col gap-1"
+                >
+                  <p className="font-bold text-foreground text-sm">{card.name}</p>
+                  <p className="text-muted-foreground text-[11px] font-semibold">
+                    {card.dept}
+                  </p>
+                  <p className="text-primary font-bold text-[11px] mt-1 flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-primary shrink-0" /> {card.email}
+                  </p>
+                </Card>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
-  const ProfileContent = renderProfileContent();
+  const ProfileContent = renderProfileContent(null);
 
   // ─── 左パネル：案件・活動フィルターコンテンツ ────────────────────────────────────────────────
 
@@ -1195,7 +1302,7 @@ export default function CustomerDetail() {
 
             <div
               className={cn(
-                "shrink-0 grid grid-cols-2 gap-2 md:hidden",
+                "shrink-0 grid grid-cols-1 gap-2 md:hidden",
                 !isMobileHeaderCompact && "hidden",
               )}
             >
@@ -1207,13 +1314,6 @@ export default function CustomerDetail() {
               >
                 <Edit className="w-4 h-4" /> 編集
               </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                className="h-8 w-full px-3 gap-1.5 font-bold shadow-2xs justify-center"
-              >
-                <Plus className="w-4 h-4" /> 活動を記録
-              </Button>
             </div>
 
             <div className="shrink-0 hidden md:flex items-center gap-2.5 pt-1">
@@ -1224,13 +1324,6 @@ export default function CustomerDetail() {
                 className="gap-1.5 font-bold shadow-sm"
               >
                 <Edit className="w-4.5 h-4.5" /> 編集
-              </Button>
-              <Button
-                variant="primary"
-                size="md"
-                className="gap-1.5 font-bold shadow-sm"
-              >
-                <Plus className="w-4.5 h-4.5" /> 活動を記録
               </Button>
             </div>
           </div>
@@ -1249,13 +1342,6 @@ export default function CustomerDetail() {
               className="flex-1 gap-1.5 font-bold shadow-2xs justify-center"
             >
               <Edit className="w-4 h-4" /> 編集
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              className="flex-1 gap-1.5 font-bold shadow-2xs justify-center"
-            >
-              <Plus className="w-4 h-4" /> 活動を記録
             </Button>
           </div>
         </div>
@@ -1307,7 +1393,7 @@ export default function CustomerDetail() {
           <div
             className={cn(
               "shrink-0 bg-card border-l border-border overflow-hidden shadow-sm z-10 transition-[width] duration-200",
-              isProfilePanelOpen ? "w-72" : "w-13",
+              isProfilePanelOpen ? "w-[360px]" : "w-13",
             )}
           >
             {isProfilePanelOpen ? (

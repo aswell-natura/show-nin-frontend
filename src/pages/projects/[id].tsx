@@ -687,15 +687,17 @@ export default function ProjectDetail() {
           <div className="flex flex-col gap-4 animate-in fade-in duration-200">
 
             {/* Mobile recording CTA row */}
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => openPopupWindow("/recording", "recording")}
-              className="md:hidden flex items-center justify-center gap-2 h-10 w-full font-bold shadow-sm rounded-xl"
-            >
-              <Mic className="w-4 h-4" />
-              <span>この案件で録音を開始</span>
-            </Button>
+            <div className="relative flex md:hidden items-center justify-end gap-3 mb-2">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => openPopupWindow("/recording", "recording")}
+                className="h-9 w-9 rounded-full px-0 shadow-sm"
+                aria-label="この案件で録音を開始"
+              >
+                <Mic className="w-4 h-4" />
+              </Button>
+            </div>
             {/* Audio Minutes section */}
             {projectMinutes.map((m) => {
               const doneCount = m.checklist.filter((c) => c.checked).length;

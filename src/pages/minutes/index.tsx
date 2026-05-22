@@ -28,6 +28,8 @@ import {
 import AppLayout from "../../components/layout/AppLayout";
 import { useDataStore } from "../../context/DataStoreContext";
 import { useGlobalDialog } from "../../context/GlobalDialogContext";
+import CustomerDialogForm from "@/components/customers/CustomerDialogForm";
+import ProjectDialogForm from "@/components/projects/ProjectDialogForm";
 import { mockAudioMinutes } from "../../data/mock";
 import type { AudioMinute } from "../../types";
 import { Badge } from "@/components/ui/badge";
@@ -202,7 +204,8 @@ function FileAnalysisForm({
   formId: string;
   onSubmit: (values: FileAnalysisFormValues) => void;
 }) {
-  const { customers, projects } = useDataStore();
+  const { customers, projects, addCustomer, addProject } = useDataStore();
+  const { openDialog, closeDialog } = useGlobalDialog();
   const [values, setValues] = useState<FileAnalysisFormValues>({
     fileType: "audio",
     title: "",
@@ -234,6 +237,112 @@ function FileAnalysisForm({
     value: FileAnalysisFormValues[K],
   ) => {
     setValues((current) => ({ ...current, [key]: value }));
+  };
+
+  const handleCreateCustomerQuick = (name: string) => {
+    const newCustomer = addCustomer({
+      name,
+      industry: ["未設定"],
+      rank: "B",
+      status: "lead",
+      is_pinned: false,
+      created_by: "user-001",
+    });
+    updateValue("customerId", newCustomer.id);
+    updateValue("projectId", "");
+  };
+
+  const handleCreateCustomerDetail = (name: string) => {
+    const nestedFormId = "add-customer-from-minute-form";
+    openDialog({
+      mode: "add",
+      eyebrow: "顧客",
+      breadcrumbs: ["新規作成"],
+      title: "顧客を追加",
+      hideHeaderTitle: true,
+      size: "xl",
+      content: (
+        <CustomerDialogForm
+          formId={nestedFormId}
+          submitLabel="顧客を追加"
+          initialValues={{ name }}
+          onSubmit={(customerValues) => {
+            const newCustomer = addCustomer({
+              ...customerValues,
+              created_by: "user-001",
+            });
+            updateValue("customerId", newCustomer.id);
+            updateValue("projectId", "");
+            closeDialog();
+          }}
+        />
+      ),
+      footer: (
+        <>
+          <Button type="button" variant="secondary" onClick={closeDialog}>
+            キャンセル
+          </Button>
+          <Button type="submit" form={nestedFormId} variant="primary">
+            顧客を追加
+          </Button>
+        </>
+      ),
+    });
+  };
+
+  const handleCreateProjectQuick = (name: string) => {
+    const newProject = addProject({
+      name,
+      customer_id: values.customerId || null,
+      status: "lead",
+      priority: 2,
+      amount: 0,
+      user_id: "user-001",
+      source: "manual",
+    });
+    updateValue("projectId", newProject.id);
+  };
+
+  const handleCreateProjectDetail = (name: string) => {
+    const nestedFormId = "add-project-from-minute-form";
+    openDialog({
+      mode: "add",
+      eyebrow: "案件",
+      breadcrumbs: ["新規作成"],
+      title: "案件を追加",
+      hideHeaderTitle: true,
+      size: "xl",
+      content: (
+        <ProjectDialogForm
+          formId={nestedFormId}
+          submitLabel="案件を追加"
+          initialValues={{
+            name,
+            customer_id: values.customerId || null,
+            user_id: "user-001",
+            source: "manual",
+          }}
+          onSubmit={(projectValues) => {
+            const newProject = addProject(projectValues);
+            updateValue("projectId", newProject.id);
+            if (projectValues.customer_id) {
+              updateValue("customerId", projectValues.customer_id);
+            }
+            closeDialog();
+          }}
+        />
+      ),
+      footer: (
+        <>
+          <Button type="button" variant="secondary" onClick={closeDialog}>
+            キャンセル
+          </Button>
+          <Button type="submit" form={nestedFormId} variant="primary">
+            案件を追加
+          </Button>
+        </>
+      ),
+    });
   };
 
   const fileAccept =
@@ -326,6 +435,8 @@ function FileAnalysisForm({
               const nextProject = projects.find((project) => project.customer_id === value);
               updateValue("projectId", nextProject?.id ?? "");
             }}
+            onCreateOptionQuick={handleCreateCustomerQuick}
+            onCreateOptionDetail={handleCreateCustomerDetail}
             placeholder="顧客名を選択"
             className="h-11 rounded-xl border border-input bg-background text-sm font-medium shadow-sm"
           />
@@ -343,6 +454,8 @@ function FileAnalysisForm({
                 updateValue("customerId", selectedProject.customer_id);
               }
             }}
+            onCreateOptionQuick={handleCreateProjectQuick}
+            onCreateOptionDetail={handleCreateProjectDetail}
             placeholder="案件名を選択"
             className="h-11 rounded-xl border border-input bg-background text-sm font-medium shadow-sm"
           />

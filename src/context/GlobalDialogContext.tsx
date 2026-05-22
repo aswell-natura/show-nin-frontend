@@ -84,6 +84,7 @@ export function GlobalDialogProvider({ children }: { children: ReactNode }) {
           <Dialog
             key={index}
             open={true}
+            modal={isTop}
             onOpenChange={(open) => {
               if (!open && isTop) {
                 closeDialog()

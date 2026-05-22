@@ -1,4 +1,4 @@
-import { useState, type ReactNode, type UIEvent } from "react";
+import { useEffect, useRef, useState, type ReactNode, type UIEvent } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   PanelRightClose,
@@ -138,6 +138,9 @@ export default function CustomerDetail() {
   const [isMobileHeaderCompact, setIsMobileHeaderCompact] = useState(false);
   const [copiedBusinessNumber, setCopiedBusinessNumber] = useState(false);
   const [copiedCompanyCode, setCopiedCompanyCode] = useState(false);
+  const projectTabSwitchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   const handleCopyBusinessNumber = (val: string) => {
     navigator.clipboard.writeText(val);
@@ -168,6 +171,14 @@ export default function CustomerDetail() {
   >("incomplete");
 
   const customer = customers.find((c) => c.id === id);
+
+  useEffect(() => {
+    return () => {
+      if (projectTabSwitchTimeoutRef.current) {
+        clearTimeout(projectTabSwitchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleOpenEditCustomerDialog = () => {
     if (!customer) return;
@@ -285,8 +296,16 @@ export default function CustomerDetail() {
 
   const handleSelectProject = (projectId: string) => {
     setSelectedProjectId(projectId);
-    setActiveTab("details");
     setIsMobileHeaderCompact(false);
+
+    if (projectTabSwitchTimeoutRef.current) {
+      clearTimeout(projectTabSwitchTimeoutRef.current);
+    }
+
+    projectTabSwitchTimeoutRef.current = setTimeout(() => {
+      setActiveTab("details");
+      projectTabSwitchTimeoutRef.current = null;
+    }, 500);
   };
 
   const handleMobileContentScroll = (event: UIEvent<HTMLDivElement>) => {

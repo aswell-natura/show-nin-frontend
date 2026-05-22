@@ -1,4 +1,11 @@
-import { useMemo, useState, type ReactNode, type UIEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type UIEvent,
+} from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -239,10 +246,34 @@ export default function TaskDetail() {
     baseId: id ?? "",
     selectedId: id ?? "",
   }));
+  const taskTabSwitchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   const task = tasks.find((item) => item.id === id);
   const selectedTaskId = selection.baseId === (id ?? "") ? selection.selectedId : (id ?? "");
   const selectedTask = tasks.find((item) => item.id === selectedTaskId) ?? task;
+
+  const handleSelectRelatedTask = (taskId: string) => {
+    setSelection({ baseId: id ?? "", selectedId: taskId });
+
+    if (taskTabSwitchTimeoutRef.current) {
+      clearTimeout(taskTabSwitchTimeoutRef.current);
+    }
+
+    taskTabSwitchTimeoutRef.current = setTimeout(() => {
+      setActiveTab("record");
+      taskTabSwitchTimeoutRef.current = null;
+    }, 500);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (taskTabSwitchTimeoutRef.current) {
+        clearTimeout(taskTabSwitchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleMobileContentScroll = (event: UIEvent<HTMLDivElement>) => {
     const scrollElement = event.target as HTMLDivElement;
@@ -426,10 +457,7 @@ export default function TaskDetail() {
           {relatedTasks.map((related) => (
             <Card
               key={related.id}
-              onClick={() => {
-                setSelection({ baseId: id ?? "", selectedId: related.id });
-                setActiveTab("record");
-              }}
+              onClick={() => handleSelectRelatedTask(related.id)}
               className={cn(
                 "cursor-pointer rounded-xl border p-4 shadow-sm transition-all duration-200 hover:border-primary/30 hover:bg-primary/5 hover:shadow-md",
                 selectedTaskId === related.id

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-<<<<<<< HEAD
 import { Check, ChevronLeft, Download, Lock, Printer, Unlock } from 'lucide-react'
 
 import AppLayout from '@/components/layout/AppLayout'
@@ -11,21 +10,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-=======
-import {
-  Check,
-  ChevronLeft,
-  Download,
-  Pencil,
-  Printer,
-} from 'lucide-react'
-
-import AppLayout from '@/components/layout/AppLayout'
-import { Button } from '@/components/ui/button'
-import { DatePicker } from '@/components/ui/date-picker'
-
-const previewScale = 0.72
->>>>>>> ad7912f9c0ebf86067f25abd270dacdfc10f91dd
 
 function todayLabel() {
   const now = new Date()
@@ -71,21 +55,25 @@ export default function MinuteDocumentEdit() {
             <TooltipProvider delayDuration={0}>
               <Tooltip>
                 <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant={isEditing ? 'primary' : 'secondary'}
-              onClick={() => setIsEditing(current => !current)}
-              className="h-10 gap-2"
-            >
-              {isEditing ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-              {isEditing ? 'ドキュメント編集' : 'ドキュメントロック'}
-            </Button>
+                  <Button
+                    type="button"
+                    variant={isEditing ? 'primary' : 'secondary'}
+                    onClick={() => setIsEditing(current => !current)}
+                    className="h-10 gap-2"
+                  >
+                    {isEditing ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                    {isEditing ? '編集中' : '編集ロック'}
+                  </Button>
                 </TooltipTrigger>
                 <TooltipContent
                   side="bottom"
                   className="border border-slate-200 bg-white text-slate-950 shadow-lg"
                 >
-                  <p>ドキュメントのテキストクリックで編集可能</p>
+                  <p>
+                    {isEditing
+                      ? 'ドキュメントの編集をロック'
+                      : 'ドキュメントのテキストクリックで編集可能'}
+                  </p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -158,7 +146,6 @@ export default function MinuteDocumentEdit() {
               </p>
             </section>
 
-<<<<<<< HEAD
             <section className="border-b border-slate-200 px-7 py-8">
               <h3 className="mb-5 inline-flex rounded bg-teal-700 px-2 py-1 text-lg font-bold text-white">
                 次のアクション
@@ -169,17 +156,6 @@ export default function MinuteDocumentEdit() {
                 <li>次回会議までの対応事項を確認する</li>
               </ul>
             </section>
-=======
-                <div className="space-y-2">
-                  <FieldLabel>商談日時</FieldLabel>
-                  <DatePicker
-                    value={fields.meetingDate}
-                    onChange={(value) => updateField('meetingDate', value)}
-                    placeholder="日付を選択"
-                    buttonClassName="h-12 rounded-xl border-slate-200 bg-white px-4 text-base shadow-none hover:border-blue-300 hover:bg-white focus-visible:border-blue-300 focus-visible:ring-blue-100"
-                  />
-                </div>
->>>>>>> ad7912f9c0ebf86067f25abd270dacdfc10f91dd
 
             <section className="px-7 py-8">
               <h3 className="mb-5 inline-flex rounded bg-teal-700 px-2 py-1 text-lg font-bold text-white">

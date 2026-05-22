@@ -18,16 +18,11 @@ import {
 } from "@dnd-kit/sortable";
 import {
   Building2,
-<<<<<<< HEAD
-  ChevronRight,
-=======
->>>>>>> ad7912f9c0ebf86067f25abd270dacdfc10f91dd
   Filter,
   Info,
   Plus,
   RotateCcw,
   Search,
-  SquareArrowOutUpRight,
   ChevronRight,
   X,
 } from "lucide-react";
@@ -829,20 +824,6 @@ export default function ProjectList() {
                                           <span className="truncate text-sm font-bold text-foreground">
                                             {customer.name}
                                           </span>
-<<<<<<< HEAD
-=======
-                                          <button
-                                            type="button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              navigate(`/customers/${customer.id}`);
-                                            }}
-                                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all duration-200 cursor-pointer border border-transparent hover:border-primary/20"
-                                            title="顧客詳細を表示"
-                                          >
-                                            <SquareArrowOutUpRight className="h-3 w-3" />
-                                          </button>
->>>>>>> ad7912f9c0ebf86067f25abd270dacdfc10f91dd
                                         </div>
                                         <span className="text-xs text-muted-foreground truncate">
                                           {customer.industry?.join("、")}

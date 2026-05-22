@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, type ReactNode, type UIEvent } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   PanelRightClose,
@@ -127,6 +127,7 @@ export default function CustomerDetail() {
 
   const [activeTab, setActiveTab] = useState<Tab>("projects");
   const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(false);
+  const [isMobileHeaderCompact, setIsMobileHeaderCompact] = useState(false);
 
   // 案件フィルター & 選択状態
   const [projectFilter, setProjectFilter] = useState<
@@ -258,6 +259,13 @@ export default function CustomerDetail() {
   });
 
   const owner = profiles.find((p) => p.id === customer.created_by);
+
+  const handleMobileContentScroll = (event: UIEvent<HTMLDivElement>) => {
+    const shouldCompact = event.currentTarget.scrollTop > 64;
+    setIsMobileHeaderCompact((current) =>
+      current === shouldCompact ? current : shouldCompact,
+    );
+  };
 
   // ─── 右パネル：企業概要コンテンツ ────────────────────────────────────────────────
 
@@ -1088,22 +1096,63 @@ export default function CustomerDetail() {
     <AppLayout>
       <div className="h-full flex flex-col bg-background relative overflow-hidden">
         {/* 顧客ヘッダー */}
-        <div className="bg-card border-b border-border px-4 md:px-6 py-4 md:py-5 shrink-0 shadow-sm z-20 relative overflow-hidden">
-          <div className="flex items-start justify-between gap-4 relative z-10">
-            <div className="flex items-start gap-3 min-w-0 flex-1">
+        <div
+          className={cn(
+            "bg-card border-b border-border px-4 md:px-6 shrink-0 shadow-sm z-20 relative overflow-hidden transition-all duration-200",
+            isMobileHeaderCompact ? "py-2.5 md:py-5" : "py-4 md:py-5",
+          )}
+        >
+          <div
+            className={cn(
+              "flex relative z-10 md:flex-row md:items-start md:justify-between md:gap-4",
+              isMobileHeaderCompact
+                ? "flex-col items-stretch gap-2.5"
+                : "flex-row items-start justify-between gap-4",
+            )}
+          >
+            <div
+              className={cn(
+                "flex gap-3 min-w-0 flex-1 md:items-start",
+                isMobileHeaderCompact ? "items-center" : "items-start",
+              )}
+            >
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate(-1)}
-                className="mt-0.5 shrink-0 text-muted-foreground hover:text-foreground h-9 w-9 rounded-full bg-muted/40 hover:bg-muted"
+                className={cn(
+                  "mt-0.5 shrink-0 text-muted-foreground hover:text-foreground h-9 w-9 rounded-full bg-muted/40 hover:bg-muted",
+                  isMobileHeaderCompact && "hidden md:inline-flex",
+                )}
               >
                 <ArrowLeft className="w-5 h-5" />
               </Button>
-              <div className="min-w-0 pt-0.5 flex-1">
-                <div className="flex items-center gap-3 flex-wrap mb-2">
-                  <h1 className="text-lg md:text-xl font-bold text-foreground tracking-tight">
+              <div
+                className={cn(
+                  "min-w-0 flex-1 md:pt-0.5",
+                  isMobileHeaderCompact ? "pt-0" : "pt-0.5",
+                )}
+              >
+                <div
+                  className={cn(
+                    "flex items-center gap-3 flex-wrap md:mb-2",
+                    isMobileHeaderCompact ? "mb-0" : "mb-2",
+                  )}
+                >
+                  <h1
+                    className={cn(
+                      "font-bold text-foreground tracking-tight truncate md:text-xl",
+                      isMobileHeaderCompact ? "text-base" : "text-lg",
+                    )}
+                  >
                     {customer.name}
                   </h1>
+                  <div
+                    className={cn(
+                      "contents",
+                      isMobileHeaderCompact && "hidden md:contents",
+                    )}
+                  >
                   <RankBadge rank={customer.rank} size="lg" />
                   <Badge
                     variant="secondary"
@@ -1119,8 +1168,14 @@ export default function CustomerDetail() {
                       📌 ピン留め済み
                     </Badge>
                   )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap font-medium">
+                <div
+                  className={cn(
+                    "flex items-center gap-3 text-xs text-muted-foreground flex-wrap font-medium",
+                    isMobileHeaderCompact && "hidden md:flex",
+                  )}
+                >
                   {owner && (
                     <span className="flex items-center gap-1.5 text-foreground/80">
                       <User className="w-3.5 h-3.5 text-primary" /> 担当:{" "}
@@ -1136,6 +1191,29 @@ export default function CustomerDetail() {
                   </span>
                 </div>
               </div>
+            </div>
+
+            <div
+              className={cn(
+                "shrink-0 grid grid-cols-2 gap-2 md:hidden",
+                !isMobileHeaderCompact && "hidden",
+              )}
+            >
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleOpenEditCustomerDialog}
+                className="h-8 w-full px-3 gap-1.5 font-bold shadow-2xs justify-center"
+              >
+                <Edit className="w-4 h-4" /> 編集
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                className="h-8 w-full px-3 gap-1.5 font-bold shadow-2xs justify-center"
+              >
+                <Plus className="w-4 h-4" /> 活動を記録
+              </Button>
             </div>
 
             <div className="shrink-0 hidden md:flex items-center gap-2.5 pt-1">
@@ -1158,7 +1236,12 @@ export default function CustomerDetail() {
           </div>
 
           {/* モバイル用アクションボタン */}
-          <div className="flex md:hidden items-center gap-2 mt-4 pt-4 border-t border-border/60 justify-end relative z-10">
+          <div
+            className={cn(
+              "flex md:hidden items-center gap-2 mt-4 pt-4 border-t border-border/60 justify-end relative z-10",
+              isMobileHeaderCompact && "hidden",
+            )}
+          >
             <Button
               variant="secondary"
               size="sm"
@@ -1178,7 +1261,12 @@ export default function CustomerDetail() {
         </div>
 
         {/* モバイルタブバー */}
-        <div className="md:hidden flex border-b border-border bg-muted/5 shrink-0 px-2 overflow-x-auto scrollbar-none z-10">
+        <div
+          className={cn(
+            "md:hidden flex border-b border-border bg-muted/5 shrink-0 px-2 overflow-x-auto scrollbar-none z-10",
+            isMobileHeaderCompact && "hidden",
+          )}
+        >
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -1199,7 +1287,10 @@ export default function CustomerDetail() {
         </div>
 
         {/* モバイル：タブに対応した単一カラム */}
-        <div className="md:hidden flex-1 overflow-y-auto bg-background/50">
+        <div
+          className="md:hidden flex-1 overflow-y-auto bg-background/50"
+          onScroll={handleMobileContentScroll}
+        >
           {activeTab === "projects" && ProjectsContent}
           {activeTab === "details" && ProjectDetailsContent}
           {activeTab === "profile" && ProfileContent}

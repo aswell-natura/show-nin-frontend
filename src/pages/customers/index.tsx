@@ -73,6 +73,7 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import type { DragEndEvent } from "@dnd-kit/core";
+import type { Customer } from "../../types";
 
 function formatDateTime(iso: string) {
   if (!iso) return "-";
@@ -91,8 +92,8 @@ function formatDateTime(iso: string) {
 }
 
 const DEFAULT_COLUMNS: ListTableColumn[] = [
-  { id: "pin", label: "ピン留め", width: "w-24" },
-  { id: "rank", label: "ランク", width: "w-20" },
+  { id: "pin", label: "ピン留め", width: "w-16" },
+  { id: "rank", label: "ランク", width: "w-16" },
   { id: "company_code", label: "企業コード", width: "w-28" },
   { id: "name", label: "顧客名", width: "w-72" },
   { id: "phone", label: "電話番号", width: "w-36" },
@@ -104,6 +105,10 @@ const DEFAULT_COLUMNS: ListTableColumn[] = [
   { id: "projects", label: "進行中の案件数", width: "w-40" },
   { id: "accessed", label: "最終更新", width: "w-32" },
 ];
+
+function getAcquisitionSource(customer: Customer) {
+  return customer.acquisition_source?.trim() || "手動登録";
+}
 
 interface FilterRule {
   id: string;
@@ -216,7 +221,7 @@ export default function CustomerList() {
   const allAcquisitionSources = useMemo(() => {
     const sources = new Set<string>();
     customers.forEach((c) => {
-      if (c.acquisition_source) sources.add(c.acquisition_source);
+      sources.add(getAcquisitionSource(c));
     });
     return Array.from(sources)
       .sort()
@@ -335,7 +340,7 @@ export default function CustomerList() {
           (c.email ?? "").toLowerCase().includes(q) ||
           (c.industry?.join("、") ?? "").toLowerCase().includes(q) ||
           (c.labels?.join("、") ?? "").toLowerCase().includes(q) ||
-          (c.acquisition_source ?? "").toLowerCase().includes(q),
+          getAcquisitionSource(c).toLowerCase().includes(q),
       );
     }
 
@@ -353,9 +358,7 @@ export default function CustomerList() {
           case "industry":
             return c.industry?.includes(val);
           case "acquisition_source":
-            return (c.acquisition_source ?? "")
-              .toLowerCase()
-              .includes(val.toLowerCase());
+            return getAcquisitionSource(c).toLowerCase().includes(val.toLowerCase());
           case "amount": {
             if (!val || val === ",") return true;
             const total = projects
@@ -422,9 +425,7 @@ export default function CustomerList() {
           return (a.email ?? "").localeCompare(b.email ?? "");
         }
         if (sortKey === "acquisition_source") {
-          return (a.acquisition_source ?? "").localeCompare(
-            b.acquisition_source ?? "",
-          );
+          return getAcquisitionSource(a).localeCompare(getAcquisitionSource(b));
         }
         if (sortKey === "amount") {
           const amountA = projects
@@ -877,7 +878,6 @@ export default function CustomerList() {
                           !customer.phone &&
                           !customer.email &&
                           !customer.company_code &&
-                          !customer.acquisition_source &&
                           (!customer.labels || customer.labels.length === 0) &&
                           !customer.address &&
                           !customer.website &&
@@ -902,7 +902,7 @@ export default function CustomerList() {
                                     <TableCell
                                       key={column.id}
                                       className={cn(
-                                        "border-r border-border/60 px-3 py-3.5",
+                                        "border-r border-border/60 px-2 py-3.5",
                                         customer.is_pinned &&
                                           "bg-primary/[0.035]",
                                       )}
@@ -915,7 +915,7 @@ export default function CustomerList() {
                                           });
                                         }}
                                         className={cn(
-                                          "flex h-8 w-8 items-center justify-center rounded-md transition-all",
+                                          "flex h-7 w-7 items-center justify-center rounded-md transition-all",
                                           customer.is_pinned
                                             ? "text-primary bg-primary/10"
                                             : "text-muted-foreground/30 hover:text-muted-foreground hover:bg-muted",
@@ -933,11 +933,11 @@ export default function CustomerList() {
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="px-4 py-3.5"
+                                      className="px-2 py-3.5"
                                     >
                                       <RankBadge
                                         rank={customer.rank}
-                                        size="lg"
+                                        size="sm"
                                       />
                                     </TableCell>
                                   );
@@ -1043,7 +1043,7 @@ export default function CustomerList() {
                                       key={column.id}
                                       className="px-4 py-3.5 text-xs text-foreground font-medium truncate max-w-[10rem]"
                                     >
-                                      {customer.acquisition_source || "-"}
+                                      {getAcquisitionSource(customer)}
                                     </TableCell>
                                   );
                                 case "amount": {

@@ -111,6 +111,22 @@ function derivePriority(projectPriority?: number): Priority {
   return "Middle";
 }
 
+function priorityLabel(priority: string) {
+  const labels: Record<string, string> = {
+    High: "高",
+    high: "高",
+    higt: "高",
+    Middle: "中",
+    middle: "中",
+    Medium: "中",
+    medium: "中",
+    Low: "低",
+    low: "低",
+  };
+
+  return labels[priority] ?? priority;
+}
+
 function statusLabel(status: TaskStatus, dueDate?: string) {
   if (status === "in_progress" && dueDate) {
     const diffDays = daysUntilDue(dueDate);
@@ -371,9 +387,6 @@ export default function TaskDetail() {
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="text-sm font-bold text-foreground">タスク一覧</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              同じ企業または案件に紐づくタスク
-            </p>
           </div>
           <Badge variant="secondary" className="border-0 bg-muted text-xs font-bold">
             {relatedTasks.length}
@@ -448,9 +461,6 @@ export default function TaskDetail() {
               <p className="text-sm font-bold text-foreground/70">
                 関連タスクはありません
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                同じ企業または案件に紐づく他のタスクはまだありません。
-              </p>
             </Card>
           )}
         </div>
@@ -463,7 +473,7 @@ export default function TaskDetail() {
       <div className="space-y-5 p-4 md:p-5">
         <Card className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
               <div className="min-w-0">
                 <h2 className="text-xl font-bold leading-snug text-foreground md:text-2xl">
                   {taskView.title}
@@ -474,9 +484,6 @@ export default function TaskDetail() {
                     期限: {formatDueDateWithRemaining(taskView.dueDate)}
                   </span>
                 </div>
-                <p className="mt-4 text-sm leading-6 text-muted-foreground">
-                  {buildTaskDescription(taskView)}
-                </p>
               </div>
 
               <div className="flex shrink-0 items-center gap-2">
@@ -506,6 +513,9 @@ export default function TaskDetail() {
                   </SelectContent>
                 </Select>
               </div>
+              <p className="text-sm leading-6 text-muted-foreground lg:col-span-2">
+                {buildTaskDescription(taskView)}
+              </p>
             </div>
 
             <div>
@@ -551,10 +561,10 @@ export default function TaskDetail() {
                 />
                 <DetailRow
                   icon={<Flag className="h-4 w-4" />}
-                  label="優先度"
+                  label="確度"
                   value={
                     <Badge variant="outline" className={priorityTone(taskView.priority)}>
-                      {taskView.priority}
+                      {priorityLabel(taskView.priority)}
                     </Badge>
                   }
                 />

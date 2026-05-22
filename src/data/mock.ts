@@ -1909,7 +1909,6 @@ export const sidebarMenuItems = [
   { id: "projects", label: "案件一覧", icon: "folder" },
   { id: "minutes", label: "議事録一覧", icon: "mic" },
   { id: "tasks", label: "タスク", icon: "check" },
-  { id: "budget", label: "予算・実績", icon: "target" },
 ];
 
 export const managerSidebarMenuItems = [

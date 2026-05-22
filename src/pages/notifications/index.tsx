@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { AlertTriangle, Bell, CalendarClock, FileText } from "lucide-react";
+import { AlertTriangle, Bell, CalendarClock, FileText, Trash2 } from "lucide-react";
 
 import AppLayout from "@/components/layout/AppLayout";
 import { Badge } from "@/components/ui/badge";
@@ -212,6 +212,13 @@ export default function NotificationsPage() {
                           {formatDateTime(notification.created_at)}
                         </p>
                       </div>
+                      <button
+                        type="button"
+                        aria-label="通知を削除"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
                     <p className="mt-3 text-sm leading-6 text-muted-foreground">
                       {notification.body}

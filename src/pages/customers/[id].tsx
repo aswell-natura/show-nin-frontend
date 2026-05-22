@@ -960,16 +960,6 @@ export default function CustomerDetail() {
                 </DropdownMenu>
               </div>
 
-              {/* タスクボードへリダイレクトするボタン (ユーザー要望) */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate("/tasks")}
-                className="h-8 text-xs font-bold text-primary hover:bg-primary/10 gap-1.5 px-3 shadow-2xs border border-primary/20 bg-primary/5"
-              >
-                <span>タスクボードを開く</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </Button>
             </div>
 
             {/* タスクリスト */}

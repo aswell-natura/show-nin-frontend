@@ -1,6 +1,6 @@
 import * as React from "react";
 import { CalendarDays, X } from "lucide-react";
-import { ja } from "date-fns/locale";
+import { ja } from "date-fns/locale/ja";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -141,4 +141,4 @@ function DatePicker({
   );
 }
 
-export { DatePicker, formatDateValue, parseDateString };
+export { DatePicker };

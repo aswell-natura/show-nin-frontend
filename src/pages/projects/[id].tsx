@@ -1,4 +1,4 @@
-import { useState, useRef, type ReactNode } from "react";
+import { useState, useRef, type ReactNode, type UIEvent } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   PanelLeftClose,
@@ -185,6 +185,7 @@ export default function ProjectDetail() {
   const [centerTab, setCenterTab] = useState<CenterTab>("activities");
 
   const [isContextPanelOpen, setIsContextPanelOpen] = useState(true);
+  const [isMobileHeaderCompact, setIsMobileHeaderCompact] = useState(false);
 
   // Document states
   const [uploading, setUploading] = useState(false);
@@ -361,6 +362,13 @@ export default function ProjectDetail() {
       icon: ReactNode;
     } => section.id !== "context",
   );
+
+  const handleMobileContentScroll = (event: UIEvent<HTMLDivElement>) => {
+    const shouldCompact = event.currentTarget.scrollTop > 64;
+    setIsMobileHeaderCompact((current) =>
+      current === shouldCompact ? current : shouldCompact,
+    );
+  };
 
   const handleOpenEditProjectDialog = () => {
     const formId = "project-edit-form";
@@ -1481,9 +1489,26 @@ export default function ProjectDetail() {
     <AppLayout>
       <div className="h-full flex flex-col bg-background relative overflow-hidden">
         {/* Project Header */}
-        <div className="bg-card border-b border-border px-4 md:px-6 py-4 md:py-5 shrink-0 shadow-xs z-20 relative overflow-hidden">
-          <div className="flex items-start justify-between gap-4 relative z-10">
-            <div className="flex items-start gap-3 min-w-0 flex-1">
+        <div
+          className={cn(
+            "bg-card border-b border-border px-4 md:px-6 shrink-0 shadow-xs z-20 relative overflow-hidden transition-all duration-200",
+            isMobileHeaderCompact ? "py-2.5 md:py-5" : "py-4 md:py-5",
+          )}
+        >
+          <div
+            className={cn(
+              "flex relative z-10 md:flex-row md:items-start md:justify-between md:gap-4",
+              isMobileHeaderCompact
+                ? "flex-col items-stretch gap-2.5"
+                : "flex-row items-start justify-between gap-4",
+            )}
+          >
+            <div
+              className={cn(
+                "flex gap-3 min-w-0 flex-1 md:items-start",
+                isMobileHeaderCompact ? "items-center" : "items-start",
+              )}
+            >
               <Button
                 variant="ghost"
                 size="sm"
@@ -1494,18 +1519,42 @@ export default function ProjectDetail() {
                     navigate("/projects");
                   }
                 }}
-                className="mt-0.5 shrink-0 text-muted-foreground hover:text-foreground h-9 w-9 rounded-full bg-muted/40 hover:bg-muted"
+                className={cn(
+                  "mt-0.5 shrink-0 text-muted-foreground hover:text-foreground h-9 w-9 rounded-full bg-muted/40 hover:bg-muted",
+                  isMobileHeaderCompact && "hidden md:inline-flex",
+                )}
                 title="戻る"
                 aria-label="戻る"
               >
                 <ArrowLeft className="w-5 h-5" />
               </Button>
-              <div className="min-w-0 pt-0.5 flex-1">
-                <div className="flex items-center gap-3 flex-wrap mb-2">
-                  <h1 className="text-lg md:text-xl font-bold text-foreground tracking-tight">
+              <div
+                className={cn(
+                  "min-w-0 flex-1 md:pt-0.5",
+                  isMobileHeaderCompact ? "pt-0" : "pt-0.5",
+                )}
+              >
+                <div
+                  className={cn(
+                    "flex items-center gap-3 flex-wrap md:mb-2",
+                    isMobileHeaderCompact ? "mb-0" : "mb-2",
+                  )}
+                >
+                  <h1
+                    className={cn(
+                      "font-bold text-foreground tracking-tight truncate md:text-xl",
+                      isMobileHeaderCompact ? "text-base" : "text-lg",
+                    )}
+                  >
                     {project.name}
                   </h1>
-                  {project.close_date &&
+                  <div
+                    className={cn(
+                      "contents",
+                      isMobileHeaderCompact && "hidden md:contents",
+                    )}
+                  >
+                    {project.close_date &&
                     (() => {
                       const timeLeft = getTimeLeftInfo(project.close_date);
                       if (!timeLeft) return null;
@@ -1529,8 +1578,14 @@ export default function ProjectDetail() {
                         </span>
                       );
                     })()}
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap font-medium">
+                <div
+                  className={cn(
+                    "flex items-center gap-3 text-xs text-muted-foreground flex-wrap font-medium",
+                    isMobileHeaderCompact && "hidden md:flex",
+                  )}
+                >
                   {customer && (
                     <button
                       onClick={() => navigate(`/customers/${customer.id}`)}
@@ -1553,6 +1608,22 @@ export default function ProjectDetail() {
               </div>
             </div>
 
+            <div
+              className={cn(
+                "shrink-0 grid grid-cols-1 gap-2 md:hidden",
+                !isMobileHeaderCompact && "hidden",
+              )}
+            >
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleOpenEditProjectDialog}
+                className="h-8 w-full gap-1.5 font-bold shadow-2xs justify-center"
+              >
+                <Edit className="w-4 h-4" /> 編集
+              </Button>
+            </div>
+
             <div className="shrink-0 hidden md:flex items-center gap-2.5 pt-1">
               <Button
                 variant="secondary"
@@ -1566,7 +1637,12 @@ export default function ProjectDetail() {
           </div>
 
           {/* Mobile Edit Button */}
-          <div className="flex md:hidden items-center gap-2 mt-4 pt-4 border-t border-border/60 justify-end relative z-10">
+          <div
+            className={cn(
+              "flex md:hidden items-center gap-2 mt-4 pt-4 border-t border-border/60 justify-end relative z-10",
+              isMobileHeaderCompact && "hidden",
+            )}
+          >
             <Button
               variant="secondary"
               size="sm"
@@ -1579,7 +1655,12 @@ export default function ProjectDetail() {
         </div>
 
         {/* Mobile Section Switcher */}
-        <div className="md:hidden flex border-b border-border bg-card shrink-0 px-2 overflow-x-auto scrollbar-none z-10">
+        <div
+          className={cn(
+            "md:hidden flex border-b border-border bg-card shrink-0 px-2 overflow-x-auto scrollbar-none z-10",
+            isMobileHeaderCompact && "hidden",
+          )}
+        >
           {mobileSections.map((section) => {
             const isActive = mobileSection === section.id;
             return (
@@ -1617,7 +1698,10 @@ export default function ProjectDetail() {
         </div>
 
         {/* Mobile Content Area */}
-        <div className="md:hidden flex-1 overflow-y-auto bg-background/50">
+        <div
+          className="md:hidden flex-1 overflow-y-auto bg-background/50"
+          onScroll={handleMobileContentScroll}
+        >
           {mobileSection !== "context" && ProjectDetailsContent}
           {mobileSection === "context" && renderProfileContent(null)}
         </div>
@@ -1628,7 +1712,7 @@ export default function ProjectDetail() {
           <div
             className={cn(
               "shrink-0 bg-card border-r border-border overflow-hidden shadow-xs z-10 transition-[width] duration-200",
-              isContextPanelOpen ? "w-1/2 min-w-[360px] max-w-[640px]" : "w-13",
+              isContextPanelOpen ? "w-2/5 min-w-[360px] max-w-[640px]" : "w-13",
             )}
           >
             {isContextPanelOpen ? (

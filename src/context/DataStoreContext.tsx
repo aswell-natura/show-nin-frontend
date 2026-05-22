@@ -47,11 +47,14 @@ function loadProjects() {
   })
 }
 
+const DEFAULT_ACQUISITION_SOURCE = '手動登録'
+
 function loadCustomers() {
   const loaded = loadWithNewSeeds(KEYS.customers, mockCustomers)
   const seedById = new Map(mockCustomers.map((customer) => [customer.id, customer]))
   return loaded.map((customer) => {
     const seed = seedById.get(customer.id)
+    const acquisitionSource = customer.acquisition_source?.trim() || seed?.acquisition_source || DEFAULT_ACQUISITION_SOURCE
     
     let normalizedIndustry: string[] = []
     if (Array.isArray(customer.industry)) {
@@ -66,6 +69,7 @@ function loadCustomers() {
       return {
         ...customer,
         industry: normalizedIndustry,
+        acquisition_source: acquisitionSource,
       }
     }
     return {
@@ -75,7 +79,7 @@ function loadCustomers() {
       email: customer.email ?? seed.email,
       status: customer.status ?? seed.status,
       labels: customer.labels ?? seed.labels,
-      acquisition_source: customer.acquisition_source ?? seed.acquisition_source,
+      acquisition_source: acquisitionSource,
     }
   })
 }
@@ -234,7 +238,12 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
   }
 
   function addCustomer(data: Omit<Customer, 'id' | 'last_accessed_at'>): Customer {
-    const record: Customer = { ...data, id: genId(), last_accessed_at: now() }
+    const record: Customer = {
+      ...data,
+      id: genId(),
+      acquisition_source: data.acquisition_source?.trim() || DEFAULT_ACQUISITION_SOURCE,
+      last_accessed_at: now(),
+    }
     setCustomers((prev) => [...prev, record])
     return record
   }

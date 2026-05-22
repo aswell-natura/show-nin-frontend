@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode, type UIEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -229,6 +229,7 @@ export default function TaskDetail() {
   const { tasks, customers, projects, profiles, addTask, updateTask } = useDataStore();
   const { openDialog, closeDialog } = useGlobalDialog();
   const [activeTab, setActiveTab] = useState<MobileTab>("record");
+  const [isMobileHeaderCompact, setIsMobileHeaderCompact] = useState(false);
   const [selection, setSelection] = useState(() => ({
     baseId: id ?? "",
     selectedId: id ?? "",
@@ -237,6 +238,13 @@ export default function TaskDetail() {
   const task = tasks.find((item) => item.id === id);
   const selectedTaskId = selection.baseId === (id ?? "") ? selection.selectedId : (id ?? "");
   const selectedTask = tasks.find((item) => item.id === selectedTaskId) ?? task;
+
+  const handleMobileContentScroll = (event: UIEvent<HTMLDivElement>) => {
+    const shouldCompact = event.currentTarget.scrollTop > 64;
+    setIsMobileHeaderCompact((current) =>
+      current === shouldCompact ? current : shouldCompact,
+    );
+  };
 
   const taskView = useMemo(() => {
     if (!selectedTask) return null;
@@ -594,40 +602,105 @@ export default function TaskDetail() {
   return (
     <AppLayout>
       <div className="relative flex h-full flex-col overflow-hidden bg-background">
-        <div className="relative z-20 shrink-0 overflow-hidden border-b border-border bg-card px-4 py-4 shadow-sm md:px-6 md:py-5">
-          <div className="relative z-10 flex items-start justify-between gap-4">
-            <div className="flex min-w-0 flex-1 items-start gap-3">
+        <div
+          className={cn(
+            "relative z-20 shrink-0 overflow-hidden border-b border-border bg-card px-4 shadow-sm transition-all duration-200 md:px-6 md:py-5",
+            isMobileHeaderCompact ? "py-2.5" : "py-4",
+          )}
+        >
+          <div
+            className={cn(
+              "relative z-10 flex md:flex-row md:items-start md:justify-between md:gap-4",
+              isMobileHeaderCompact
+                ? "flex-col items-stretch gap-2.5"
+                : "flex-row items-start justify-between gap-4",
+            )}
+          >
+            <div
+              className={cn(
+                "flex min-w-0 flex-1 gap-3 md:items-start",
+                isMobileHeaderCompact ? "items-center" : "items-start",
+              )}
+            >
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate(-1)}
-                className="mt-0.5 h-9 w-9 shrink-0 rounded-full bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground"
+                className={cn(
+                  "mt-0.5 h-9 w-9 shrink-0 rounded-full bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground",
+                  isMobileHeaderCompact && "hidden md:inline-flex",
+                )}
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <div className="min-w-0 flex-1 pt-0.5">
-                <div className="mb-2 flex flex-wrap items-center gap-2">
+              <div
+                className={cn(
+                  "min-w-0 flex-1 md:pt-0.5",
+                  isMobileHeaderCompact ? "pt-0" : "pt-0.5",
+                )}
+              >
+                <div
+                  className={cn(
+                    "flex flex-wrap items-center gap-2 md:mb-2",
+                    isMobileHeaderCompact ? "mb-0" : "mb-2",
+                  )}
+                >
                   {taskView.customerId ? (
                     <button
                       type="button"
                       onClick={() => navigate(`/customers/${taskView.customerId}`)}
-                      className="inline-flex min-w-0 items-center gap-1.5 text-left text-lg font-bold tracking-tight text-foreground transition-colors hover:text-primary md:text-xl"
+                      className={cn(
+                        "inline-flex min-w-0 items-center gap-1.5 text-left font-bold tracking-tight text-foreground transition-colors hover:text-primary md:text-xl",
+                        isMobileHeaderCompact ? "text-base" : "text-lg",
+                      )}
                     >
                       <span className="truncate">{taskView.customer}</span>
-                      <ExternalLink className="h-4 w-4 shrink-0 text-primary" />
+                      <ExternalLink
+                        className={cn(
+                          "h-4 w-4 shrink-0 text-primary",
+                          isMobileHeaderCompact && "hidden md:block",
+                        )}
+                      />
                     </button>
                   ) : (
-                    <h1 className="text-lg font-bold tracking-tight text-foreground md:text-xl">
+                    <h1
+                      className={cn(
+                        "font-bold tracking-tight text-foreground md:text-xl",
+                        isMobileHeaderCompact ? "text-base" : "text-lg",
+                      )}
+                    >
                       {taskView.customer}
                     </h1>
                   )}
                 </div>
               </div>
             </div>
+            <div
+              className={cn(
+                "shrink-0 grid grid-cols-1 gap-2 md:hidden",
+                !isMobileHeaderCompact && "hidden",
+              )}
+            >
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleOpenEditTaskDialog}
+                className="h-8 w-full justify-center gap-1.5 font-bold shadow-2xs"
+              >
+                <Edit className="h-4 w-4" />
+                編集
+              </Button>
+            </div>
           </div>
         </div>
 
-        <div className="flex shrink-0 overflow-x-auto border-b border-border bg-muted/5 px-2 md:hidden">
+        <div
+          className={cn(
+            "flex shrink-0 overflow-x-auto border-b border-border bg-muted/5 px-2 md:hidden",
+            isMobileHeaderCompact && "hidden",
+          )}
+        >
           {mobileTabs.map((tab) => (
             <button
               key={tab.id}
@@ -644,7 +717,10 @@ export default function TaskDetail() {
           ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-background/50 md:hidden">
+        <div
+          className="flex-1 overflow-y-auto bg-background/50 md:hidden"
+          onScroll={handleMobileContentScroll}
+        >
           {activeTab === "related" && RelatedContent}
           {activeTab === "record" && RecordContent}
         </div>

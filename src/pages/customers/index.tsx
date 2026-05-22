@@ -94,16 +94,16 @@ function formatDateTime(iso: string) {
 const DEFAULT_COLUMNS: ListTableColumn[] = [
   { id: "pin", label: "ピン留め", width: "w-16" },
   { id: "rank", label: "ランク", width: "w-16" },
-  { id: "company_code", label: "企業コード", width: "w-28" },
-  { id: "name", label: "顧客名", width: "w-72" },
-  { id: "phone", label: "電話番号", width: "w-36" },
-  { id: "email", label: "メール", width: "w-48" },
-  { id: "status", label: "フェーズ", width: "w-28" },
-  { id: "labels", label: "ラベル", width: "w-48" },
-  { id: "acquisition_source", label: "流入経路", width: "w-36" },
-  { id: "amount", label: "案件金額", width: "w-36" },
-  { id: "projects", label: "進行中の案件数", width: "w-40" },
-  { id: "accessed", label: "最終更新", width: "w-32" },
+  { id: "company_code", label: "企業コード", width: "w-24" },
+  { id: "name", label: "顧客名", width: "w-64" },
+  { id: "phone", label: "電話番号", width: "w-32" },
+  { id: "email", label: "メール", width: "w-40" },
+  { id: "status", label: "フェーズ", width: "w-24" },
+  { id: "labels", label: "ラベル", width: "w-40" },
+  { id: "acquisition_source", label: "流入経路", width: "w-32" },
+  { id: "amount", label: "案件金額", width: "w-32" },
+  { id: "projects", label: "進行中の案件数", width: "w-36" },
+  { id: "accessed", label: "最終更新", width: "w-28" },
 ];
 
 function getAcquisitionSource(customer: Customer) {
@@ -846,7 +846,7 @@ export default function CustomerList() {
                   collisionDetection={closestCenter}
                   onDragEnd={handleDragEnd}
                 >
-                  <Table className="min-w-[600px] sm:min-w-[1000px] bg-card">
+                  <Table className="min-w-[600px] sm:min-w-[920px] bg-card">
                     <TableHeader className="bg-muted/40">
                       <TableRow className="border-b border-border hover:bg-transparent">
                         <SortableContext
@@ -945,7 +945,7 @@ export default function CustomerList() {
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="px-4 py-3.5 text-xs font-mono font-bold text-muted-foreground"
+                                      className="px-3 py-3.5 text-xs font-mono font-bold text-muted-foreground"
                                     >
                                       {customer.company_code || "-"}
                                     </TableCell>
@@ -954,11 +954,11 @@ export default function CustomerList() {
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="px-4 py-3.5"
+                                      className="px-3 py-3.5"
                                     >
                                       <div className="flex flex-col gap-0.5">
                                         <div className="flex items-center gap-1.5">
-                                          <span className="max-w-[18rem] truncate text-sm font-bold text-foreground transition-colors group-hover:text-primary">
+                                          <span className="max-w-[16rem] truncate text-sm font-bold text-foreground transition-colors group-hover:text-primary">
                                             {customer.name}
                                           </span>
                                           {isMinimalCustomer && (
@@ -998,7 +998,7 @@ export default function CustomerList() {
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="px-4 py-3.5 text-xs text-foreground font-medium"
+                                      className="px-3 py-3.5 text-xs text-foreground font-medium"
                                     >
                                       {customer.phone || "-"}
                                     </TableCell>
@@ -1007,7 +1007,7 @@ export default function CustomerList() {
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="px-4 py-3.5 text-xs text-muted-foreground truncate max-w-[14rem]"
+                                      className="px-3 py-3.5 text-xs text-muted-foreground truncate max-w-[12rem]"
                                     >
                                       {customer.email || "-"}
                                     </TableCell>
@@ -1016,9 +1016,9 @@ export default function CustomerList() {
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="px-4 py-3.5"
+                                      className="px-3 py-3.5"
                                     >
-                                      <div className="flex flex-wrap gap-1 max-w-[16rem]">
+                                      <div className="flex flex-wrap gap-1 max-w-[12rem]">
                                         {customer.labels &&
                                         customer.labels.length > 0 ? (
                                           customer.labels.map((lbl, idx) => (
@@ -1041,7 +1041,7 @@ export default function CustomerList() {
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="px-4 py-3.5 text-xs text-foreground font-medium truncate max-w-[10rem]"
+                                      className="px-3 py-3.5 text-xs text-foreground font-medium truncate max-w-[8rem]"
                                     >
                                       {getAcquisitionSource(customer)}
                                     </TableCell>
@@ -1054,7 +1054,7 @@ export default function CustomerList() {
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="px-4 py-3.5 text-xs font-bold text-foreground"
+                                      className="px-3 py-3.5 text-xs font-bold text-foreground"
                                     >
                                       {totalAmount > 0
                                         ? `¥${totalAmount.toLocaleString()}`
@@ -1066,7 +1066,7 @@ export default function CustomerList() {
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="px-4 py-3.5"
+                                      className="px-3 py-3.5"
                                     >
                                       {activeProjects.length > 0 ? (
                                         <Popover
@@ -1162,7 +1162,7 @@ export default function CustomerList() {
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="px-4 py-3.5 text-xs font-semibold text-muted-foreground"
+                                      className="px-3 py-3.5 text-xs font-semibold text-muted-foreground"
                                     >
                                       {formatDateTime(
                                         customer.last_accessed_at,
@@ -1173,7 +1173,7 @@ export default function CustomerList() {
                                   return null;
                               }
                             })}
-                            <TableCell className="px-4 py-3.5 text-right">
+                            <TableCell className="px-3 py-3.5 text-right">
                               <div className="flex items-center justify-end pr-4">
                                 <ChevronRight className="w-4.5 h-4.5 text-muted-foreground opacity-0 -translate-x-2 transition-all duration-300 ease-out group-hover:opacity-100 group-hover:translate-x-0 group-hover:text-primary" />
                               </div>

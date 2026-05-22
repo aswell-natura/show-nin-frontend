@@ -62,18 +62,14 @@ export default function MinuteDocumentEdit() {
               className="h-10 gap-2"
             >
               {isEditing ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-              {isEditing ? '編集中' : '編集ロック'}
+              {isEditing ? 'ドキュメント編集' : 'ドキュメントロック'}
             </Button>
                 </TooltipTrigger>
                 <TooltipContent
                   side="bottom"
                   className="border border-slate-200 bg-white text-slate-950 shadow-lg"
                 >
-                  <p>
-                    {isEditing
-                      ? 'ドキュメントの編集をロック'
-                      : 'ドキュメントのテキストクリックで編集可能'}
-                  </p>
+                  <p>ドキュメントのテキストクリックで編集可能</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

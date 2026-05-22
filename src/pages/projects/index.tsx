@@ -19,7 +19,6 @@ import {
 import {
   Building2,
   ChevronRight,
-  Eye,
   Filter,
   Info,
   Plus,
@@ -34,13 +33,7 @@ import { useDataStore } from "../../context/DataStoreContext";
 import { useGlobalDialog } from "../../context/GlobalDialogContext";
 import ProjectDialogForm from "@/components/projects/ProjectDialogForm";
 import type { Project, ProjectStatus } from "../../types";
-import { StatusBadge } from "../../components/dashboard/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Combobox } from "@/components/ui/combobox";
 import {
   ListPagination,
@@ -833,17 +826,6 @@ export default function ProjectList() {
                                           <span className="truncate text-sm font-bold text-foreground">
                                             {customer.name}
                                           </span>
-                                          <button
-                                            type="button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              navigate(`/customers/${customer.id}`);
-                                            }}
-                                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all duration-200 cursor-pointer border border-transparent hover:border-primary/20"
-                                            title="顧客詳細を表示"
-                                          >
-                                            <Eye className="h-3 w-3" />
-                                          </button>
                                         </div>
                                         <span className="text-xs text-muted-foreground truncate">
                                           {customer.industry?.join("、")}
@@ -864,56 +846,21 @@ export default function ProjectList() {
                                     className="px-4 py-3.5"
                                     onClick={(e) => e.stopPropagation()}
                                   >
-                                    <Popover>
-                                      <PopoverTrigger asChild>
-                                        <button className="h-8 border border-transparent hover:border-border hover:bg-muted/50 px-2 shadow-none focus:ring-0 w-auto gap-1.5 rounded-lg flex items-center">
-                                          <StatusBadge
-                                            status={project.status}
-                                          />
-                                        </button>
-                                      </PopoverTrigger>
-                                      <PopoverContent
-                                        className="w-56 p-3 bg-background border border-border shadow-md rounded-xl"
-                                        align="start"
-                                      >
-                                        <div className="space-y-3">
-                                          <div className="space-y-1">
-                                            <h4 className="font-bold text-xs text-foreground">
-                                              フェーズ変更
-                                            </h4>
-                                            <p className="text-[11px] text-muted-foreground">
-                                              案件のフェーズを選択してください。
-                                            </p>
-                                          </div>
-                                          <Select
-                                            value={project.status}
-                                            onValueChange={(val) =>
-                                              updateProject(project.id, {
-                                                status: val as ProjectStatus,
-                                              })
-                                            }
-                                          >
-                                            <SelectTrigger className="h-8 bg-muted/30 border-border/60 text-xs w-full justify-between">
-                                              <SelectValue placeholder="フェーズを選択" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="lead">
-                                                <StatusBadge status="lead" />
-                                              </SelectItem>
-                                              <SelectItem value="proposing">
-                                                <StatusBadge status="proposing" />
-                                              </SelectItem>
-                                              <SelectItem value="negotiating">
-                                                <StatusBadge status="negotiating" />
-                                              </SelectItem>
-                                              <SelectItem value="closed">
-                                                <StatusBadge status="closed" />
-                                              </SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                      </PopoverContent>
-                                    </Popover>
+                                    <select
+                                      value={project.status}
+                                      onChange={(event) =>
+                                        updateProject(project.id, {
+                                          status: event.target.value as ProjectStatus,
+                                        })
+                                      }
+                                      className="h-8 w-28 rounded-md border border-input bg-background px-2 text-sm font-semibold text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
+                                    >
+                                      {statusOptions.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                          {option.label}
+                                        </option>
+                                      ))}
+                                    </select>
                                   </TableCell>
                                 );
                               case "priority":
@@ -923,81 +870,24 @@ export default function ProjectList() {
                                     className="px-4 py-3.5"
                                     onClick={(e) => e.stopPropagation()}
                                   >
-                                    <Popover>
-                                      <PopoverTrigger asChild>
-                                        <button className="h-8 border border-transparent hover:border-border hover:bg-muted/50 px-2 shadow-none focus:ring-0 w-auto gap-1.5 rounded-lg flex items-center">
-                                          <span
-                                            className={cn(
-                                              "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
-                                              priorityColor[project.priority],
-                                            )}
-                                          >
-                                            {priorityLabel[project.priority]}
-                                          </span>
-                                        </button>
-                                      </PopoverTrigger>
-                                      <PopoverContent
-                                        className="w-56 p-3 bg-background border border-border shadow-md rounded-xl"
-                                        align="start"
-                                      >
-                                        <div className="space-y-3">
-                                          <div className="space-y-1">
-                                            <h4 className="font-bold text-xs text-foreground">
-                                              確度変更
-                                            </h4>
-                                            <p className="text-[11px] text-muted-foreground">
-                                              案件の確度を選択してください。
-                                            </p>
-                                          </div>
-                                          <Select
-                                            value={String(project.priority)}
-                                            onValueChange={(val) =>
-                                              updateProject(project.id, {
-                                                priority: Number(
-                                                  val,
-                                                ) as Project["priority"],
-                                              })
-                                            }
-                                          >
-                                            <SelectTrigger className="h-8 bg-muted/30 border-border/60 text-xs w-full justify-between">
-                                              <SelectValue placeholder="確度を選択" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="1">
-                                                <span
-                                                  className={cn(
-                                                    "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
-                                                    priorityColor[1],
-                                                  )}
-                                                >
-                                                  高
-                                                </span>
-                                              </SelectItem>
-                                              <SelectItem value="2">
-                                                <span
-                                                  className={cn(
-                                                    "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
-                                                    priorityColor[2],
-                                                  )}
-                                                >
-                                                  中
-                                                </span>
-                                              </SelectItem>
-                                              <SelectItem value="3">
-                                                <span
-                                                  className={cn(
-                                                    "inline-flex rounded-full px-2.5 py-1 text-xs font-medium",
-                                                    priorityColor[3],
-                                                  )}
-                                                >
-                                                  低
-                                                </span>
-                                              </SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                      </PopoverContent>
-                                    </Popover>
+                                    <select
+                                      value={String(project.priority)}
+                                      onChange={(event) =>
+                                        updateProject(project.id, {
+                                          priority: Number(event.target.value) as Project["priority"],
+                                        })
+                                      }
+                                      className={cn(
+                                        "h-8 w-20 rounded-md border border-input bg-background px-2 text-sm font-semibold text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary",
+                                        priorityColor[project.priority],
+                                      )}
+                                    >
+                                      {priorityOptions.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                          {option.label}
+                                        </option>
+                                      ))}
+                                    </select>
                                   </TableCell>
                                 );
                               case "amount":

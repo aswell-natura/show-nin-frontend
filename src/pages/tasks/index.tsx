@@ -31,7 +31,6 @@ import { useDataStore } from "../../context/DataStoreContext";
 import { useGlobalDialog } from "../../context/GlobalDialogContext";
 import TaskDialogForm from "@/components/tasks/TaskDialogForm";
 import type { Task } from "../../types";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import {
@@ -116,12 +115,6 @@ const priorityOptions = [
   { label: "低", value: "Low" },
 ];
 
-const priorityLabels: Record<Priority, string> = {
-  High: "高",
-  Middle: "中",
-  Low: "低",
-};
-
 const progressOptions = Array.from({ length: 11 }, (_, index) => index * 10);
 
 function todayString() {
@@ -168,7 +161,6 @@ function statusTone(status: TaskStatus) {
 
 function priorityTone(priority: Priority) {
   return cn(
-    "border-0 px-2.5 py-0.5 text-[11px] font-bold",
     priority === "High" && "bg-destructive/10 text-destructive",
     priority === "Middle" && "bg-amber-500/10 text-amber-600",
     priority === "Low" && "bg-muted text-muted-foreground",
@@ -188,11 +180,17 @@ function derivePriority(projectPriority?: number): Priority {
   return "Middle";
 }
 
+function priorityToProjectPriority(priority: Priority): 1 | 2 | 3 {
+  if (priority === "High") return 1;
+  if (priority === "Low") return 3;
+  return 2;
+}
+
 export default function TaskBoard() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { currentUser } = useAuth();
-  const { tasks, customers, projects, profiles, addTask, updateTask } =
+  const { tasks, customers, projects, profiles, addTask, updateTask, updateProject } =
     useDataStore();
   const { openDialog, closeDialog } = useGlobalDialog();
 
@@ -400,6 +398,13 @@ export default function TaskBoard() {
       progress_percent: value,
       is_completed: value === 100,
     } satisfies Partial<Task>);
+  };
+
+  const handlePriorityChange = (task: TaskView, value: Priority) => {
+    if (!task.projectId) return;
+    updateProject(task.projectId, {
+      priority: priorityToProjectPriority(value),
+    });
   };
 
   const filtered = useMemo(() => {
@@ -936,10 +941,31 @@ export default function TaskBoard() {
                                 );
                               case "priority":
                                 return (
-                                  <TableCell key={column.id} className="px-4 py-3.5">
-                                    <Badge variant="outline" className={priorityTone(task.priority)}>
-                                      {priorityLabels[task.priority]}
-                                    </Badge>
+                                  <TableCell
+                                    key={column.id}
+                                    className="px-4 py-3.5"
+                                    onClick={(event) => event.stopPropagation()}
+                                  >
+                                    <select
+                                      value={task.priority}
+                                      onChange={(event) =>
+                                        handlePriorityChange(
+                                          task,
+                                          event.target.value as Priority,
+                                        )
+                                      }
+                                      disabled={!task.projectId}
+                                      className={cn(
+                                        "h-8 w-20 rounded-md border border-input bg-background px-2 text-sm font-semibold text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60",
+                                        priorityTone(task.priority),
+                                      )}
+                                    >
+                                      {priorityOptions.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                          {option.label}
+                                        </option>
+                                      ))}
+                                    </select>
                                   </TableCell>
                                 );
                               case "owner":

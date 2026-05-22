@@ -1,18 +1,15 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import {
-  CalendarDays,
-  Check,
-  ChevronLeft,
-  Download,
-  Pencil,
-  Printer,
-} from 'lucide-react'
+import { Check, ChevronLeft, Download, Lock, Printer, Unlock } from 'lucide-react'
 
 import AppLayout from '@/components/layout/AppLayout'
 import { Button } from '@/components/ui/button'
-
-const previewScale = 0.72
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 function todayLabel() {
   const now = new Date()
@@ -22,21 +19,6 @@ function todayLabel() {
   return `${yyyy}/${mm}/${dd}`
 }
 
-function FieldLabel({
-  children,
-  required = false,
-}: {
-  children: string
-  required?: boolean
-}) {
-  return (
-    <label className="text-sm font-medium text-slate-700">
-      {children}
-      {required && <span className="ml-1 text-red-500">*</span>}
-    </label>
-  )
-}
-
 export default function MinuteDocumentEdit() {
   const { id, documentId } = useParams<{ id: string; documentId: string }>()
   const [searchParams] = useSearchParams()
@@ -44,49 +26,60 @@ export default function MinuteDocumentEdit() {
   const documentType = searchParams.get('type') || '生成ドキュメント'
   const generatedDate = searchParams.get('date') || todayLabel()
 
-  const initialFields = useMemo(
-    () => ({
-      customerName: `会議 ${generatedDate} 議事録レポート`,
-      projectName: '商人\nその他複数名',
-      meetingName: `会議 ${generatedDate} 議事録レポート`,
-      meetingDate: '',
-      location: 'オンライン',
-      topic: 'SHOW-NIN開発に関連する打ち合わせ',
-      issue: '録音・記録内容をもとに、議事録として確認しやすい状態へ整理します。',
-      nextAction: '関係者へ内容を共有し、必要に応じてドキュメントを更新します。',
-    }),
-    [generatedDate],
-  )
-
-  const [fields, setFields] = useState(initialFields)
-
-  const updateField = (key: keyof typeof fields, value: string) => {
-    setFields(current => ({ ...current, [key]: value }))
-  }
+  const [documentTitle, setDocumentTitle] = useState(`${documentType} - ${generatedDate}`)
+  const [isEditing, setIsEditing] = useState(false)
 
   return (
     <AppLayout>
-      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-slate-50 px-6 py-5 text-slate-950">
-        <div className="flex shrink-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-6">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-slate-50 text-slate-950">
+        <div className="flex shrink-0 flex-col gap-4 border-b border-slate-200 bg-white px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-4">
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-700 transition hover:bg-white hover:shadow-sm"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-700 transition hover:bg-slate-100"
             >
               <ChevronLeft className="h-6 w-6" />
             </button>
             <div>
-              <h2 className="text-lg font-bold tracking-tight">
-                {documentType} - {generatedDate}
-              </h2>
+              <p className="text-xs font-bold text-slate-400">ドキュメント編集</p>
+              <input
+                value={documentTitle}
+                onChange={event => setDocumentTitle(event.target.value)}
+                className="mt-1 w-full min-w-0 rounded-md border border-transparent bg-transparent px-0 text-lg font-bold tracking-tight text-slate-950 outline-none transition focus:border-blue-200 focus:bg-white focus:px-2 focus:ring-2 focus:ring-blue-100"
+              />
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 lg:justify-end">
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant={isEditing ? 'primary' : 'secondary'}
+              onClick={() => setIsEditing(current => !current)}
+              className="h-10 gap-2"
+            >
+              {isEditing ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+              {isEditing ? '編集中' : '編集ロック'}
+            </Button>
+                </TooltipTrigger>
+                <TooltipContent
+                  side="bottom"
+                  className="border border-slate-200 bg-white text-slate-950 shadow-lg"
+                >
+                  <p>
+                    {isEditing
+                      ? 'ドキュメントの編集をロック'
+                      : 'ドキュメントのテキストクリックで編集可能'}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <Button type="button" variant="primary" className="h-10 gap-2">
               <Check className="h-4 w-4" />
-              更新
+              保存
             </Button>
             <Button
               type="button"
@@ -109,159 +102,71 @@ export default function MinuteDocumentEdit() {
           </div>
         </div>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(25rem,0.95fr)]">
-          <section className="min-h-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div className="h-full overflow-auto bg-slate-100 p-4">
-              <div
-                className="origin-top-left rounded-sm bg-white shadow-sm"
-                style={{
-                  width: `${100 / previewScale}%`,
-                  transform: `scale(${previewScale})`,
-                  transformOrigin: 'top left',
-                }}
-              >
-                <article className="min-h-[1120px] w-[794px] border border-slate-200 bg-white text-slate-950">
-                  <header className="bg-teal-700 px-10 py-8 text-center">
-                    <h3 className="text-3xl font-bold tracking-[0.18em] text-white">
-                      議 事 録
-                    </h3>
-                  </header>
+        <main className="min-h-0 flex-1 overflow-auto px-4 py-6 md:px-8">
+          <article
+            contentEditable={isEditing}
+            suppressContentEditableWarning
+            className={`mx-auto min-h-[1120px] w-full max-w-[794px] bg-white text-slate-950 shadow-sm outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-blue-200 ${
+              isEditing ? 'cursor-text' : 'cursor-default select-none'
+            }`}
+          >
+            <header className="bg-teal-700 px-8 py-8 text-center">
+              <h2 className="text-3xl font-bold tracking-[0.18em] text-white">議 事 録</h2>
+            </header>
 
-                  <div className="grid grid-cols-[9rem_1fr] border-b border-slate-200">
-                    <div className="bg-teal-100 px-7 py-5 text-base font-medium">
-                      商人<br />その他複数名
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => updateField('projectName', fields.projectName)}
-                      className="px-7 py-5 text-left text-lg transition hover:bg-blue-50"
-                    >
-                      {fields.projectName}
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-[9rem_1fr] border-b border-slate-200">
-                    <div className="bg-teal-100 px-7 py-4 text-base font-medium">件名</div>
-                    <button
-                      type="button"
-                      onClick={() => updateField('topic', fields.topic)}
-                      className="px-7 py-4 text-left text-lg transition hover:bg-blue-50"
-                    >
-                      {fields.topic}
-                    </button>
-                  </div>
-
-                  <div className="h-24 border-b border-slate-200" />
-
-                  <div className="border-b border-slate-200 px-7 py-5 text-lg">
-                    {fields.customerName}
-                  </div>
-
-                  <section className="border-b border-slate-200 px-7 py-8">
-                    <h4 className="mb-5 inline-flex rounded bg-teal-700 px-2 py-1 text-lg font-bold text-white">
-                      ミーティング内容・現状の課題
-                    </h4>
-                    <p className="whitespace-pre-wrap text-base leading-8">{fields.issue}</p>
-                  </section>
-
-                  <section className="border-b border-slate-200 px-7 py-8">
-                    <h4 className="mb-5 inline-flex rounded bg-teal-700 px-2 py-1 text-lg font-bold text-white">
-                      次のアクション
-                    </h4>
-                    <p className="whitespace-pre-wrap text-base leading-8">{fields.nextAction}</p>
-                  </section>
-
-                  <footer className="px-7 py-8 text-sm leading-7 text-slate-500">
-                    関連議事録ID: {id ?? '-'} / ドキュメントID: {documentId ?? '-'}
-                  </footer>
-                </article>
+            <section className="grid grid-cols-[9rem_1fr] border-b border-slate-200">
+              <div className="bg-teal-100 px-6 py-5 text-base font-medium">
+                商人
+                <br />
+                その他複数名
               </div>
-            </div>
-          </section>
-
-          <aside className="min-h-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div className="h-full overflow-y-auto px-6 py-6">
-              <div className="mb-5">
-                <div className="flex items-center gap-3">
-                  <Pencil className="h-5 w-5 text-slate-800" />
-                  <h3 className="text-xl font-bold">フィールド編集</h3>
-                </div>
-                <p className="mt-3 text-sm leading-6 text-slate-500">
-                  左のプレビュー上のテキストをクリックしても直接編集できます
-                </p>
+              <div className="px-7 py-5 text-lg">
+                SHOW-NIN開発に関連する打ち合わせ
               </div>
+            </section>
 
-              <div className="space-y-5">
-                <div className="space-y-2">
-                  <FieldLabel required>取引先会社名</FieldLabel>
-                  <input
-                    value={fields.customerName}
-                    onChange={event => updateField('customerName', event.target.value)}
-                    className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                  />
-                </div>
+            <section className="grid grid-cols-[9rem_1fr] border-b border-slate-200">
+              <div className="bg-teal-100 px-6 py-4 text-base font-medium">件名</div>
+              <div className="px-7 py-4 text-lg">会議 {generatedDate} 議事録レポート</div>
+            </section>
 
-                <div className="space-y-2">
-                  <FieldLabel>案件名</FieldLabel>
-                  <textarea
-                    value={fields.projectName}
-                    onChange={event => updateField('projectName', event.target.value)}
-                    className="min-h-28 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base leading-7 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                  />
-                </div>
+            <section className="border-b border-slate-200 px-7 py-6 text-base leading-8">
+              <p>作成日: {generatedDate}</p>
+              <p>関連議事録ID: {id ?? '-'}</p>
+              <p>ドキュメントID: {documentId ?? '-'}</p>
+            </section>
 
-                <div className="space-y-2">
-                  <FieldLabel>会議体の名前</FieldLabel>
-                  <input
-                    value={fields.meetingName}
-                    onChange={event => updateField('meetingName', event.target.value)}
-                    className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                  />
-                </div>
+            <section className="border-b border-slate-200 px-7 py-8">
+              <h3 className="mb-5 inline-flex rounded bg-teal-700 px-2 py-1 text-lg font-bold text-white">
+                ミーティング内容・現状の課題
+              </h3>
+              <p className="whitespace-pre-wrap text-base leading-8">
+                録音・記録内容をもとに、議事録として確認しやすい状態へ整理します。
+                参加者の発言、決定事項、課題、次回までのアクションをこの画面で直接編集できます。
+              </p>
+            </section>
 
-                <div className="space-y-2">
-                  <FieldLabel>商談日時</FieldLabel>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      value={fields.meetingDate}
-                      onChange={event => updateField('meetingDate', event.target.value)}
-                      className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 pr-11 text-base outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                    />
-                    <CalendarDays className="pointer-events-none absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
-                  </div>
-                </div>
+            <section className="border-b border-slate-200 px-7 py-8">
+              <h3 className="mb-5 inline-flex rounded bg-teal-700 px-2 py-1 text-lg font-bold text-white">
+                次のアクション
+              </h3>
+              <ul className="list-disc space-y-2 pl-6 text-base leading-8">
+                <li>関係者へ内容を共有する</li>
+                <li>必要に応じてドキュメント内容を更新する</li>
+                <li>次回会議までの対応事項を確認する</li>
+              </ul>
+            </section>
 
-                <div className="space-y-2">
-                  <FieldLabel>商談場所</FieldLabel>
-                  <input
-                    value={fields.location}
-                    onChange={event => updateField('location', event.target.value)}
-                    className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <FieldLabel>議題</FieldLabel>
-                  <textarea
-                    value={fields.topic}
-                    onChange={event => updateField('topic', event.target.value)}
-                    className="min-h-24 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base leading-7 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <FieldLabel>内容・課題</FieldLabel>
-                  <textarea
-                    value={fields.issue}
-                    onChange={event => updateField('issue', event.target.value)}
-                    className="min-h-32 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base leading-7 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                  />
-                </div>
-              </div>
-            </div>
-          </aside>
-        </div>
+            <section className="px-7 py-8">
+              <h3 className="mb-5 inline-flex rounded bg-teal-700 px-2 py-1 text-lg font-bold text-white">
+                備考
+              </h3>
+              <p className="text-base leading-8">
+                このドキュメントは生成後に自由に編集できます。本文、見出し、箇条書きなどを直接クリックして入力してください。
+              </p>
+            </section>
+          </article>
+        </main>
       </div>
     </AppLayout>
   )

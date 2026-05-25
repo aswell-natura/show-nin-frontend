@@ -1,23 +1,12 @@
 import * as React from "react"
 import { WidgetCard } from "./WidgetCard"
-import { StatCard } from "./StatCard"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-
-interface Stat {
-  label: string
-  value: string | number
-  unit?: string
-  className?: string
-  labelClassName?: string
-  valueClassName?: string
-}
 
 interface StandardWidgetProps<T> {
   title: string
   description?: string
   action?: React.ReactNode
-  stats?: Stat[]
   items: T[]
   renderItem: (item: T) => React.ReactNode
   keyExtractor: (item: T) => string
@@ -34,7 +23,6 @@ export function StandardWidget<T>({
   title,
   description,
   action,
-  stats,
   items,
   renderItem,
   keyExtractor,
@@ -51,22 +39,6 @@ export function StandardWidget<T>({
 
   return (
     <WidgetCard title={title} description={description} action={action} className={className}>
-      {stats && stats.length > 0 && (
-        <div className={cn("grid gap-2 p-4 border-b border-border bg-muted/20", `grid-cols-${Math.min(stats.length, 4)}`)}>
-          {stats.map((stat, i) => (
-            <StatCard
-              key={i}
-              label={stat.label}
-              value={stat.value}
-              unit={stat.unit}
-              className={stat.className}
-              labelClassName={stat.labelClassName}
-              valueClassName={stat.valueClassName}
-            />
-          ))}
-        </div>
-      )}
-
       {children}
 
       <div className="flex-1 relative min-h-0 overflow-hidden">

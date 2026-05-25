@@ -33,11 +33,6 @@ export default function PlayerBudgetOverview() {
           <ChevronRight className="ml-1 h-3.5 w-3.5" />
         </Button>
       }
-      stats={[
-        { label: '配分予算', value: (targetAmount / 10000).toLocaleString(), unit: '万円' },
-        { label: '成約実績', value: (closedAmount / 10000).toLocaleString(), unit: '万円' },
-        { label: '見込み率', value: projectedProgress, unit: '%', valueClassName: 'text-blue-600', className: 'bg-blue-50/50 border-blue-100' },
-      ]}
       items={myProjects}
       keyExtractor={(p) => p.id}
       maxItems={5}

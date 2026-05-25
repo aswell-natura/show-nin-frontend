@@ -22,10 +22,6 @@ export default function CustomerOverview() {
     (a, b) => new Date(b.last_accessed_at).getTime() - new Date(a.last_accessed_at).getTime(),
   )
   const pinnedCount = customers.filter((customer) => customer.is_pinned).length
-  const rankACount = customers.filter((customer) => customer.rank === 'A').length
-  const activeCustomerCount = customers.filter((customer) =>
-    projects.some((project) => project.customer_id === customer.id && project.status !== 'closed'),
-  ).length
 
   return (
     <StandardWidget
@@ -37,11 +33,6 @@ export default function CustomerOverview() {
           <ChevronRight className="ml-1 h-3.5 w-3.5" />
         </Button>
       }
-      stats={[
-        { label: '顧客数', value: customers.length, unit: '社' },
-        { label: 'ランクA', value: rankACount, unit: '社', labelClassName: 'text-blue-600', valueClassName: 'text-blue-700' },
-        { label: '進行中', value: activeCustomerCount, unit: '社' },
-      ]}
       items={sortedCustomers}
       keyExtractor={(c) => c.id}
       maxItems={12}

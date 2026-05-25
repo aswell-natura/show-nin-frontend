@@ -9,7 +9,6 @@ export default function TaskOverview() {
   const { tasks, customers } = useDataStore()
   const referenceDate = '2026-05-09'
   const openTasks = tasks.filter((task) => !task.is_completed)
-  const overdue = openTasks.filter((task) => task.due_date < referenceDate)
 
   return (
     <StandardWidget
@@ -21,11 +20,6 @@ export default function TaskOverview() {
           <ChevronRight className="ml-1 h-3.5 w-3.5" />
         </Button>
       }
-      stats={[
-        { label: '未完了', value: openTasks.length, unit: '件' },
-        { label: '期限超過', value: overdue.length, unit: '件', valueClassName: 'text-red-600 dark:text-red-400', className: 'bg-red-50/50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30' },
-        { label: '総数', value: tasks.length, unit: '件' },
-      ]}
       items={openTasks}
       keyExtractor={(t) => t.id}
       maxItems={10}

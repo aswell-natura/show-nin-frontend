@@ -63,10 +63,6 @@ export function BudgetSummaryWidget() {
   const pipeline = teamProjects.filter((project) => project.status !== 'closed').reduce((sum, project) => sum + project.amount, 0)
   const projected = closed + pipeline
   const progress = targetAmount ? Math.round((projected / targetAmount) * 100) : 0
-  const allocated = members.reduce((sum, member) => {
-    const memberTarget = targets.find((item) => item.type === 'individual' && item.user_id === member.id && item.target_month === '2026-05-01')
-    return sum + (memberTarget?.amount ?? 0)
-  }, 0)
 
   return (
     <StandardWidget
@@ -78,10 +74,6 @@ export function BudgetSummaryWidget() {
           <ChevronRight className="ml-1 h-3.5 w-3.5" />
         </Button>
       }
-      stats={[
-        { label: 'チーム目標', value: (targetAmount / 10000).toLocaleString(), unit: '万円' },
-        { label: '配分済み', value: (allocated / 10000).toLocaleString(), unit: '万円' },
-      ]}
       items={[]}
       keyExtractor={() => ''}
       renderItem={() => null}

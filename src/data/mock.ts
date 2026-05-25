@@ -401,6 +401,7 @@ export const mockProjects: Project[] = [
     close_date: "2026-05-31",
     labels: ["社内打ち合わせ", "重点案件"],
     next_action_date: "2026-05-14",
+    next_action: "最終見積書を送付し、決裁スケジュールを確認する",
   },
   {
     id: "proj-002",
@@ -415,6 +416,7 @@ export const mockProjects: Project[] = [
     close_date: "2026-06-30",
     labels: ["追加提案"],
     next_action_date: "2026-05-15",
+    next_action: "チャットボット追加機能のデモ日程を先方と調整する",
   },
   {
     id: "proj-003",
@@ -429,6 +431,7 @@ export const mockProjects: Project[] = [
     close_date: "2026-07-31",
     labels: ["新規案件", "技術確認"],
     next_action_date: "2026-05-16",
+    next_action: "現行システムの連携要件をヒアリングする",
   },
   {
     id: "proj-004",
@@ -457,6 +460,7 @@ export const mockProjects: Project[] = [
     close_date: "2026-05-20",
     labels: ["社内打ち合わせ", "見積調整"],
     next_action_date: "2026-05-13",
+    next_action: "価格調整後の提案書を更新して提出する",
   },
   {
     id: "proj-006",
@@ -499,6 +503,7 @@ export const mockProjects: Project[] = [
     close_date: "2026-06-30",
     labels: ["デモ後フォロー"],
     next_action_date: "2026-05-14",
+    next_action: "デモフィードバックを確認し追加要望を整理する",
   },
   {
     id: "proj-009",
@@ -527,6 +532,7 @@ export const mockProjects: Project[] = [
     close_date: "2026-12-31",
     labels: ["新規案件"],
     next_action_date: "2026-05-14",
+    next_action: "初回商談に向けた導入課題の確認事項を送付する",
   },
   {
     id: "proj-011",
@@ -612,6 +618,7 @@ export const mockProjects: Project[] = [
     source: "recording",
     labels: ["録音起票", "新規案件"],
     next_action_date: "2026-05-13",
+    next_action: "録音内容から企業名と担当者情報を特定する",
     note: "録音から自動作成。企業名が会話内で確定していないため、未紐付け案件として保留中。",
   },
   {
@@ -659,6 +666,7 @@ export const mockProjects: Project[] = [
     source: "recording",
     labels: ["録音起票", "要確認"],
     next_action_date: "2026-05-13",
+    next_action: "案件名と顧客企業を確認して案件情報を更新する",
     note: "顧客企業と案件タイトルを設定せずに録音開始したデータ。企業名と案件名の確認待ち。",
   },
   {
@@ -674,6 +682,7 @@ export const mockProjects: Project[] = [
     close_date: "2026-06-30",
     labels: ["重点案件", "見積調整"],
     next_action_date: "2026-05-15",
+    next_action: "修正版見積と導入効果試算を提出する",
   },
   {
     id: "proj-021",
@@ -688,6 +697,7 @@ export const mockProjects: Project[] = [
     close_date: "2026-08-31",
     labels: ["新規案件"],
     next_action_date: "2026-05-18",
+    next_action: "倉庫担当者向けの要件確認ミーティングを設定する",
   },
   {
     id: "proj-022",
@@ -716,6 +726,7 @@ export const mockProjects: Project[] = [
     close_date: "2026-06-15",
     labels: ["重点案件", "スピード決着"],
     next_action_date: "2026-05-14",
+    next_action: "連携API仕様への回答と契約条件を共有する",
   },
   {
     id: "proj-024",
@@ -744,6 +755,7 @@ export const mockProjects: Project[] = [
     close_date: "2026-07-15",
     labels: ["セキュリティ確認"],
     next_action_date: "2026-05-14",
+    next_action: "セキュリティチェックシートの回答を回収する",
   },
   {
     id: "proj-026",
@@ -1970,4 +1982,3 @@ export const mockProjectDocuments: ProjectDocument[] = [
     file_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
   }
 ];
-

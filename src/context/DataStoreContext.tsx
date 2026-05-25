@@ -43,6 +43,7 @@ function loadProjects() {
       ...project,
       labels: project.labels ?? seed.labels,
       next_action_date: project.next_action_date ?? seed.next_action_date,
+      next_action: project.next_action ?? seed.next_action,
     }
   })
 }

@@ -35,8 +35,6 @@ export default function ProjectOverview() {
   const sortedProjects = [...projects].sort(
     (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
   )
-  const unlinkedCount = projects.filter((project) => project.customer_id === null).length
-  const activeCount = projects.filter((project) => project.status !== 'closed').length
 
   return (
     <StandardWidget
@@ -48,11 +46,6 @@ export default function ProjectOverview() {
           <ChevronRight className="ml-1 h-3.5 w-3.5" />
         </Button>
       }
-      stats={[
-        { label: '全案件', value: projects.length, unit: '件' },
-        { label: '進行中', value: activeCount, unit: '件' },
-        { label: '未紐付け', value: unlinkedCount, unit: '件', valueClassName: 'text-red-600 dark:text-red-400', className: 'bg-red-50/50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30' },
-      ]}
       items={sortedProjects}
       keyExtractor={(p) => p.id}
       maxItems={12}

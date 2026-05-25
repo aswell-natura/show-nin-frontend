@@ -35,9 +35,6 @@ export default function ManagerAtRisk() {
           <ChevronRight className="ml-1 h-3.5 w-3.5" />
         </Button>
       }
-      stats={[
-        { label: 'リスク案件', value: staleProjects.length, unit: '件', valueClassName: 'text-red-600', className: 'bg-red-50/50 border-red-100' },
-      ]}
       items={staleProjects}
       keyExtractor={(p) => p.id}
       emptyMessage="要フォロー案件はありません"

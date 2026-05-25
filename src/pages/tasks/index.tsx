@@ -863,7 +863,7 @@ export default function TaskBoard() {
                   collisionDetection={closestCenter}
                   onDragEnd={handleDragEnd}
                 >
-                  <Table className="min-w-[600px] bg-card sm:min-w-[1280px]">
+                  <Table className="min-w-[600px] bg-card text-xs text-foreground sm:min-w-[1280px]">
                     <TableHeader className="bg-muted/40">
                       <TableRow className="border-b border-border hover:bg-transparent">
                         <SortableContext
@@ -908,7 +908,7 @@ export default function TaskBoard() {
                                 return (
                                   <TableCell key={column.id} className="px-4 py-3.5">
                                     <div className="flex flex-col gap-0.5">
-                                      <span className="max-w-[18rem] truncate text-sm font-bold text-foreground transition-colors group-hover:text-primary">
+                                      <span className="max-w-[18rem] truncate text-xs font-bold text-foreground transition-colors group-hover:text-primary">
                                         {task.title}
                                       </span>
                                       <span className="text-xs text-muted-foreground">
@@ -932,7 +932,7 @@ export default function TaskBoard() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="px-4 py-3.5 text-xs font-medium text-muted-foreground"
+                                    className="px-4 py-3.5 text-xs font-medium text-foreground"
                                   >
                                     <span className="block max-w-[16rem] truncate">
                                       {task.project}
@@ -946,64 +946,71 @@ export default function TaskBoard() {
                                     className="px-4 py-3.5"
                                     onClick={(event) => event.stopPropagation()}
                                   >
-                                    <select
+                                    <Select
                                       value={task.priority}
-                                      onChange={(event) =>
-                                        handlePriorityChange(
-                                          task,
-                                          event.target.value as Priority,
-                                        )
+                                      onValueChange={(value) =>
+                                        handlePriorityChange(task, value as Priority)
                                       }
                                       disabled={!task.projectId}
-                                      className={cn(
-                                        "h-8 w-20 rounded-md border border-input bg-background px-2 text-sm font-semibold text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60",
-                                        priorityTone(task.priority),
-                                      )}
                                     >
-                                      {priorityOptions.map((option) => (
-                                        <option key={option.value} value={option.value}>
-                                          {option.label}
-                                        </option>
-                                      ))}
-                                    </select>
+                                      <SelectTrigger
+                                        className={cn(
+                                          "h-8 w-20 bg-background text-xs font-semibold text-foreground",
+                                          priorityTone(task.priority),
+                                        )}
+                                      >
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {priorityOptions.map((option) => (
+                                          <SelectItem key={option.value} value={option.value}>
+                                            {option.label}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
                                   </TableCell>
                                 );
                               case "owner":
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="px-4 py-3.5 text-xs font-semibold text-muted-foreground"
+                                    className="px-4 py-3.5 text-xs font-semibold text-foreground"
                                   >
                                     {task.owner}
                                   </TableCell>
                                 );
                               case "progress":
                                 return (
-                                  <TableCell key={column.id} className="px-4 py-3.5">
-                                    <select
-                                      value={task.progressPercent}
-                                      onClick={(event) => event.stopPropagation()}
-                                      onChange={(event) =>
-                                        handleProgressChange(
-                                          task.id,
-                                          Number(event.target.value),
-                                        )
+                                  <TableCell
+                                    key={column.id}
+                                    className="px-4 py-3.5"
+                                    onClick={(event) => event.stopPropagation()}
+                                  >
+                                    <Select
+                                      value={String(task.progressPercent)}
+                                      onValueChange={(value) =>
+                                        handleProgressChange(task.id, Number(value))
                                       }
-                                      className="h-8 w-24 rounded-md border border-input bg-background px-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
                                     >
-                                      {progressOptions.map((value) => (
-                                        <option key={value} value={value}>
-                                          {value}%
-                                        </option>
-                                      ))}
-                                    </select>
+                                      <SelectTrigger className="h-8 w-24 bg-background text-xs font-medium text-foreground">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {progressOptions.map((value) => (
+                                          <SelectItem key={value} value={String(value)}>
+                                            {value}%
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
                                   </TableCell>
                                 );
                               case "updated":
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-muted-foreground"
+                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-foreground"
                                   >
                                     {task.progressUpdatedAt
                                       ? formatDateTimeMinute(task.progressUpdatedAt)

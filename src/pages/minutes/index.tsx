@@ -106,6 +106,11 @@ interface GeneratedDocumentView {
   generatedDate: string;
 }
 
+interface MinuteLinkOverrides {
+  customerId?: string;
+  projectId?: string;
+}
+
 interface FileAnalysisFormValues {
   fileType: "audio" | "text";
   title: string;
@@ -467,7 +472,7 @@ function FileAnalysisForm({
 
 export default function AudioMinuteList() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { customers, projects, profiles } = useDataStore();
+  const { customers, projects, profiles, addCustomer, addProject } = useDataStore();
   const { openDialog, closeDialog } = useGlobalDialog();
 
   const [search, setSearch] = useState(() => searchParams.get("q") || "");
@@ -508,6 +513,9 @@ export default function AudioMinuteList() {
   );
   const [columns, setColumns] = useState<ListTableColumn[]>(DEFAULT_COLUMNS);
   const [openDocumentPopoverId, setOpenDocumentPopoverId] = useState<string | null>(null);
+  const [minuteLinkOverrides, setMinuteLinkOverrides] = useState<
+    Record<string, MinuteLinkOverrides>
+  >({});
   const itemsPerPage = 8;
 
   useEffect(() => {
@@ -532,11 +540,14 @@ export default function AudioMinuteList() {
   const minuteViews = useMemo<MinuteView[]>(
     () =>
       mockAudioMinutes.map((minute: AudioMinute) => {
-        const customer = minute.customer_id
-          ? customers.find((item) => item.id === minute.customer_id)
+        const override = minuteLinkOverrides[minute.id];
+        const customerId = override?.customerId ?? minute.customer_id;
+        const projectId = override?.projectId ?? minute.project_id;
+        const customer = customerId
+          ? customers.find((item) => item.id === customerId)
           : null;
-        const project = minute.project_id
-          ? projects.find((item) => item.id === minute.project_id)
+        const project = projectId
+          ? projects.find((item) => item.id === projectId)
           : null;
         const owner = profiles.find((profile) => profile.id === minute.user_id);
         const checklistDone = minute.checklist.filter((item) => item.checked).length;
@@ -545,10 +556,10 @@ export default function AudioMinuteList() {
         return {
           id: minute.id,
           title: minute.title.trim() || "-",
-          customerId: minute.customer_id,
+          customerId,
           customer: customer?.name ?? "未紐づけ",
           customerIndustry: customer?.industry?.join("、"),
-          projectId: minute.project_id,
+          projectId,
           project: project?.name ?? "未紐づけ",
           ownerId: minute.user_id,
           owner: owner?.name ?? "未担当",
@@ -564,8 +575,131 @@ export default function AudioMinuteList() {
           isUnlinked: !customer || !project,
         };
       }),
-    [customers, profiles, projects],
+    [customers, minuteLinkOverrides, profiles, projects],
   );
+
+  const updateMinuteLink = (
+    minuteId: string,
+    field: keyof MinuteLinkOverrides,
+    value: string,
+  ) => {
+    setMinuteLinkOverrides((current) => ({
+      ...current,
+      [minuteId]: { ...current[minuteId], [field]: value },
+    }));
+  };
+
+  const handleSelectMinuteProject = (minuteId: string, projectId: string) => {
+    updateMinuteLink(minuteId, "projectId", projectId);
+    const project = projects.find((item) => item.id === projectId);
+    if (project?.customer_id) {
+      updateMinuteLink(minuteId, "customerId", project.customer_id);
+    }
+  };
+
+  const handleCreateMinuteCustomerQuick = (minuteId: string, name: string) => {
+    const customer = addCustomer({
+      name,
+      industry: ["未設定"],
+      rank: "B",
+      status: "lead",
+      is_pinned: false,
+      created_by: "user-001",
+    });
+    updateMinuteLink(minuteId, "customerId", customer.id);
+  };
+
+  const handleCreateMinuteCustomerDetail = (minuteId: string, name: string) => {
+    const formId = `add-customer-from-minute-row-${minuteId}`;
+    openDialog({
+      mode: "add",
+      eyebrow: "顧客",
+      breadcrumbs: ["新規作成"],
+      title: "顧客を追加",
+      hideHeaderTitle: true,
+      size: "xl",
+      content: (
+        <CustomerDialogForm
+          formId={formId}
+          submitLabel="顧客を追加"
+          initialValues={{ name }}
+          onSubmit={(values) => {
+            const customer = addCustomer({
+              ...values,
+              created_by: "user-001",
+            });
+            updateMinuteLink(minuteId, "customerId", customer.id);
+            closeDialog();
+          }}
+        />
+      ),
+      footer: (
+        <>
+          <Button type="button" variant="secondary" onClick={closeDialog}>
+            キャンセル
+          </Button>
+          <Button type="submit" form={formId} variant="primary">
+            顧客を追加
+          </Button>
+        </>
+      ),
+    });
+  };
+
+  const handleCreateMinuteProjectQuick = (minute: MinuteView, name: string) => {
+    const project = addProject({
+      name,
+      customer_id: minute.customerId,
+      status: "lead",
+      priority: 2,
+      amount: 0,
+      user_id: minute.ownerId || "user-001",
+      source: "manual",
+    });
+    updateMinuteLink(minute.id, "projectId", project.id);
+  };
+
+  const handleCreateMinuteProjectDetail = (minute: MinuteView, name: string) => {
+    const formId = `add-project-from-minute-row-${minute.id}`;
+    openDialog({
+      mode: "add",
+      eyebrow: "案件",
+      breadcrumbs: ["新規作成"],
+      title: "案件を追加",
+      hideHeaderTitle: true,
+      size: "xl",
+      content: (
+        <ProjectDialogForm
+          formId={formId}
+          submitLabel="案件を追加"
+          initialValues={{
+            name,
+            customer_id: minute.customerId,
+            user_id: minute.ownerId || "user-001",
+            source: "manual",
+          }}
+          onSubmit={(values) => {
+            const project = addProject(values);
+            updateMinuteLink(minute.id, "projectId", project.id);
+            if (project.customer_id) {
+              updateMinuteLink(minute.id, "customerId", project.customer_id);
+            }
+            closeDialog();
+          }}
+        />
+      ),
+      footer: (
+        <>
+          <Button type="button" variant="secondary" onClick={closeDialog}>
+            キャンセル
+          </Button>
+          <Button type="submit" form={formId} variant="primary">
+            案件を追加
+          </Button>
+        </>
+      ),
+    });
+  };
 
   const customerOptions = useMemo(
     () =>
@@ -1064,7 +1198,7 @@ export default function AudioMinuteList() {
                   collisionDetection={closestCenter}
                   onDragEnd={handleDragEnd}
                 >
-                  <Table className="min-w-[1460px] bg-card">
+                  <Table className="min-w-[1460px] bg-card text-xs text-foreground">
                     <TableHeader className="bg-muted/40">
                       <TableRow className="border-b border-border hover:bg-transparent">
                         <SortableContext
@@ -1102,7 +1236,7 @@ export default function AudioMinuteList() {
                                   <TableCell key={column.id} className="px-4 py-3.5">
                                     <div className="flex min-w-0 flex-col gap-1">
                                       <div className="flex min-w-0 items-center gap-2">
-                                        <span className="truncate text-sm font-bold text-foreground transition-colors group-hover:text-primary">
+                                        <span className="truncate text-xs font-bold text-foreground transition-colors group-hover:text-primary">
                                           {minute.title}
                                         </span>
                                       </div>
@@ -1111,7 +1245,13 @@ export default function AudioMinuteList() {
                                 );
                               case "customer":
                                 return (
-                                  <TableCell key={column.id} className="px-4 py-3.5">
+                                  <TableCell
+                                    key={column.id}
+                                    className="px-4 py-3.5"
+                                    onClick={(event) => {
+                                      if (!minute.customerId) event.stopPropagation();
+                                    }}
+                                  >
                                     {minute.customerId ? (
                                       <div className="min-w-0">
                                         <p className="truncate text-xs font-bold text-foreground">
@@ -1122,29 +1262,61 @@ export default function AudioMinuteList() {
                                         </p>
                                       </div>
                                     ) : (
-                                      <Badge
-                                        variant="destructive"
-                                        className="border-0 px-2.5 py-1 text-xs font-bold"
-                                      >
-                                        未紐づけ
-                                      </Badge>
+                                      <Combobox
+                                        options={customerOptions}
+                                        onValueChange={(value) =>
+                                          updateMinuteLink(minute.id, "customerId", value)
+                                        }
+                                        onCreateOptionQuick={(name) =>
+                                          handleCreateMinuteCustomerQuick(minute.id, name)
+                                        }
+                                        onCreateOptionDetail={(name) =>
+                                          handleCreateMinuteCustomerDetail(minute.id, name)
+                                        }
+                                        placeholder="企業を紐づけ"
+                                        className="h-8 w-48 border border-destructive/30 bg-destructive/5 text-xs font-medium text-destructive"
+                                      />
                                     )}
                                   </TableCell>
                                 );
                               case "project":
                                 return (
-                                  <TableCell key={column.id} className="px-4 py-3.5">
+                                  <TableCell
+                                    key={column.id}
+                                    className="px-4 py-3.5"
+                                    onClick={(event) => {
+                                      if (!minute.projectId) event.stopPropagation();
+                                    }}
+                                  >
                                     {minute.projectId ? (
                                       <span className="block max-w-[16rem] truncate text-xs font-semibold text-foreground">
                                         {minute.project}
                                       </span>
                                     ) : (
-                                      <Badge
-                                        variant="destructive"
-                                        className="border-0 px-2.5 py-1 text-xs font-bold"
-                                      >
-                                        未紐づけ
-                                      </Badge>
+                                      <Combobox
+                                        options={
+                                          minute.customerId
+                                            ? projectOptions.filter((option) =>
+                                                projects.some(
+                                                  (project) =>
+                                                    project.id === option.value &&
+                                                    project.customer_id === minute.customerId,
+                                                ),
+                                              )
+                                            : projectOptions
+                                        }
+                                        onValueChange={(value) =>
+                                          handleSelectMinuteProject(minute.id, value)
+                                        }
+                                        onCreateOptionQuick={(name) =>
+                                          handleCreateMinuteProjectQuick(minute, name)
+                                        }
+                                        onCreateOptionDetail={(name) =>
+                                          handleCreateMinuteProjectDetail(minute, name)
+                                        }
+                                        placeholder="案件を紐づけ"
+                                        className="h-8 w-56 border border-destructive/30 bg-destructive/5 text-xs font-medium text-destructive"
+                                      />
                                     )}
                                   </TableCell>
                                 );
@@ -1152,7 +1324,7 @@ export default function AudioMinuteList() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-muted-foreground"
+                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-foreground"
                                   >
                                     {minute.owner}
                                   </TableCell>
@@ -1169,7 +1341,7 @@ export default function AudioMinuteList() {
                                             onMouseLeave={() => setOpenDocumentPopoverId(null)}
                                             onClick={(event) => event.stopPropagation()}
                                           >
-                                            <span className="text-sm font-bold text-foreground transition-colors group-hover/num:text-primary">
+                                            <span className="text-xs font-bold text-foreground transition-colors group-hover/num:text-primary">
                                               {minute.generatedDocuments.length}
                                             </span>
                                             <span className="text-xs font-medium text-muted-foreground transition-colors group-hover/num:text-primary">
@@ -1225,7 +1397,7 @@ export default function AudioMinuteList() {
                                         </PopoverContent>
                                       </Popover>
                                     ) : (
-                                      <span className="text-sm font-bold text-muted-foreground/40">
+                                      <span className="text-xs font-bold text-muted-foreground/40">
                                         0 <span className="text-xs font-medium">件</span>
                                       </span>
                                     )}
@@ -1244,7 +1416,7 @@ export default function AudioMinuteList() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="px-4 py-3.5 font-mono text-xs text-muted-foreground"
+                                    className="px-4 py-3.5 font-mono text-xs text-foreground"
                                   >
                                     {minute.startTime}
                                   </TableCell>
@@ -1253,7 +1425,7 @@ export default function AudioMinuteList() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="px-4 py-3.5 font-mono text-xs text-muted-foreground"
+                                    className="px-4 py-3.5 font-mono text-xs text-foreground"
                                   >
                                     {minute.endTime}
                                   </TableCell>
@@ -1262,7 +1434,7 @@ export default function AudioMinuteList() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-muted-foreground"
+                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-foreground"
                                   >
                                     {formatDateTime(minute.createdAt)}
                                   </TableCell>
@@ -1271,7 +1443,7 @@ export default function AudioMinuteList() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-muted-foreground"
+                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-foreground"
                                   >
                                     {formatDateTime(minute.updatedAt)}
                                   </TableCell>

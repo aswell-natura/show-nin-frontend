@@ -17,7 +17,6 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import {
-  Building2,
   Filter,
   Info,
   Plus,
@@ -737,7 +736,7 @@ export default function ProjectList() {
           ) : (
             <div className="mt-4 px-4 pb-6 md:px-6 lg:pb-10">
               <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
-                <Table className="min-w-[1480px] bg-card">
+                <Table className="min-w-[1480px] bg-card text-xs text-foreground">
                   <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
@@ -800,7 +799,7 @@ export default function ProjectList() {
                                             要紐付け
                                           </span>
                                         )}
-                                        <span className="max-w-[18rem] truncate text-sm font-bold text-foreground transition-colors group-hover:text-primary">
+                                        <span className="max-w-[18rem] truncate text-xs font-bold text-foreground transition-colors group-hover:text-primary">
                                           {project.name ||
                                             "録音メモ（案件名未設定）"}
                                         </span>
@@ -821,7 +820,7 @@ export default function ProjectList() {
                                     {customer ? (
                                       <div className="flex min-w-0 flex-col gap-0.5">
                                         <div className="flex items-center gap-1.5 min-w-0">
-                                          <span className="truncate text-sm font-bold text-foreground">
+                                          <span className="truncate text-xs font-bold text-foreground">
                                             {customer.name}
                                           </span>
                                         </div>
@@ -830,9 +829,23 @@ export default function ProjectList() {
                                         </span>
                                       </div>
                                     ) : (
-                                      <div className="inline-flex items-center gap-1.5 rounded-md bg-destructive/10 px-2 py-1 text-xs font-bold text-destructive">
-                                        <Building2 className="h-3.5 w-3.5" />
-                                        企業未紐付け
+                                      <div onClick={(event) => event.stopPropagation()}>
+                                        <Select
+                                          onValueChange={(value) =>
+                                            updateProject(project.id, { customer_id: value })
+                                          }
+                                        >
+                                          <SelectTrigger className="h-8 w-52 border-destructive/30 bg-destructive/5 text-xs font-medium text-destructive">
+                                            <SelectValue placeholder="企業を紐づけ" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {customerOptions.map((option) => (
+                                              <SelectItem key={option.value} value={option.value}>
+                                                {option.label}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
                                       </div>
                                     )}
                                   </TableCell>
@@ -844,21 +857,25 @@ export default function ProjectList() {
                                     className="px-4 py-3.5"
                                     onClick={(e) => e.stopPropagation()}
                                   >
-                                    <select
+                                    <Select
                                       value={project.status}
-                                      onChange={(event) =>
+                                      onValueChange={(value) =>
                                         updateProject(project.id, {
-                                          status: event.target.value as ProjectStatus,
+                                          status: value as ProjectStatus,
                                         })
                                       }
-                                      className="h-8 w-28 rounded-md border border-input bg-background px-2 text-sm font-semibold text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
                                     >
-                                      {statusOptions.map((option) => (
-                                        <option key={option.value} value={option.value}>
-                                          {option.label}
-                                        </option>
-                                      ))}
-                                    </select>
+                                      <SelectTrigger className="h-8 w-28 bg-background text-xs font-semibold text-foreground">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {statusOptions.map((option) => (
+                                          <SelectItem key={option.value} value={option.value}>
+                                            {option.label}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
                                   </TableCell>
                                 );
                               case "priority":
@@ -868,31 +885,37 @@ export default function ProjectList() {
                                     className="px-4 py-3.5"
                                     onClick={(e) => e.stopPropagation()}
                                   >
-                                    <select
+                                    <Select
                                       value={String(project.priority)}
-                                      onChange={(event) =>
+                                      onValueChange={(value) =>
                                         updateProject(project.id, {
-                                          priority: Number(event.target.value) as Project["priority"],
+                                          priority: Number(value) as Project["priority"],
                                         })
                                       }
-                                      className={cn(
-                                        "h-8 w-20 rounded-md border border-input bg-background px-2 text-sm font-semibold text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary",
-                                        priorityColor[project.priority],
-                                      )}
                                     >
-                                      {priorityOptions.map((option) => (
-                                        <option key={option.value} value={option.value}>
-                                          {option.label}
-                                        </option>
-                                      ))}
-                                    </select>
+                                      <SelectTrigger
+                                        className={cn(
+                                          "h-8 w-20 bg-background text-xs font-semibold text-foreground",
+                                          priorityColor[project.priority],
+                                        )}
+                                      >
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {priorityOptions.map((option) => (
+                                          <SelectItem key={option.value} value={option.value}>
+                                            {option.label}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
                                   </TableCell>
                                 );
                               case "amount":
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="whitespace-nowrap px-4 py-3.5 text-sm font-semibold text-foreground/90"
+                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-foreground"
                                   >
                                     {formatAmount(project.amount)}
                                   </TableCell>
@@ -901,7 +924,7 @@ export default function ProjectList() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="whitespace-nowrap px-4 py-3.5 text-sm font-semibold text-foreground/80"
+                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-foreground"
                                   >
                                     {owner?.name ?? "未担当"}
                                   </TableCell>
@@ -910,7 +933,7 @@ export default function ProjectList() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-muted-foreground"
+                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-foreground"
                                   >
                                     {formatDate(project.next_action_date)}
                                   </TableCell>
@@ -919,7 +942,7 @@ export default function ProjectList() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-muted-foreground"
+                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-foreground"
                                   >
                                     {formatDateTime(project.updated_at)}
                                   </TableCell>
@@ -929,7 +952,7 @@ export default function ProjectList() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="px-4 py-3.5 text-xs font-medium text-muted-foreground"
+                                    className="px-4 py-3.5 text-xs font-medium text-foreground"
                                   >
                                     <span className="block max-w-[20rem] truncate">
                                       {project.note ?? "-"}

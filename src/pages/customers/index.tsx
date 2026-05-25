@@ -110,6 +110,18 @@ function getAcquisitionSource(customer: Customer) {
   return customer.acquisition_source?.trim() || "手動登録";
 }
 
+function hasIncompleteDetails(customer: Customer) {
+  return (
+    !customer.phone &&
+    !customer.email &&
+    !customer.company_code &&
+    (!customer.labels || customer.labels.length === 0) &&
+    !customer.address &&
+    !customer.website &&
+    !customer.employee_count
+  );
+}
+
 interface FilterRule {
   id: string;
   field: string;
@@ -394,6 +406,12 @@ export default function CustomerList() {
     });
 
     list.sort((a, b) => {
+      const incompleteA = hasIncompleteDetails(a);
+      const incompleteB = hasIncompleteDetails(b);
+      if (incompleteA !== incompleteB) {
+        return incompleteA ? -1 : 1;
+      }
+
       if (sortKey === "pin") {
         const pinA = a.is_pinned ? 1 : 0;
         const pinB = b.is_pinned ? 1 : 0;
@@ -846,7 +864,7 @@ export default function CustomerList() {
                   collisionDetection={closestCenter}
                   onDragEnd={handleDragEnd}
                 >
-                  <Table className="min-w-[600px] sm:min-w-[920px] bg-card">
+                  <Table className="min-w-[600px] bg-card text-xs text-foreground sm:min-w-[920px]">
                     <TableHeader className="bg-muted/40">
                       <TableRow className="border-b border-border hover:bg-transparent">
                         <SortableContext
@@ -874,14 +892,7 @@ export default function CustomerList() {
                             p.status !== "closed",
                         );
 
-                        const isMinimalCustomer =
-                          !customer.phone &&
-                          !customer.email &&
-                          !customer.company_code &&
-                          (!customer.labels || customer.labels.length === 0) &&
-                          !customer.address &&
-                          !customer.website &&
-                          !customer.employee_count;
+                        const isMinimalCustomer = hasIncompleteDetails(customer);
 
                         return (
                           <TableRow
@@ -891,7 +902,10 @@ export default function CustomerList() {
                             }
                             className={cn(
                               "group cursor-pointer border-b border-border/70 bg-card transition-colors duration-200 last:border-b-0 hover:bg-muted/40",
+                              isMinimalCustomer &&
+                                "bg-destructive/5 hover:bg-destructive/10",
                               customer.is_pinned &&
+                                !isMinimalCustomer &&
                                 "bg-primary/[0.035] hover:bg-primary/[0.07]",
                             )}
                           >
@@ -904,6 +918,7 @@ export default function CustomerList() {
                                       className={cn(
                                         "border-r border-border/60 px-2 py-3.5",
                                         customer.is_pinned &&
+                                          !isMinimalCustomer &&
                                           "bg-primary/[0.035]",
                                       )}
                                     >
@@ -945,7 +960,7 @@ export default function CustomerList() {
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="px-3 py-3.5 text-xs font-mono font-bold text-muted-foreground"
+                                      className="px-3 py-3.5 text-xs font-mono font-bold text-foreground"
                                     >
                                       {customer.company_code || "-"}
                                     </TableCell>
@@ -958,7 +973,7 @@ export default function CustomerList() {
                                     >
                                       <div className="flex flex-col gap-0.5">
                                         <div className="flex items-center gap-1.5">
-                                          <span className="max-w-[16rem] truncate text-sm font-bold text-foreground transition-colors group-hover:text-primary">
+                                          <span className="max-w-[16rem] truncate text-xs font-bold text-foreground transition-colors group-hover:text-primary">
                                             {customer.name}
                                           </span>
                                           {isMinimalCustomer && (
@@ -1007,7 +1022,7 @@ export default function CustomerList() {
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="px-3 py-3.5 text-xs text-muted-foreground truncate max-w-[12rem]"
+                                      className="px-3 py-3.5 text-xs text-foreground truncate max-w-[12rem]"
                                     >
                                       {customer.email || "-"}
                                     </TableCell>
@@ -1085,7 +1100,7 @@ export default function CustomerList() {
                                                 e.stopPropagation()
                                               }
                                             >
-                                              <span className="text-sm font-bold text-foreground group-hover/num:text-primary transition-colors">
+                                              <span className="text-xs font-bold text-foreground group-hover/num:text-primary transition-colors">
                                                 {activeProjects.length}
                                               </span>
                                               <span className="text-xs text-muted-foreground font-medium group-hover/num:text-primary transition-colors">
@@ -1149,7 +1164,7 @@ export default function CustomerList() {
                                           </PopoverContent>
                                         </Popover>
                                       ) : (
-                                        <span className="text-sm font-bold text-muted-foreground/40">
+                                        <span className="text-xs font-bold text-muted-foreground/40">
                                           0{" "}
                                           <span className="text-xs font-medium">
                                             件
@@ -1162,7 +1177,7 @@ export default function CustomerList() {
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="px-3 py-3.5 text-xs font-semibold text-muted-foreground"
+                                      className="px-3 py-3.5 text-xs font-semibold text-foreground"
                                     >
                                       {formatDateTime(
                                         customer.last_accessed_at,

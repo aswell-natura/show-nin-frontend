@@ -22,7 +22,6 @@ import {
   Building,
   Folder,
   Mic,
-  Check,
   Target,
   Users,
   FileText,
@@ -37,6 +36,7 @@ import {
   ScanText,
   ChevronLeft,
   ChevronRight,
+  SquareCheckBig,
   type LucideIcon
 } from "lucide-react";
 import {
@@ -50,7 +50,7 @@ const sidebarIconMap: Record<string, LucideIcon> = {
   building: Building,
   folder: Folder,
   mic: Mic,
-  check: Check,
+  check: SquareCheckBig,
   target: Target,
   users: Users,
   "file-text": FileText,

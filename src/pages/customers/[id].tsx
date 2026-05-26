@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode, type UIEvent } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
+  AlertTriangle,
   PanelRightClose,
   PanelRightOpen,
   Building,
@@ -25,6 +26,7 @@ import {
   Mail,
   Copy,
   Check,
+  Trash2,
 } from "lucide-react";
 import AppLayout from "../../components/layout/AppLayout";
 import { useDataStore } from "../../context/DataStoreContext";
@@ -130,6 +132,7 @@ export default function CustomerDetail() {
     tasks: allTasks,
     profiles,
     updateCustomer,
+    deleteCustomer,
   } = useDataStore();
   const { openDialog, closeDialog } = useGlobalDialog();
 
@@ -224,6 +227,48 @@ export default function CustomerDetail() {
           </Button>
           <Button type="submit" form={formId} variant="primary">
             変更を保存
+          </Button>
+        </>
+      ),
+    });
+  };
+
+  const handleOpenDeleteCustomerDialog = () => {
+    if (!customer) return;
+
+    openDialog({
+      eyebrow: "顧客",
+      breadcrumbs: ["削除"],
+      title: "顧客を削除しますか？",
+      description: "この操作は取り消せません。",
+      icon: <AlertTriangle className="h-5 w-5 text-destructive" />,
+      size: "md",
+      content: (
+        <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm leading-6 text-foreground">
+          <p className="font-bold text-destructive">削除対象</p>
+          <p className="mt-2 break-words font-semibold">{customer.name}</p>
+          <p className="mt-3 text-muted-foreground">
+            OKすると、この顧客のレコードが削除されます。
+          </p>
+        </div>
+      ),
+      footer: (
+        <>
+          <Button type="button" variant="secondary" onClick={closeDialog}>
+            キャンセル
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => {
+              deleteCustomer(customer.id);
+              closeDialog();
+              navigate("/customers");
+            }}
+            className="bg-destructive text-background hover:bg-destructive/90 active:bg-destructive/85"
+          >
+            <Trash2 className="w-4 h-4" />
+            削除
           </Button>
         </>
       ),
@@ -1336,7 +1381,7 @@ export default function CustomerDetail() {
 
             <div
               className={cn(
-                "shrink-0 grid grid-cols-1 gap-2 md:hidden",
+                "shrink-0 grid grid-cols-2 gap-2 md:hidden",
                 !isMobileHeaderCompact && "hidden",
               )}
             >
@@ -1348,6 +1393,14 @@ export default function CustomerDetail() {
               >
                 <Edit className="w-4 h-4" /> 編集
               </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleOpenDeleteCustomerDialog}
+                className="h-8 w-full px-3 gap-1.5 font-bold text-muted-foreground shadow-2xs justify-center hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="w-4 h-4" /> 削除
+              </Button>
             </div>
 
             <div className="shrink-0 hidden md:flex items-center gap-2.5 pt-1">
@@ -1358,6 +1411,14 @@ export default function CustomerDetail() {
                 className="gap-1.5 font-bold shadow-sm"
               >
                 <Edit className="w-4.5 h-4.5" /> 編集
+              </Button>
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={handleOpenDeleteCustomerDialog}
+                className="gap-1.5 font-bold text-muted-foreground shadow-sm hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="w-4 h-4" /> 削除
               </Button>
             </div>
           </div>
@@ -1376,6 +1437,14 @@ export default function CustomerDetail() {
               className="flex-1 gap-1.5 font-bold shadow-2xs justify-center"
             >
               <Edit className="w-4 h-4" /> 編集
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleOpenDeleteCustomerDialog}
+              className="flex-1 gap-1.5 font-bold text-muted-foreground shadow-2xs justify-center hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 className="w-4 h-4" /> 削除
             </Button>
           </div>
         </div>

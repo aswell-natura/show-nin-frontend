@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
+  AlertTriangle,
   ArrowLeft,
   Briefcase,
   Calendar,
@@ -17,6 +18,7 @@ import {
   Flag,
   Hash,
   Plus,
+  Trash2,
   User,
 } from "lucide-react";
 
@@ -238,7 +240,7 @@ function DetailRow({
 export default function TaskDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { tasks, customers, projects, profiles, addTask, updateTask } = useDataStore();
+  const { tasks, customers, projects, profiles, addTask, updateTask, deleteTask } = useDataStore();
   const { openDialog, closeDialog } = useGlobalDialog();
   const [activeTab, setActiveTab] = useState<MobileTab>("record");
   const [isMobileHeaderCompact, setIsMobileHeaderCompact] = useState(false);
@@ -430,6 +432,46 @@ export default function TaskDetail() {
     });
   };
 
+  const handleOpenDeleteTaskDialog = () => {
+    openDialog({
+      eyebrow: "タスク",
+      breadcrumbs: ["削除"],
+      title: "タスクを削除しますか？",
+      description: "この操作は取り消せません。",
+      icon: <AlertTriangle className="h-5 w-5 text-destructive" />,
+      size: "md",
+      content: (
+        <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm leading-6 text-foreground">
+          <p className="font-bold text-destructive">削除対象</p>
+          <p className="mt-2 break-words font-semibold">{taskView.title}</p>
+          <p className="mt-3 text-muted-foreground">
+            OKすると、このタスクのレコードが削除されます。
+          </p>
+        </div>
+      ),
+      footer: (
+        <>
+          <Button type="button" variant="secondary" onClick={closeDialog}>
+            キャンセル
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => {
+              deleteTask(taskView.id);
+              closeDialog();
+              navigate("/tasks");
+            }}
+            className="bg-destructive text-background hover:bg-destructive/90 active:bg-destructive/85"
+          >
+            <Trash2 className="h-4 w-4" />
+            削除
+          </Button>
+        </>
+      ),
+    });
+  };
+
   const RelatedContent = (
     <div className="flex h-full flex-col bg-muted/5">
       <div className="border-b border-border/60 bg-card/80 px-4 py-4 backdrop-blur-md">
@@ -532,7 +574,7 @@ export default function TaskDetail() {
                 </div>
               </div>
 
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="flex shrink-0 items-center justify-end gap-2">
                 <Button
                   type="button"
                   variant="secondary"
@@ -543,6 +585,19 @@ export default function TaskDetail() {
                   <Edit className="h-4 w-4" />
                   編集
                 </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="md"
+                  onClick={handleOpenDeleteTaskDialog}
+                  className="gap-1.5 font-bold text-muted-foreground shadow-sm hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  削除
+                </Button>
+              </div>
+
+              <div className="flex justify-end lg:col-start-2">
                 <Select
                   value={String(taskView.progressPercent)}
                   onValueChange={(value) => handleProgressChange(Number(value))}
@@ -714,7 +769,7 @@ export default function TaskDetail() {
             </div>
             <div
               className={cn(
-                "shrink-0 grid grid-cols-1 gap-2 md:hidden",
+                "shrink-0 grid grid-cols-2 gap-2 md:hidden",
                 !isMobileHeaderCompact && "hidden",
               )}
             >
@@ -727,6 +782,16 @@ export default function TaskDetail() {
               >
                 <Edit className="h-4 w-4" />
                 編集
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleOpenDeleteTaskDialog}
+                className="h-8 w-full justify-center gap-1.5 font-bold text-muted-foreground shadow-2xs hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+                削除
               </Button>
             </div>
           </div>

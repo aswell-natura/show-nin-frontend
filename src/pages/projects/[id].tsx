@@ -1,6 +1,7 @@
 import { useState, useRef, type ReactNode, type UIEvent } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
+  AlertTriangle,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
@@ -176,6 +177,7 @@ export default function ProjectDetail() {
     documents,
     memos: allMemos,
     updateProject,
+    deleteProject,
     updateTask,
     addProjectDocument,
     updateProjectDocument,
@@ -419,6 +421,46 @@ export default function ProjectDetail() {
           </Button>
           <Button type="submit" form={formId} variant="primary">
             変更を保存
+          </Button>
+        </>
+      ),
+    });
+  };
+
+  const handleOpenDeleteProjectDialog = () => {
+    openDialog({
+      eyebrow: "案件",
+      breadcrumbs: ["削除"],
+      title: "案件を削除しますか？",
+      description: "この操作は取り消せません。",
+      icon: <AlertTriangle className="h-5 w-5 text-destructive" />,
+      size: "md",
+      content: (
+        <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm leading-6 text-foreground">
+          <p className="font-bold text-destructive">削除対象</p>
+          <p className="mt-2 break-words font-semibold">{project.name}</p>
+          <p className="mt-3 text-muted-foreground">
+            OKすると、この案件のレコードが削除されます。
+          </p>
+        </div>
+      ),
+      footer: (
+        <>
+          <Button type="button" variant="secondary" onClick={closeDialog}>
+            キャンセル
+          </Button>
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => {
+              deleteProject(project.id);
+              closeDialog();
+              navigate("/projects");
+            }}
+            className="bg-destructive text-background hover:bg-destructive/90 active:bg-destructive/85"
+          >
+            <Trash2 className="w-4 h-4" />
+            削除
           </Button>
         </>
       ),
@@ -1623,7 +1665,7 @@ export default function ProjectDetail() {
 
             <div
               className={cn(
-                "shrink-0 grid grid-cols-1 gap-2 md:hidden",
+                "shrink-0 grid grid-cols-2 gap-2 md:hidden",
                 !isMobileHeaderCompact && "hidden",
               )}
             >
@@ -1635,6 +1677,14 @@ export default function ProjectDetail() {
               >
                 <Edit className="w-4 h-4" /> 編集
               </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleOpenDeleteProjectDialog}
+                className="h-8 w-full gap-1.5 font-bold text-muted-foreground shadow-2xs justify-center hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="w-4 h-4" /> 削除
+              </Button>
             </div>
 
             <div className="shrink-0 hidden md:flex items-center gap-2.5 pt-1">
@@ -1645,6 +1695,14 @@ export default function ProjectDetail() {
                 className="gap-1.5 font-bold shadow-xs"
               >
                 <Edit className="w-4 h-4" /> 編集
+              </Button>
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={handleOpenDeleteProjectDialog}
+                className="gap-1.5 font-bold text-muted-foreground shadow-xs hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="w-4 h-4" /> 削除
               </Button>
             </div>
           </div>
@@ -1663,6 +1721,14 @@ export default function ProjectDetail() {
               className="flex-1 gap-1.5 font-bold shadow-2xs justify-center"
             >
               <Edit className="w-4 h-4" /> 編集
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleOpenDeleteProjectDialog}
+              className="flex-1 gap-1.5 font-bold text-muted-foreground shadow-2xs justify-center hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 className="w-4 h-4" /> 削除
             </Button>
           </div>
         </div>

@@ -79,6 +79,7 @@ The first standardized component is `Button` in `src/components/ui/button.tsx`.
 Supported variants:
 
 - `primary`: filled brand action using `--primary`.
+- `destructive`: quiet destructive action using a light `--destructive` tint, border, and label color; reserved for irreversible actions such as record deletion.
 - `secondary`: outlined/muted action using `--secondary` and `--border`.
 - `ghost`: subtle action with no default background.
 
@@ -151,6 +152,15 @@ For CRUD/table-intensive interfaces like `CustomerList`, implement high-density 
 - **Interactive Drag-and-Drop Columns:** Use `@dnd-kit/core` with `SortableContext` and `horizontalListSortingStrategy` to enable users to drag and reorder columns dynamically.
 - **Hover-Activated Navigation Cues:** Add class-based hover styles that shift backgrounds (`bg-muted/40`) and smoothly fade/slide in a right-pointing chevron on the rightmost cell (`group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300`).
 - **Inline Actions & Metric Popovers:** Standardize inline toggle-actions (e.g. Pin/Unpin) using button components with `e.stopPropagation()` to prevent triggering parent row click handlers. Embed interactive mouse-hover metrics using Popovers to display descriptive breakdowns without leaving the page.
+
+#### Inline Table Selects
+
+Use `Select` from `src/components/ui/select.tsx` for finite editable selections inside data-table rows. Follow the quiet trigger styling established in the minutes page filters without adding a search field.
+
+- Keep row controls compact with an `h-8` trigger and `text-xs`; choose a fixed width appropriate to the cell, such as `w-20`, `w-28`, or `w-52`.
+- Use `border-none bg-secondary/50 shadow-none` on normal table select triggers. Apply semantic tints such as `bg-destructive/5 text-destructive border border-destructive/30` only for attention-required states such as an unlinked entity.
+- Stop click propagation at the interactive table cell or its wrapper so opening or choosing an option does not navigate the row.
+- Reserve searchable `Combobox` controls for long or user-extensible option sets where filtering or quick creation is necessary, such as missing association linking on the minutes page.
 
 ### Responsive Multi-Column Layouts & Collapsible Drawers
 

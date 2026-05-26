@@ -835,7 +835,7 @@ export default function ProjectList() {
                                             updateProject(project.id, { customer_id: value })
                                           }
                                         >
-                                          <SelectTrigger className="h-8 w-52 border-destructive/30 bg-destructive/5 text-xs font-medium text-destructive">
+                                          <SelectTrigger className="h-8 w-52 border border-destructive/30 bg-destructive/5 text-xs font-medium text-destructive shadow-none">
                                             <SelectValue placeholder="企業を紐づけ" />
                                           </SelectTrigger>
                                           <SelectContent>
@@ -865,7 +865,7 @@ export default function ProjectList() {
                                         })
                                       }
                                     >
-                                      <SelectTrigger className="h-8 w-28 bg-background text-xs font-semibold text-foreground">
+                                      <SelectTrigger className="h-8 w-28 border-none bg-secondary/50 text-xs font-semibold text-foreground shadow-none">
                                         <SelectValue />
                                       </SelectTrigger>
                                       <SelectContent>
@@ -895,7 +895,7 @@ export default function ProjectList() {
                                     >
                                       <SelectTrigger
                                         className={cn(
-                                          "h-8 w-20 bg-background text-xs font-semibold text-foreground",
+                                          "h-8 w-20 border-none bg-secondary/50 text-xs font-semibold text-foreground shadow-none",
                                           priorityColor[project.priority],
                                         )}
                                       >

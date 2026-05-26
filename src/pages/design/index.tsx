@@ -50,7 +50,7 @@ const spaces = [
   { name: "12", variable: "--space-12", value: "3rem" },
 ]
 
-const variants = ["primary", "secondary", "ghost"] as const
+const variants = ["primary", "secondary", "destructive", "ghost"] as const
 const sizes = ["sm", "md", "lg"] as const
 
 export default function DesignShowcase() {

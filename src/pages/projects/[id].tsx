@@ -451,13 +451,12 @@ export default function ProjectDetail() {
           </Button>
           <Button
             type="button"
-            variant="primary"
+            variant="destructive"
             onClick={() => {
               deleteProject(project.id);
               closeDialog();
               navigate("/projects");
             }}
-            className="bg-destructive text-background hover:bg-destructive/90 active:bg-destructive/85"
           >
             <Trash2 className="w-4 h-4" />
             削除
@@ -1678,10 +1677,10 @@ export default function ProjectDetail() {
                 <Edit className="w-4 h-4" /> 編集
               </Button>
               <Button
-                variant="secondary"
+                variant="destructive"
                 size="sm"
                 onClick={handleOpenDeleteProjectDialog}
-                className="h-8 w-full gap-1.5 font-bold text-muted-foreground shadow-2xs justify-center hover:bg-destructive/10 hover:text-destructive"
+                className="h-8 w-full gap-1.5 font-bold shadow-2xs justify-center"
               >
                 <Trash2 className="w-4 h-4" /> 削除
               </Button>
@@ -1697,10 +1696,10 @@ export default function ProjectDetail() {
                 <Edit className="w-4 h-4" /> 編集
               </Button>
               <Button
-                variant="secondary"
+                variant="destructive"
                 size="md"
                 onClick={handleOpenDeleteProjectDialog}
-                className="gap-1.5 font-bold text-muted-foreground shadow-xs hover:bg-destructive/10 hover:text-destructive"
+                className="gap-1.5 font-bold shadow-xs"
               >
                 <Trash2 className="w-4 h-4" /> 削除
               </Button>
@@ -1723,10 +1722,10 @@ export default function ProjectDetail() {
               <Edit className="w-4 h-4" /> 編集
             </Button>
             <Button
-              variant="secondary"
+              variant="destructive"
               size="sm"
               onClick={handleOpenDeleteProjectDialog}
-              className="flex-1 gap-1.5 font-bold text-muted-foreground shadow-2xs justify-center hover:bg-destructive/10 hover:text-destructive"
+              className="flex-1 gap-1.5 font-bold shadow-2xs justify-center"
             >
               <Trash2 className="w-4 h-4" /> 削除
             </Button>

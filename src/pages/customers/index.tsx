@@ -904,9 +904,6 @@ export default function CustomerList() {
                               "group cursor-pointer border-b border-border/70 bg-card transition-colors duration-200 last:border-b-0 hover:bg-muted/40",
                               isMinimalCustomer &&
                                 "bg-destructive/5 hover:bg-destructive/10",
-                              customer.is_pinned &&
-                                !isMinimalCustomer &&
-                                "bg-primary/[0.035] hover:bg-primary/[0.07]",
                             )}
                           >
                             {columns.map((column) => {
@@ -915,12 +912,7 @@ export default function CustomerList() {
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className={cn(
-                                        "border-r border-border/60 px-2 py-3.5",
-                                        customer.is_pinned &&
-                                          !isMinimalCustomer &&
-                                          "bg-primary/[0.035]",
-                                      )}
+                                      className="border-r border-border/60 px-2 py-3.5"
                                     >
                                       <button
                                         onClick={(e) => {
@@ -1025,6 +1017,19 @@ export default function CustomerList() {
                                       className="px-3 py-3.5 text-xs text-foreground truncate max-w-[12rem]"
                                     >
                                       {customer.email || "-"}
+                                    </TableCell>
+                                  );
+                                case "status":
+                                  return (
+                                    <TableCell
+                                      key={column.id}
+                                      className="px-3 py-3.5"
+                                    >
+                                      {customer.status ? (
+                                        <StatusBadge status={customer.status} />
+                                      ) : (
+                                        "-"
+                                      )}
                                     </TableCell>
                                   );
                                 case "labels":

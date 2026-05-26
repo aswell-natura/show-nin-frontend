@@ -259,13 +259,12 @@ export default function CustomerDetail() {
           </Button>
           <Button
             type="button"
-            variant="primary"
+            variant="destructive"
             onClick={() => {
               deleteCustomer(customer.id);
               closeDialog();
               navigate("/customers");
             }}
-            className="bg-destructive text-background hover:bg-destructive/90 active:bg-destructive/85"
           >
             <Trash2 className="w-4 h-4" />
             削除
@@ -1339,7 +1338,7 @@ export default function CustomerDetail() {
                       isMobileHeaderCompact && "hidden md:contents",
                     )}
                   >
-                  <RankBadge rank={customer.rank} size="lg" />
+                  <RankBadge rank={customer.rank} size="sm" />
                   <Badge
                     variant="secondary"
                     className="font-medium text-secondary-foreground text-xs px-2.5 py-1"
@@ -1394,10 +1393,10 @@ export default function CustomerDetail() {
                 <Edit className="w-4 h-4" /> 編集
               </Button>
               <Button
-                variant="secondary"
+                variant="destructive"
                 size="sm"
                 onClick={handleOpenDeleteCustomerDialog}
-                className="h-8 w-full px-3 gap-1.5 font-bold text-muted-foreground shadow-2xs justify-center hover:bg-destructive/10 hover:text-destructive"
+                className="h-8 w-full px-3 gap-1.5 font-bold shadow-2xs justify-center"
               >
                 <Trash2 className="w-4 h-4" /> 削除
               </Button>
@@ -1413,10 +1412,10 @@ export default function CustomerDetail() {
                 <Edit className="w-4.5 h-4.5" /> 編集
               </Button>
               <Button
-                variant="secondary"
+                variant="destructive"
                 size="md"
                 onClick={handleOpenDeleteCustomerDialog}
-                className="gap-1.5 font-bold text-muted-foreground shadow-sm hover:bg-destructive/10 hover:text-destructive"
+                className="gap-1.5 font-bold shadow-sm"
               >
                 <Trash2 className="w-4 h-4" /> 削除
               </Button>
@@ -1439,10 +1438,10 @@ export default function CustomerDetail() {
               <Edit className="w-4 h-4" /> 編集
             </Button>
             <Button
-              variant="secondary"
+              variant="destructive"
               size="sm"
               onClick={handleOpenDeleteCustomerDialog}
-              className="flex-1 gap-1.5 font-bold text-muted-foreground shadow-2xs justify-center hover:bg-destructive/10 hover:text-destructive"
+              className="flex-1 gap-1.5 font-bold shadow-2xs justify-center"
             >
               <Trash2 className="w-4 h-4" /> 削除
             </Button>

@@ -955,7 +955,7 @@ export default function TaskBoard() {
                                     >
                                       <SelectTrigger
                                         className={cn(
-                                          "h-8 w-20 bg-background text-xs font-semibold text-foreground",
+                                          "h-8 w-20 border-none bg-secondary/50 text-xs font-semibold text-foreground shadow-none",
                                           priorityTone(task.priority),
                                         )}
                                       >
@@ -993,7 +993,7 @@ export default function TaskBoard() {
                                         handleProgressChange(task.id, Number(value))
                                       }
                                     >
-                                      <SelectTrigger className="h-8 w-24 bg-background text-xs font-medium text-foreground">
+                                      <SelectTrigger className="h-8 w-24 border-none bg-secondary/50 text-xs font-medium text-foreground shadow-none">
                                         <SelectValue />
                                       </SelectTrigger>
                                       <SelectContent>

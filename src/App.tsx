@@ -15,6 +15,13 @@ import ProjectList from './pages/projects'
 import ProjectDetail from './pages/projects/[id]'
 import ManagerMembers from './pages/members'
 import BudgetPlanning from './pages/budget'
+import BillingPage from './pages/billing'
+import PaymentCardPage from './pages/payment-card'
+import AiPacketsPage from './pages/ai-packets'
+import AiPacketHistoryPage from './pages/ai-packet-history'
+import PaymentHistoryPage from './pages/payment-history'
+import UsageStatusPage from './pages/usage-status'
+import PasswordChangePage from './pages/password-change'
 import PlayerBudget from './pages/my-budget'
 import ManagerReviews from './pages/reviews'
 import ManagerRisks from './pages/risks'
@@ -43,6 +50,13 @@ function AppRoutes() {
       <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetail /></ProtectedRoute>} />
       <Route path="/members" element={<ProtectedRoute><ManagerMembers /></ProtectedRoute>} />
       <Route path="/budget" element={<ProtectedRoute><BudgetPlanning /></ProtectedRoute>} />
+      <Route path="/billing" element={<ProtectedRoute><BillingPage /></ProtectedRoute>} />
+      <Route path="/payment-card" element={<ProtectedRoute><PaymentCardPage /></ProtectedRoute>} />
+      <Route path="/ai-packets" element={<ProtectedRoute><AiPacketsPage /></ProtectedRoute>} />
+      <Route path="/ai-packet-history" element={<ProtectedRoute><AiPacketHistoryPage /></ProtectedRoute>} />
+      <Route path="/payment-history" element={<ProtectedRoute><PaymentHistoryPage /></ProtectedRoute>} />
+      <Route path="/usage-status" element={<ProtectedRoute><UsageStatusPage /></ProtectedRoute>} />
+      <Route path="/password-change" element={<ProtectedRoute><PasswordChangePage /></ProtectedRoute>} />
       <Route path="/my-budget" element={<ProtectedRoute><PlayerBudget /></ProtectedRoute>} />
       <Route path="/reviews" element={<ProtectedRoute><ManagerReviews /></ProtectedRoute>} />
       <Route path="/risks" element={<ProtectedRoute><ManagerRisks /></ProtectedRoute>} />

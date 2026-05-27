@@ -45,7 +45,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Combobox } from "@/components/ui/combobox";
-import { DatePicker } from "@/components/ui/date-picker";
 import {
   Filter,
   Plus,
@@ -129,6 +128,14 @@ interface FilterRule {
   value: string;
 }
 
+const CUSTOMER_FILTER_FIELDS = [
+  "rank",
+  "status",
+  "labels",
+  "acquisition_source",
+  "amount",
+];
+
 export default function CustomerList() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -149,46 +156,20 @@ export default function CustomerList() {
     return page ? parseInt(page, 10) : 1;
   });
   const [filters, setFilters] = useState<FilterRule[]>(() => {
-    const initialFilters: FilterRule[] = [];
-    const filterFields = [
-      "rank",
-      "labels",
-      "industry",
-      "acquisition_source",
-      "amount",
-      "date",
-    ];
-
-    filterFields.forEach((field) => {
-      const values = searchParams.getAll(field);
-      values.forEach((value) => {
-        if (value) {
-          initialFilters.push({
-            id: Math.random().toString(36).substr(2, 9),
-            field,
-            operator: "contains",
-            value,
-          });
-        }
-      });
-    });
-
-    return initialFilters;
+    return CUSTOMER_FILTER_FIELDS.map((field) => ({
+      id: Math.random().toString(36).substr(2, 9),
+      field,
+      operator: "contains",
+      value: searchParams.get(field) ?? "",
+    }));
   });
   const [isFilterOpen, setIsFilterOpen] = useState(() => {
-    const filterFields = [
-      "rank",
-      "labels",
-      "industry",
-      "acquisition_source",
-      "amount",
-      "date",
-    ];
-    return filterFields.some((field) => searchParams.has(field));
+    return CUSTOMER_FILTER_FIELDS.some((field) => searchParams.has(field));
   });
   const [columns, setColumns] = useState<ListTableColumn[]>(DEFAULT_COLUMNS);
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
   const itemsPerPage = 8;
+  const activeFilterCount = filters.filter((filter) => filter.value).length;
 
   // URLSearchParams の同期
   useEffect(() => {
@@ -220,14 +201,6 @@ export default function CustomerList() {
     return Array.from(labels)
       .sort()
       .map((l) => ({ label: l, value: l }));
-  }, [customers]);
-
-  const allIndustries = useMemo(() => {
-    const industries = new Set<string>();
-    customers.forEach((c) => c.industry?.forEach((ind) => industries.add(ind)));
-    return Array.from(industries)
-      .sort()
-      .map((i) => ({ label: i, value: i }));
   }, [customers]);
 
   const allAcquisitionSources = useMemo(() => {
@@ -292,23 +265,6 @@ export default function CustomerList() {
     });
   };
 
-  const addFilter = () => {
-    const newFilter: FilterRule = {
-      id: Math.random().toString(36).substr(2, 9),
-      field: "rank",
-      operator: "contains",
-      value: "",
-    };
-    setFilters([...filters, newFilter]);
-    setCurrentPage(1);
-    setIsFilterOpen(true);
-  };
-
-  const removeFilter = (id: string) => {
-    setFilters(filters.filter((f) => f.id !== id));
-    setCurrentPage(1);
-  };
-
   const updateFilter = (id: string, updates: Partial<FilterRule>) => {
     setFilters(filters.map((f) => (f.id === id ? { ...f, ...updates } : f)));
     setCurrentPage(1);
@@ -358,17 +314,17 @@ export default function CustomerList() {
 
     // Advanced filters
     filters.forEach((filter) => {
-      if (!filter.value && filter.field !== "is_pinned") return;
+        if (!filter.value) return;
 
       list = list.filter((c) => {
         const val = filter.value;
         switch (filter.field) {
           case "rank":
             return c.rank === val;
+          case "status":
+            return c.status === val;
           case "labels":
             return (c.labels?.join("、") ?? "").includes(val);
-          case "industry":
-            return c.industry?.includes(val);
           case "acquisition_source":
             return getAcquisitionSource(c).toLowerCase().includes(val.toLowerCase());
           case "amount": {
@@ -557,7 +513,7 @@ export default function CustomerList() {
                               variant={
                                 isFilterOpen
                                   ? "ghost"
-                                  : filters.length > 0
+                                  : activeFilterCount > 0
                                     ? "secondary"
                                     : "ghost"
                               }
@@ -565,12 +521,12 @@ export default function CustomerList() {
                               onClick={() => setIsFilterOpen(!isFilterOpen)}
                               className={cn(
                                 "h-10 border border-border/50 transition-all shadow-sm flex-1 sm:flex-initial justify-center",
-                                filters.length === 0
+                                activeFilterCount === 0
                                   ? "px-3 md:w-10 md:px-0 gap-2 md:gap-0"
                                   : "px-3 md:px-2.5 gap-2 md:gap-1.5",
                                 isFilterOpen
                                   ? "bg-primary/10 text-primary border-primary shadow-sm"
-                                  : filters.length > 0
+                                  : activeFilterCount > 0
                                     ? "bg-secondary text-foreground border-border"
                                     : "bg-card",
                               )}
@@ -579,7 +535,7 @@ export default function CustomerList() {
                               <span className="text-sm md:hidden">
                                 フィルター
                               </span>
-                              {filters.length > 0 && (
+                              {activeFilterCount > 0 && (
                                 <span
                                   className={cn(
                                     "flex items-center justify-center text-[10px] font-bold rounded-full w-4 h-4",
@@ -588,7 +544,7 @@ export default function CustomerList() {
                                       : "bg-primary text-primary-foreground",
                                   )}
                                 >
-                                  {filters.length}
+                                  {activeFilterCount}
                                 </span>
                               )}
                             </Button>
@@ -599,7 +555,7 @@ export default function CustomerList() {
                           >
                             <p>
                               フィルター
-                              {filters.length > 0 ? ` (${filters.length})` : ""}
+                              {activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
                             </p>
                           </TooltipContent>
                         </Tooltip>
@@ -630,7 +586,7 @@ export default function CustomerList() {
                         key={filter.id}
                         className={cn(
                           "flex flex-wrap sm:flex-nowrap items-center gap-2 p-2 sm:p-1.5 bg-background border border-border/60 rounded-xl shadow-sm animate-in zoom-in-95 duration-200 w-full sm:w-auto min-w-0 overflow-hidden",
-                          filter.field === "amount" || filter.field === "date"
+                          filter.field === "amount"
                             ? "col-span-2"
                             : "col-span-1",
                         )}
@@ -648,12 +604,10 @@ export default function CustomerList() {
                             <SelectItem value="rank">ランク</SelectItem>
                             <SelectItem value="status">フェーズ</SelectItem>
                             <SelectItem value="labels">ラベル</SelectItem>
-                            <SelectItem value="industry">業種</SelectItem>
                             <SelectItem value="acquisition_source">
                               流入経路
                             </SelectItem>
-                            <SelectItem value="amount">案件金額</SelectItem>
-                            <SelectItem value="date">最終更新</SelectItem>
+                            <SelectItem value="amount">金額</SelectItem>
                           </SelectContent>
                         </Select>
 
@@ -689,16 +643,6 @@ export default function CustomerList() {
                             placeholder="ラベルを選択"
                             className="order-4 sm:order-3 w-full sm:w-48 h-8 text-xs font-medium min-w-0"
                           />
-                        ) : filter.field === "industry" ? (
-                          <Combobox
-                            options={allIndustries}
-                            value={filter.value}
-                            onValueChange={(val) =>
-                              updateFilter(filter.id, { value: val })
-                            }
-                            placeholder="業種を選択"
-                            className="order-4 sm:order-3 w-full sm:w-48 h-8 text-xs font-medium min-w-0"
-                          />
                         ) : filter.field === "acquisition_source" ? (
                           <Combobox
                             options={allAcquisitionSources}
@@ -709,44 +653,6 @@ export default function CustomerList() {
                             placeholder="流入経路を選択"
                             className="order-4 sm:order-3 w-full sm:w-48 h-8 text-xs font-medium min-w-0"
                           />
-                        ) : filter.field === "date" ? (
-                          <div className="order-4 sm:order-3 flex items-center gap-1 w-full sm:w-auto min-w-0">
-                            <DatePicker
-                              value={(filter.value.split(",")[0] || "").replace(
-                                /\//g,
-                                "-",
-                              )}
-                              onChange={(value) => {
-                                const parts = filter.value.split(",");
-                                const dateVal = value ? value.replace(/-/g, "/") : "";
-                                updateFilter(filter.id, {
-                                  value: `${dateVal},${parts[1] || ""}`,
-                                });
-                              }}
-                              size="sm"
-                              className="min-w-0 flex-1 sm:w-32 sm:flex-initial"
-                              buttonClassName="text-xs"
-                            />
-                            <span className="text-xs text-muted-foreground font-bold shrink-0">
-                              〜
-                            </span>
-                            <DatePicker
-                              value={(filter.value.split(",")[1] || "").replace(
-                                /\//g,
-                                "-",
-                              )}
-                              onChange={(value) => {
-                                const parts = filter.value.split(",");
-                                const dateVal = value ? value.replace(/-/g, "/") : "";
-                                updateFilter(filter.id, {
-                                  value: `${parts[0] || ""},${dateVal}`,
-                                });
-                              }}
-                              size="sm"
-                              className="min-w-0 flex-1 sm:w-32 sm:flex-initial"
-                              buttonClassName="text-xs"
-                            />
-                          </div>
                         ) : filter.field === "amount" ? (
                           <div className="order-4 sm:order-3 flex items-center gap-1 w-full sm:w-auto min-w-0">
                             <input
@@ -794,7 +700,7 @@ export default function CustomerList() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => removeFilter(filter.id)}
+                          onClick={() => updateFilter(filter.id, { value: "" })}
                           className="order-2 sm:order-4 w-8 h-8 text-muted-foreground/30 hover:text-destructive hover:bg-destructive/5 rounded-lg ml-auto sm:ml-1 shrink-0"
                         >
                           <X className="w-4 h-4" />
@@ -802,24 +708,15 @@ export default function CustomerList() {
                       </div>
                     ))}
 
-                    <div className="col-span-2 flex items-center justify-between gap-3 pt-1 w-full min-w-0">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={addFilter}
-                        className="h-9 px-3 border border-dashed border-border text-muted-foreground hover:text-primary hover:border-primary/30 hover:bg-primary/5 rounded-md text-xs font-bold transition-all shrink-0"
-                      >
-                        <Plus className="w-4 h-4 mr-1.5" />
-                        条件追加
-                      </Button>
-
-                      {filters.length > 0 && (
+                    <div className="col-span-2 flex items-center justify-end gap-3 pt-1 w-full min-w-0">
+                      {activeFilterCount > 0 && (
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => {
-                            setFilters([]);
-                            setIsFilterOpen(false);
+                            setFilters((current) =>
+                              current.map((filter) => ({ ...filter, value: "" })),
+                            );
                             setCurrentPage(1);
                           }}
                           className="h-9 px-3 gap-1.5 text-xs text-muted-foreground hover:text-destructive font-medium transition-colors shrink-0"
@@ -849,7 +746,9 @@ export default function CustomerList() {
                 size="sm"
                 onClick={() => {
                   setSearch("");
-                  setFilters([]);
+                  setFilters((current) =>
+                    current.map((filter) => ({ ...filter, value: "" })),
+                  );
                   setCurrentPage(1);
                 }}
               >

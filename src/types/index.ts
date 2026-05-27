@@ -89,6 +89,7 @@ export interface Task {
   project_id?: string | null
   user_id: string
   title: string
+  summary?: string
   due_date: string
   is_completed: boolean
   progress_percent?: number

@@ -51,6 +51,7 @@ type MobileTab = "record" | "related";
 interface TaskDetailView {
   id: string;
   title: string;
+  summary: string;
   customerId: string | null;
   customer: string;
   projectId: string | null;
@@ -198,6 +199,7 @@ function buildTaskView(
   return {
     id: task.id,
     title: task.title.replace(/^.+?：/, ""),
+    summary: task.summary ?? "",
     customerId: task.customer_id,
     customer: customer?.name ?? "未設定",
     projectId: project?.id ?? null,
@@ -405,6 +407,7 @@ export default function TaskDetail() {
           submitLabel="変更を保存"
           initialValues={{
             title: taskView.title,
+            summary: taskView.summary || buildTaskDescription(taskView),
             customer_id: taskView.customerId ?? "",
             project_id: taskView.projectId,
             user_id: taskView.ownerId,
@@ -614,7 +617,7 @@ export default function TaskDetail() {
                 </Select>
               </div>
               <p className="text-sm leading-6 text-muted-foreground lg:col-span-2">
-                {buildTaskDescription(taskView)}
+                {taskView.summary || buildTaskDescription(taskView)}
               </p>
             </div>
 

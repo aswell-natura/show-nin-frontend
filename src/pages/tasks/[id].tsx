@@ -459,13 +459,12 @@ export default function TaskDetail() {
           </Button>
           <Button
             type="button"
-            variant="primary"
+            variant="destructive"
             onClick={() => {
               deleteTask(taskView.id);
               closeDialog();
               navigate("/tasks");
             }}
-            className="bg-destructive text-background hover:bg-destructive/90 active:bg-destructive/85"
           >
             <Trash2 className="h-4 w-4" />
             削除
@@ -590,10 +589,10 @@ export default function TaskDetail() {
                 </Button>
                 <Button
                   type="button"
-                  variant="secondary"
+                  variant="destructive"
                   size="md"
                   onClick={handleOpenDeleteTaskDialog}
-                  className="gap-1.5 font-bold text-muted-foreground shadow-sm hover:bg-destructive/10 hover:text-destructive"
+                  className="gap-1.5 font-bold shadow-sm"
                 >
                   <Trash2 className="h-4 w-4" />
                   削除
@@ -788,10 +787,10 @@ export default function TaskDetail() {
               </Button>
               <Button
                 type="button"
-                variant="secondary"
+                variant="destructive"
                 size="sm"
                 onClick={handleOpenDeleteTaskDialog}
-                className="h-8 w-full justify-center gap-1.5 font-bold text-muted-foreground shadow-2xs hover:bg-destructive/10 hover:text-destructive"
+                className="h-8 w-full justify-center gap-1.5 font-bold shadow-2xs"
               >
                 <Trash2 className="h-4 w-4" />
                 削除

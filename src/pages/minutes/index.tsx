@@ -1212,7 +1212,7 @@ export default function AudioMinuteList() {
                                           handleCreateMinuteCustomerDetail(minute.id, name)
                                         }
                                         placeholder="企業を紐づけ"
-                                        className="h-8 w-48 border border-destructive/30 bg-destructive/5 text-xs font-medium text-destructive"
+                                        className="h-8 w-48 rounded-full border border-destructive/30 bg-destructive/5 px-3 text-xs font-medium text-destructive shadow-2xs transition-colors hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-ring/50"
                                       />
                                     )}
                                   </TableCell>
@@ -1253,7 +1253,7 @@ export default function AudioMinuteList() {
                                           handleCreateMinuteProjectDetail(minute, name)
                                         }
                                         placeholder="案件を紐づけ"
-                                        className="h-8 w-56 border border-destructive/30 bg-destructive/5 text-xs font-medium text-destructive"
+                                        className="h-8 w-56 rounded-full border border-destructive/30 bg-destructive/5 px-3 text-xs font-medium text-destructive shadow-2xs transition-colors hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-ring/50"
                                       />
                                     )}
                                   </TableCell>

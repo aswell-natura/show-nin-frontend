@@ -704,12 +704,12 @@ export default function ProjectList() {
           ) : (
             <div className="mt-4 px-4 pb-6 md:px-6 lg:pb-10">
               <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
-                <Table className="min-w-[1480px] bg-card text-xs text-foreground">
-                  <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleDragEnd}
-                  >
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <Table className="min-w-[1480px] bg-card text-xs text-foreground">
                     <TableHeader className="bg-muted/40">
                       <TableRow className="border-b border-border hover:bg-transparent">
                         <SortableContext
@@ -729,8 +729,7 @@ export default function ProjectList() {
                         <TableHead className="w-12 px-3 py-3" />
                       </TableRow>
                     </TableHeader>
-                  </DndContext>
-                  <TableBody>
+                    <TableBody>
                     {paginatedProjects.map((project) => {
                       const customer = project.customer_id
                         ? customers.find(
@@ -803,7 +802,7 @@ export default function ProjectList() {
                                             updateProject(project.id, { customer_id: value })
                                           }
                                         >
-                                          <SelectTrigger className="h-8 w-52 border-destructive/30 bg-destructive/5 text-xs font-medium text-destructive">
+                                          <SelectTrigger className="h-8 w-52 rounded-full border border-destructive/30 bg-destructive/5 px-3 text-xs font-medium text-destructive shadow-2xs transition-colors hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-ring/50">
                                             <SelectValue placeholder="企業を紐づけ" />
                                           </SelectTrigger>
                                           <SelectContent>
@@ -833,7 +832,7 @@ export default function ProjectList() {
                                         })
                                       }
                                     >
-                                      <SelectTrigger className="h-8 w-28 bg-background text-xs font-semibold text-foreground">
+                                      <SelectTrigger className="h-8 w-28 rounded-full border border-border/80 bg-muted/30 px-3 text-xs font-semibold text-foreground shadow-2xs transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50">
                                         <SelectValue />
                                       </SelectTrigger>
                                       <SelectContent>
@@ -863,7 +862,7 @@ export default function ProjectList() {
                                     >
                                       <SelectTrigger
                                         className={cn(
-                                          "h-8 w-20 bg-background text-xs font-semibold text-foreground",
+                                          "h-8 w-20 rounded-full border border-border/80 bg-muted/30 px-3 text-xs font-semibold text-foreground shadow-2xs transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50",
                                           priorityColor[project.priority],
                                         )}
                                       >
@@ -940,8 +939,9 @@ export default function ProjectList() {
                         </TableRow>
                       );
                     })}
-                  </TableBody>
-                </Table>
+                    </TableBody>
+                  </Table>
+                </DndContext>
               </div>
 
               <ListPagination

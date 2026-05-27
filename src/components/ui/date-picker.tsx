@@ -124,7 +124,7 @@ function DatePicker({
       </div>
       <PopoverContent
         align={align}
-        className={cn("w-auto gap-0 p-3", contentClassName)}
+        className={cn("pointer-events-auto w-auto gap-0 p-3", contentClassName)}
       >
         <Calendar
           mode="single"

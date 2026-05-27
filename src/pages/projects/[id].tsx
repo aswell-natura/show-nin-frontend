@@ -32,6 +32,7 @@ import { useDataStore } from "../../context/DataStoreContext";
 import { useGlobalDialog } from "../../context/GlobalDialogContext";
 import { useAuth } from "../../context/AuthContext";
 import ProjectDialogForm from "@/components/projects/ProjectDialogForm";
+import TaskDialogForm from "@/components/tasks/TaskDialogForm";
 import { StatusBadge } from "../../components/dashboard/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -177,6 +178,7 @@ export default function ProjectDetail() {
     memos: allMemos,
     updateProject,
     deleteProject,
+    addTask,
     updateTask,
     addProjectDocument,
     updateProjectDocument,
@@ -444,16 +446,53 @@ export default function ProjectDetail() {
           </Button>
           <Button
             type="button"
-            variant="primary"
+            variant="destructive"
             onClick={() => {
               deleteProject(project.id);
               closeDialog();
               navigate("/projects");
             }}
-            className="bg-destructive text-background hover:bg-destructive/90 active:bg-destructive/85"
           >
             <Trash2 className="w-4 h-4" />
             削除
+          </Button>
+        </>
+      ),
+    });
+  };
+
+  const handleOpenAddTaskDialog = () => {
+    const formId = "project-task-add-form";
+
+    openDialog({
+      mode: "add",
+      eyebrow: "タスク",
+      breadcrumbs: ["新規作成"],
+      title: "タスクを追加",
+      hideHeaderTitle: true,
+      size: "xl",
+      content: (
+        <TaskDialogForm
+          formId={formId}
+          submitLabel="タスクを追加"
+          initialValues={{
+            customer_id: project.customer_id ?? customers[0]?.id ?? "",
+            project_id: project.id,
+            user_id: project.user_id || profiles[0]?.id || "user-001",
+          }}
+          onSubmit={(values) => {
+            addTask(values);
+            closeDialog();
+          }}
+        />
+      ),
+      footer: (
+        <>
+          <Button type="button" variant="secondary" onClick={closeDialog}>
+            キャンセル
+          </Button>
+          <Button type="submit" form={formId} variant="primary">
+            タスクを追加
           </Button>
         </>
       ),
@@ -837,6 +876,17 @@ export default function ProjectDetail() {
         {/* Tasks Tab */}
         {visibleCenterTab === "tasks" && (
           <div className="flex flex-col gap-3 animate-in fade-in duration-200">
+            <div className="relative flex md:hidden items-center justify-end gap-3 mb-2">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleOpenAddTaskDialog}
+                className="h-9 w-9 rounded-full px-0 shadow-sm"
+                aria-label="タスクを追加"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
             {projectTasks.map((task) => {
               const isOverdue =
                 task.due_date &&
@@ -1643,10 +1693,10 @@ export default function ProjectDetail() {
                 <Edit className="w-4 h-4" /> 編集
               </Button>
               <Button
-                variant="secondary"
+                variant="destructive"
                 size="sm"
                 onClick={handleOpenDeleteProjectDialog}
-                className="h-8 w-full gap-1.5 font-bold text-muted-foreground shadow-2xs justify-center hover:bg-destructive/10 hover:text-destructive"
+                className="h-8 w-full gap-1.5 font-bold shadow-2xs justify-center"
               >
                 <Trash2 className="w-4 h-4" /> 削除
               </Button>
@@ -1662,10 +1712,10 @@ export default function ProjectDetail() {
                 <Edit className="w-4 h-4" /> 編集
               </Button>
               <Button
-                variant="secondary"
+                variant="destructive"
                 size="md"
                 onClick={handleOpenDeleteProjectDialog}
-                className="gap-1.5 font-bold text-muted-foreground shadow-xs hover:bg-destructive/10 hover:text-destructive"
+                className="gap-1.5 font-bold shadow-xs"
               >
                 <Trash2 className="w-4 h-4" /> 削除
               </Button>
@@ -1688,10 +1738,10 @@ export default function ProjectDetail() {
               <Edit className="w-4 h-4" /> 編集
             </Button>
             <Button
-              variant="secondary"
+              variant="destructive"
               size="sm"
               onClick={handleOpenDeleteProjectDialog}
-              className="flex-1 gap-1.5 font-bold text-muted-foreground shadow-2xs justify-center hover:bg-destructive/10 hover:text-destructive"
+              className="flex-1 gap-1.5 font-bold shadow-2xs justify-center"
             >
               <Trash2 className="w-4 h-4" /> 削除
             </Button>
@@ -1871,6 +1921,30 @@ export default function ProjectDetail() {
                         className="px-3 py-1.5 backdrop-blur-xl bg-background/90 border border-border/60 shadow-xl rounded-xl text-xs font-bold text-foreground/90 animate-in zoom-in-95 duration-200 z-50"
                       >
                         この案件で録音
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                {centerTab === "tasks" && (
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={handleOpenAddTaskDialog}
+                          className="h-8 w-8 rounded-full px-0 shadow-xs"
+                          aria-label="タスクを追加"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="bottom"
+                        align="end"
+                        className="px-3 py-1.5 backdrop-blur-xl bg-background/90 border border-border/60 shadow-xl rounded-xl text-xs font-bold text-foreground/90 animate-in zoom-in-95 duration-200 z-50"
+                      >
+                        タスク追加
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>

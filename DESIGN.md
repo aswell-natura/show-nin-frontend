@@ -1,177 +1,156 @@
-# Design System
+# Show-nin Design System
 
-This project is a Vite React TypeScript app using Tailwind CSS v4. shadcn/ui is initialized with `components.json` using the `radix-nova` style, neutral base color, CSS variables, and `src/index.css` as the token source.
+Show-nin is an operational workspace for moving from a recorded conversation to a customer relationship, an active project, and a completed task. The design language is quiet, dense, and action-oriented: information remains visible while the next action is easy to identify.
 
-Dark mode is already part of the app. `LayoutConfigProvider` toggles `theme-dark` on `document.documentElement`, stores the choice in `show-nin-color-mode`, and Tailwind's `dark:` variant is configured to target `.theme-dark`.
+This document reflects the implemented product surfaces:
 
-## Color Tokens
-
-Source of truth: `src/index.css`.
-
-| Token | CSS variable | Light value | Dark value |
-| --- | --- | --- | --- |
-| Background | `--background` | `#ffffff` | `#0f172a` |
-| Foreground | `--foreground` | `#111827` | `#e5e7eb` |
-| Primary | `--primary` | `#2563eb` | `#60a5fa` |
-| Primary foreground | `--primary-foreground` | `#ffffff` | `#0f172a` |
-| Secondary | `--secondary` | `#f3f4f6` | `#1f2937` |
-| Secondary foreground | `--secondary-foreground` | `#111827` | `#f8fafc` |
-| Muted | `--muted` | `#f9fafb` | `#1f2937` |
-| Muted foreground | `--muted-foreground` | `#6b7280` | `#a7b3c4` |
-| Destructive | `--destructive` | `#dc2626` | `#f87171` |
-| Border | `--border` | `#e5e7eb` | `#334155` |
-| Input | `--input` | `#e5e7eb` | `#334155` |
-| Ring | `--ring` | `#93c5fd` | `#60a5fa` |
-
-Components must consume these semantic variables through Tailwind tokens such as `bg-primary`, `text-foreground`, and `border-border`, or through `var(--token-name)` for custom CSS. Dark-mode overrides must live under `.theme-dark` so they follow the existing application setting.
-
-## Typography
-
-Font family: `--font-sans`, mapped to Inter Variable by shadcn/Tailwind in `src/index.css`.
-
-| Role | CSS variable | Size | Line height |
-| --- | --- | --- | --- |
-| H1 | `--font-size-h1` | `2.25rem` | `--line-height-heading: 1.15` |
-| H2 | `--font-size-h2` | `1.875rem` | `--line-height-heading: 1.15` |
-| H3 | `--font-size-h3` | `1.5rem` | `--line-height-heading: 1.15` |
-| H4 | `--font-size-h4` | `1.25rem` | `--line-height-heading: 1.15` |
-| Body | `--font-size-body` | `1rem` | `--line-height-body: 1.5` |
-| Caption | `--font-size-caption` | `0.875rem` | `--line-height-body: 1.5` |
-| Code | `--font-size-code` | `0.875rem` | `--line-height-body: 1.5` |
-
-## Spacing
-
-| Token | CSS variable | Value |
+| Surface | Reference implementation | Design role |
 | --- | --- | --- |
-| 1 | `--space-1` | `0.25rem` |
-| 2 | `--space-2` | `0.5rem` |
-| 3 | `--space-3` | `0.75rem` |
-| 4 | `--space-4` | `1rem` |
-| 6 | `--space-6` | `1.5rem` |
-| 8 | `--space-8` | `2rem` |
-| 12 | `--space-12` | `3rem` |
+| Projects list | `src/pages/projects/index.tsx` | Searchable, sortable delivery pipeline |
+| Minutes list | `src/pages/minutes/index.tsx` | Intake and association workflow for recorded activity |
+| Project editor | `src/components/projects/ProjectDialogForm.tsx` | Fast creation with structured metadata |
+| Customer detail | `src/pages/customers/[id].tsx` | Relationship workspace with context panel |
+| Task detail | `src/pages/tasks/[id].tsx` | Execution, due-date, and progress management |
+| Living showcase | `src/pages/design/index.tsx` (`/design`) | Presentation reference for the system |
 
-## Radius
+## Product Principles
 
-Base radius is `--radius: 0.625rem`.
+1. **Context stays close to action.** Lists expose status, ownership, and association; details keep related records beside the work; dialogs avoid sending users elsewhere to create dependencies.
+2. **Dense does not mean noisy.** Borders, muted surfaces, small labels, and carefully limited semantic color establish hierarchy without competing for attention.
+3. **Risk is unmistakable.** Missing associations, approaching deadlines, overdue tasks, and destructive actions use the destructive semantic token consistently.
+4. **The path is continuous.** Minutes can be linked to customers and projects inline, projects can be created from context, and tasks can be created within detail views.
+5. **Responsive views preserve intent.** Desktop uses parallel context panels; small screens switch those panels into tabs and keep creation actions reachable.
 
-| Token | CSS variable | Value |
+## Foundations
+
+The app uses Vite, React, TypeScript, Tailwind CSS v4, and shadcn/ui primitives configured with the `radix-nova` style. `src/index.css` is the source of truth for CSS variables. New UI must prefer semantic utilities such as `bg-background`, `bg-card`, `text-foreground`, `text-muted-foreground`, `text-primary`, and `border-border`.
+
+`LayoutConfigProvider` enables dark mode by applying `.theme-dark` to `document.documentElement` and persisting the setting in `show-nin-color-mode`. Custom styling must use semantic tokens or provide equivalent `.theme-dark` behavior.
+
+### Color Tokens
+
+| Role | Variable | Light | Dark | Usage |
+| --- | --- | --- | --- | --- |
+| Canvas | `--background` | `#ffffff` | `#0f172a` | Page background and inputs |
+| Surface | `--card` | `#ffffff` | `#111827` | Cards, tables, and panels |
+| Text | `--foreground` | `#111827` | `#e5e7eb` | Primary content |
+| Brand/action | `--primary` | `#2563eb` | `#60a5fa` | Selection, links, and primary actions |
+| Quiet surface | `--secondary` | `#f3f4f6` | `#1f2937` | Secondary controls |
+| Background wash | `--muted` | `#f9fafb` | `#1f2937` | Headers and grouped regions |
+| Supporting text | `--muted-foreground` | `#6b7280` | `#a7b3c4` | Labels and timestamps |
+| Attention | `--destructive` | `#dc2626` | `#f87171` | Overdue, unlinked, and delete states |
+| Delineation | `--border` | `#e5e7eb` | `#334155` | Subtle structure |
+| Focus | `--ring` | `#93c5fd` | `#60a5fa` | Keyboard and input focus |
+
+Use amber and emerald only for supporting business states such as medium priority and completion. The blue primary and red destructive tokens carry interactive and risk meaning across every workflow.
+
+### Typography And Shape
+
+Font family is Inter Variable through `--font-sans`.
+
+| Role | Token or utility | Use |
 | --- | --- | --- |
-| Small | `--radius-sm` | `calc(var(--radius) * 0.6)` |
-| Medium | `--radius-md` | `calc(var(--radius) * 0.8)` |
-| Large | `--radius-lg` | `var(--radius)` |
-| Extra large | `--radius-xl` | `calc(var(--radius) * 1.4)` |
+| Presentation heading | `--font-size-h1`, bold/tight | Design page hero only |
+| Page heading | `text-lg md:text-xl font-bold tracking-tight` | List and detail page titles |
+| Object title | `text-2xl sm:text-3xl font-bold tracking-tight` | Dialog primary input |
+| Content | `text-sm font-medium` | Values, row information, form text |
+| Metadata | `text-xs font-semibold` | Pills, labels, table secondary content |
+| Micro-label | `text-[10px]` or `text-[11px] font-bold` | Counts, section labels, timestamps |
 
-## Shadows
+The base radius is `--radius: 0.625rem`. Use `rounded-xl` and `rounded-2xl` for content cards and modal groups, `rounded-full` for pills and prominent icon actions, and restrained token shadows (`--shadow-sm` through `--shadow-lg`) to reinforce elevation.
 
-| Token | CSS variable | Value |
-| --- | --- | --- |
-| Small | `--shadow-sm` | `0 1px 2px rgb(17 24 39 / 0.06)` |
-| Medium | `--shadow-md` | `0 8px 24px rgb(17 24 39 / 0.08)` |
-| Large | `--shadow-lg` | `0 18px 48px rgb(17 24 39 / 0.12)` |
+### Spacing Rhythm
 
-## Component Standard
+Spacing variables in `src/index.css` range from `--space-1` (`0.25rem`) through `--space-12` (`3rem`). In implemented screens:
 
-All new shared UI components live in `src/components/ui/` and follow shadcn conventions: TypeScript, named exports, `class-variance-authority` variants, and the `cn` helper from `src/lib/utils.ts`.
+- `gap-2` to `gap-3` organizes controls, pills, and compact rows.
+- `p-3` to `p-4` defines table/detail cards.
+- `p-6` defines dialog information groups and page headers.
+- `gap-6` to `gap-8` separates presentation sections or major dialog regions.
 
-The first standardized component is `Button` in `src/components/ui/button.tsx`.
+## Core Surfaces
 
-Supported variants:
+### Operational Lists
 
-- `primary`: filled brand action using `--primary`.
-- `secondary`: outlined/muted action using `--secondary` and `--border`.
-- `ghost`: subtle action with no default background.
+`/projects` and `/minutes` establish the standard list-screen composition:
 
-Supported sizes:
+- Use `AppLayout` with a quiet `bg-muted/5` scrolling workspace and a `bg-background/95 backdrop-blur-md` header surface.
+- Keep the page title, contextual tooltip, responsive primary action, expanding `SearchBar`, and filter controls in one clear header band.
+- Synchronize search, sorting, filters, and pagination through `useSearchParams`, so an operational view is bookmarkable and recoverable.
+- Render data in a bordered `Card` table with muted header rows and compact `px-4 py-3.5` cells.
+- Support drag-reordered column headers through `@dnd-kit` where users compare many attributes.
+- Make full rows navigable, revealing a primary-colored chevron on hover; stop propagation inside editable controls.
 
-- `sm`
-- `md`
-- `lg`
+Projects use inline selects for finite status and priority changes. Minutes surface missing customer or project associations first and use searchable `Combobox` controls for association and quick creation. This distinction is intentional: predictable states are compact selects; extensible relationships require search and creation.
 
-Disabled buttons use token-driven patterned backgrounds, muted text, and dashed borders so the state is visually distinct without hardcoded colors.
+### Detail Workspaces
 
-### Global Dialog
+Customer and task detail pages provide contextual execution surfaces:
 
-Global add/edit flows use `GlobalDialogProvider` from `src/context/GlobalDialogContext.tsx`, built on the shadcn-style primitive in `src/components/ui/dialog.tsx`.
+- Desktop customer detail divides work into an item selector, a central activity/task stream, and a collapsible company profile panel. The right panel collapses to a narrow titled rail rather than disappearing.
+- Customer records use selected-card treatment (`border-primary`, `ring-primary/20`, `bg-primary/5`) to show which project controls the middle stream.
+- Task detail elevates due date, priority, assignee, linked records, and a progress bar in a single readable work record.
+- Overdue or near-due work uses `border-destructive/30 bg-destructive/10 text-destructive`; completed progress may use emerald while normal active progress remains primary.
+- Mobile replaces parallel panels with tabs while keeping the title and immediate actions visible.
 
-Dialog usage should follow the Linear-inspired application pattern:
+### Creation And Editing Dialogs
 
-- Use a soft `bg-foreground/20` overlay with light backdrop blur.
-- Keep the panel large, quiet, and work-focused: `rounded-2xl`, token borders, `bg-background`, and `--shadow-lg`.
-- Put entity context in the top breadcrumb row, the main editable object name as the title, and supporting copy in `DialogDescription`.
-- Keep form content scrollable while the footer remains fixed at the bottom.
-- Use the footer for `キャンセル` plus the primary add/save action.
-- New and modify flows should share the same form component where possible by passing `initialValues`, `submitLabel`, and `onSubmit`.
+Global add/edit flows use `GlobalDialogProvider`, the primitives in `src/components/ui/dialog.tsx`, and the title-first editing pattern in `src/components/ui/linear-dialog.tsx`.
 
-### Tooltips & Popovers
+`ProjectDialogForm` is the reference:
 
-Inline helpful text and micro-copy should use the `Tooltip` component from `src/components/ui/tooltip.tsx` to keep the UI clean, information-dense, and avoid click/hover event conflicts:
+- Start with the editable object name as a large, borderless title field.
+- Put rapidly changed metadata into compact pill controls below the title: customer, status, priority, labels, owner, and source.
+- Permit creating linked customers or members from a combobox without breaking the active flow.
+- Group deeper information into quiet two-column cards at desktop widths and one column on small screens.
+- Keep long-form notes visually calm and full-width beneath structured metadata.
+- Place cancel and primary save/create actions in the persistent dialog footer.
 
-- Wrap the trigger and content in `<TooltipProvider delayDuration={200}>`.
-- Use an `Info` icon (`w-4 h-4 text-muted-foreground/60 hover:text-primary`) inside `<TooltipTrigger asChild>` as the trigger button.
-- Style `<TooltipContent>` with `backdrop-blur-xl bg-background/90 border border-border/60 shadow-xl rounded-xl text-xs text-foreground/90 leading-relaxed animate-in zoom-in-95 duration-200 z-50`.
-- Always set `side="bottom"` and `align="end"` on `<TooltipContent>` when used next to tab bars or action rows so the popup doesn't obscure adjacent controls.
-- Reserve `Popover` from `src/components/ui/popover.tsx` for complex interactive metrics (like project counts) or click-driven dropdown menus.
+For destructive confirmations, use an explicit destructive icon and message panel followed by a quiet cancel action and a destructive confirmation button.
 
-#### Icon-Button Tooltip Pattern
+## Components And Interaction Rules
 
-When an action button contains only an icon (no visible label), the tooltip **replaces** the label and is mandatory for accessibility. Follow this pattern:
+### Buttons
 
-```tsx
-<TooltipProvider delayDuration={200}>
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <Button
-        variant="primary"
-        size="sm"
-        className="h-8 w-8 rounded-full px-0 shadow-xs"
-        aria-label="ボタンの説明"  {/* always include aria-label */}
-      >
-        <Icon className="w-4 h-4" />
-      </Button>
-    </TooltipTrigger>
-    <TooltipContent
-      side="bottom"
-      align="end"
-      className="px-3 py-1.5 backdrop-blur-xl bg-background/90 border border-border/60 shadow-xl rounded-xl text-xs font-bold text-foreground/90 animate-in zoom-in-95 duration-200 z-50"
-    >
-      ボタンの説明
-    </TooltipContent>
-  </Tooltip>
-</TooltipProvider>
-```
+`src/components/ui/button.tsx` supplies `primary`, `secondary`, `destructive`, and `ghost` variants with `sm`, `md`, `lg`, and `icon` sizes.
 
-- Do **not** use the native `title` attribute — use `TooltipContent` instead.
-- The `aria-label` on the button must match the `TooltipContent` text.
-- Icon-only buttons must be square (`h-8 w-8 px-0`) and use `rounded-full` for action bars, or `rounded-md` for inline contexts.
+- `primary`: one decisive creation or commit action per local surface.
+- `secondary`: cancel and supporting actions.
+- `ghost`: low-emphasis filters, disclosure, or inline tooling.
+- `destructive`: only irreversible or dangerous operations.
+- Icon-only actions require an `aria-label`; pair non-obvious actions with `Tooltip`.
 
-### High-Density Tables & Column Reordering
+### Pills, Badges, And Status
 
-For CRUD/table-intensive interfaces like `CustomerList`, implement high-density data tables:
-- **Interactive Drag-and-Drop Columns:** Use `@dnd-kit/core` with `SortableContext` and `horizontalListSortingStrategy` to enable users to drag and reorder columns dynamically.
-- **Hover-Activated Navigation Cues:** Add class-based hover styles that shift backgrounds (`bg-muted/40`) and smoothly fade/slide in a right-pointing chevron on the rightmost cell (`group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300`).
-- **Inline Actions & Metric Popovers:** Standardize inline toggle-actions (e.g. Pin/Unpin) using button components with `e.stopPropagation()` to prevent triggering parent row click handlers. Embed interactive mouse-hover metrics using Popovers to display descriptive breakdowns without leaving the page.
+- Use pills for editable metadata in dialogs and compact selected filters.
+- Use badges for read-only state or count summaries.
+- Use `bg-primary/10 text-primary` for linked/selected/active state.
+- Use `bg-destructive/10 text-destructive` for overdue, deletion, or required-association states.
+- Avoid adding semantic colors solely for decoration.
 
-### Responsive Multi-Column Layouts & Collapsible Drawers
+### Tooltips, Popovers, And Inline Editing
 
-For object detail interfaces, structure the page into a 3-column architecture for desktop, collapsing gracefully to a single tab-bar column on mobile viewports:
-- **Navigation/Filters (Left Column):** Focus on sidebar-nested search query parameters and quick list filtering.
-- **Dynamic Content Feed (Center Column):** Keep checklists, audio transcripts, activity summaries, and progress widgets in the primary middle view.
-- **Collapsible Context Panel (Right Column):** Utilize a toggleable right drawer (`PanelRightClose`/`PanelRightOpen`) that collapses to a compact `w-13` sidebar when closed. Display vertical writing-mode titles (`[writing-mode:vertical-rl]`) on the collapsed sidebar to save screen real estate.
+- Tooltips explain page purpose or label icon-only actions without adding permanent clutter.
+- Popovers hold interactive options or compact record previews.
+- Inline selects are appropriate for small finite state sets.
+- `Combobox` is appropriate when choices are long, searchable, or creatable.
+- Any inline interactive element within a clickable row must prevent accidental row navigation.
 
-### Checklist & Task Progress Cards
+### Accessibility And Feedback
 
-Feed items and task listings must adopt visual cards (`Card`) using standardized, high-density elements:
-- **Checklist Summary Badges:** Use thin borders and primary colored iconography (e.g. `CheckSquare`) displaying completion states (e.g. `チェックリスト 2/5 完了`).
-- **Progress Tracking Bars:** Include high-contrast linear progress bars matching entity states (e.g., emerald backgrounds for completed, primary brand colors for active progress).
-- **Time/Alert Bounds:** For overdue objects, use a muted alert tint (`bg-destructive/5 border-destructive/40`) and add semantic tags like `期限切れ`.
+- Provide visible focus treatment through `ring` tokens and preserve keyboard operability for all controls.
+- Never communicate selection, risk, or completion by color alone; combine color with a label, icon, or progress text.
+- Keep Japanese action labels direct and consistent: `追加`, `変更を保存`, `キャンセル`, `削除`.
+- Use disabled styling only for genuinely unavailable actions; do not hide required workflow context.
 
-### URL State Synchronization
+## Presentation Reference
 
-All search, pagination, and multi-filter configurations must synchronize state with the browser's address bar using `useSearchParams`:
-- Maintain clear and intuitive URL state variables (e.g., `q` for search query, `sort` / `order` for sorting, `page` for paging).
-- Ensure state parameters are cleanly restored on page refresh or direct bookmark access.
+The `/design` route, implemented in `src/pages/design/index.tsx`, is a standalone presentation page. It demonstrates:
 
-## Living Style Guide
+- the narrative from meeting record to delivery action;
+- semantic colors, type, buttons, and status treatments;
+- list-screen density and association handling from projects and minutes;
+- the title-first project dialog language;
+- customer/task contextual detail patterns and responsive behavior.
 
-The visual reference page is available at `/design` and implemented in `src/pages/DesignShowcase.tsx`.
+When product screens evolve, update this document and `/design` together so the reference depicts shipped UI rather than aspirational components.

@@ -91,7 +91,7 @@ const DEFAULT_COLUMNS: ListTableColumn[] = [
   { id: "amount", label: "金額", width: "w-36" },
   { id: "owner", label: "担当者", width: "w-36" },
   { id: "next_action_date", label: "次回アクション", width: "w-40" },
-  { id: "note", label: "メモ", width: "w-80" },
+  { id: "note", label: "メモ", width: "w-96" },
   { id: "updated_at", label: "最終更新", width: "w-32" },
 ];
 
@@ -136,6 +136,10 @@ const priorityOptions = [
 
 function normalizeSearch(value: string) {
   return value.toLowerCase().replace(/\s+/g, "");
+}
+
+function truncateMemo(value: string, maxLength = 20) {
+  return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
 }
 
 function formatDate(value?: string) {
@@ -398,6 +402,7 @@ export default function ProjectList() {
           customer?.industry?.join("、") ?? "",
           project.labels?.join(" ") ?? "",
           project.note ?? "",
+          project.next_action ?? "",
           statusLabel[project.status],
           priorityLabel[project.priority],
           sourceLabel[source],
@@ -482,7 +487,7 @@ export default function ProjectList() {
         owner: [ownerA, ownerB],
         next_action_date: [a.next_action_date, b.next_action_date],
         source: [sourceLabel[sourceA], sourceLabel[sourceB]],
-        note: [a.note, b.note],
+        note: [a.note || a.next_action, b.note || b.next_action],
       };
       const comparison = compareValue(...values[sortKey]);
       return sortOrder === "desc" ? -comparison : comparison;
@@ -949,13 +954,14 @@ export default function ProjectList() {
                                 );
 
                               case "note":
+                                const memoText = project.note || project.next_action || "";
                                 return (
                                   <TableCell
                                     key={column.id}
                                     className="px-4 py-3.5 text-xs font-medium text-foreground"
                                   >
-                                    <span className="block max-w-[20rem] truncate">
-                                      {project.note ?? "-"}
+                                    <span className="block max-w-[24rem]" title={memoText || undefined}>
+                                      {memoText ? truncateMemo(memoText) : "-"}
                                     </span>
                                   </TableCell>
                                 );

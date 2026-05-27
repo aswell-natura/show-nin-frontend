@@ -17,6 +17,7 @@ import {
   LinearDialogHeader,
   LinearDialogMetadataBar,
   LinearDialogPill,
+  LinearDialogTextarea,
 } from "@/components/ui/linear-dialog";
 import { useDataStore } from "@/context/DataStoreContext";
 import { useGlobalDialog } from "@/context/GlobalDialogContext";
@@ -24,6 +25,7 @@ import type { Task } from "@/types";
 
 export interface TaskDialogValues {
   title: string;
+  summary: string;
   customer_id: string;
   project_id: string | null;
   user_id: string;
@@ -72,6 +74,7 @@ export default function TaskDialogForm({
 
   const [values, setValues] = useState<{
     title: string;
+    summary: string;
     customer_id: string;
     project_id: string | null;
     user_id: string;
@@ -79,6 +82,7 @@ export default function TaskDialogForm({
     progress_percent: number;
   }>({
     title: initialValues?.title ?? "",
+    summary: initialValues?.summary ?? "",
     customer_id: defaultCustomerId,
     project_id: defaultProjectId,
     user_id: defaultOwnerId,
@@ -303,6 +307,7 @@ export default function TaskDialogForm({
     const progress = Number(values.progress_percent) || 0;
     onSubmit({
       title,
+      summary: values.summary.trim() || undefined,
       customer_id: values.customer_id,
       project_id: values.project_id || null,
       user_id: values.user_id,
@@ -467,6 +472,18 @@ export default function TaskDialogForm({
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="border-b border-border/60 py-4">
+        <h4 className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          <ListChecks className="size-3.5 text-primary" /> タスク概要
+        </h4>
+        <LinearDialogTextarea
+          value={values.summary}
+          onChange={(event) => updateValue("summary", event.target.value)}
+          placeholder="タスクの目的、背景、完了条件などを入力..."
+          className="min-h-28 text-sm leading-relaxed"
+        />
       </div>
 
       <button type="submit" className="sr-only">

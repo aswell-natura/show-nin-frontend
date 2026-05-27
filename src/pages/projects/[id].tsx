@@ -1,4 +1,4 @@
-import { useState, useRef, type ReactNode, type UIEvent } from "react";
+import { useState, type ReactNode, type UIEvent } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
@@ -54,7 +54,6 @@ import {
   TabsContent,
   TabsContents,
 } from "@/components/ui/motion-tabs";
-import { DatePicker } from "@/components/ui/date-picker";
 import { cn } from "@/lib/utils";
 import { mockAudioMinutes } from "../../data/mock";
 import type { ProjectDocument } from "../../types";
@@ -215,10 +214,6 @@ export default function ProjectDetail() {
     Record<string, boolean>
   >({});
 
-  const [nextActionText, setNextActionText] = useState(() => project?.next_action || "");
-  const [nextActionSaveStatus, setNextActionSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
-  const nextActionDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const toggleMemoExpand = (memoId: string) => {
     setExpandedMemoIds((prev) => ({
       ...prev,
@@ -235,8 +230,6 @@ export default function ProjectDetail() {
     setSaveStatus("idle");
     setDocumentActionMode(null);
     setExpandedMemoIds({});
-    setNextActionText(project?.next_action || "");
-    setNextActionSaveStatus("idle");
   }
 
   const startEditingMemo = (memoId: string) => {
@@ -402,7 +395,7 @@ export default function ProjectDetail() {
             priority: project.priority,
             amount: project.amount,
             close_date: project.close_date || "",
-            note: project.note || "",
+            note: project.note || project.next_action || "",
             labels: project.labels || [],
             user_id: project.user_id,
             source: project.source || "manual",
@@ -850,6 +843,10 @@ export default function ProjectDetail() {
                 !task.is_completed &&
                 new Date(task.due_date).getTime() <
                   new Date().setHours(0, 0, 0, 0);
+              const taskOwner = profiles.find((profile) => profile.id === task.user_id);
+              const taskSummary =
+                task.summary?.trim() ||
+                `${customer?.name ?? "未設定"}の${project.name}に関するタスクです。${taskOwner?.name ?? "未担当"}が担当し、${task.due_date}を期限として進捗を管理します。`;
 
               return (
                 <Card
@@ -897,6 +894,13 @@ export default function ProjectDetail() {
                         {task.due_date}
                       </span>
                     )}
+                  </div>
+
+                  <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs leading-5 text-muted-foreground">
+                    <p className="mb-1 font-bold text-foreground">タスク概要</p>
+                    <p className="whitespace-pre-wrap break-words">
+                      {taskSummary}
+                    </p>
                   </div>
 
                   <div className="flex flex-col gap-2">
@@ -1379,58 +1383,19 @@ export default function ProjectDetail() {
         {/* Formatted metadata */}
         <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
           {/* 1. Next Action & Deadline Integration */}
-          <div className="relative flex flex-col gap-2.5 p-4 rounded-2xl bg-muted/40 dark:bg-muted/15 border border-border/70 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 transition-all duration-200 shadow-3xs">
+          <div className="relative flex flex-col gap-2.5 p-4 rounded-2xl bg-muted/40 dark:bg-muted/15 border border-border/70 transition-all duration-200 shadow-3xs">
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                 <CheckSquare className="w-3.5 h-3.5 text-primary" />
                 ネクストアクション
               </span>
-              {/* Datepicker inline */}
-              <DatePicker
-                value={project.next_action_date || ""}
-                onChange={(value) => {
-                  updateProject(project.id, { next_action_date: value || undefined });
-                }}
-                size="sm"
-                className="w-[150px]"
-                buttonClassName="h-8 rounded-lg border-border/70 px-2.5 py-1 text-xs font-bold shadow-3xs"
-              />
+              <span className="rounded-lg border border-border/70 bg-background px-2.5 py-1 text-xs font-bold text-foreground shadow-3xs">
+                {project.next_action_date || "日程未設定"}
+              </span>
             </div>
-            <textarea
-              value={nextActionText}
-              onChange={(e) => {
-                const val = e.target.value;
-                setNextActionText(val);
-                setNextActionSaveStatus("idle");
-                if (nextActionDebounceRef.current) clearTimeout(nextActionDebounceRef.current);
-                nextActionDebounceRef.current = setTimeout(() => {
-                  setNextActionSaveStatus("saving");
-                  updateProject(project.id, { next_action: val });
-                  setNextActionSaveStatus("saved");
-                  setTimeout(() => setNextActionSaveStatus("idle"), 2000);
-                }, 600);
-              }}
-              placeholder="次回のアクション予定を入力してください..."
-              rows={2}
-              className="w-full bg-transparent text-xs text-foreground placeholder:text-muted-foreground/45 border-none outline-none resize-none p-0 focus:ring-0 focus:outline-none leading-relaxed font-medium mt-1.5"
-            />
-            {/* Floating save indicator */}
-            <div className={cn(
-              "absolute bottom-2.5 right-3 flex items-center gap-1 pointer-events-none transition-opacity duration-200",
-              nextActionSaveStatus === "idle" ? "opacity-0" : "opacity-100"
-            )}>
-              {nextActionSaveStatus === "saving" ? (
-                <>
-                  <Loader2 className="w-3 h-3 text-muted-foreground animate-spin" />
-                  <span className="text-xs font-semibold text-muted-foreground">保存中...</span>
-                </>
-              ) : (
-                <>
-                  <Check className="w-3 h-3 text-emerald-500" />
-                  <span className="text-xs font-bold text-emerald-500 dark:text-emerald-400">保存しました</span>
-                </>
-              )}
-            </div>
+            <p className="mt-1.5 min-h-10 whitespace-pre-wrap text-xs font-medium leading-relaxed text-foreground">
+              {project.next_action || "ネクストアクションは未入力です。"}
+            </p>
           </div>
 
           {/* Grid layout for other items */}

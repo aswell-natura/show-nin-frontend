@@ -137,7 +137,7 @@ export default function CustomerDetail() {
   const { openDialog, closeDialog } = useGlobalDialog();
 
   const [activeTab, setActiveTab] = useState<Tab>("projects");
-  const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(true);
+  const [isProfilePanelOpen, setIsProfilePanelOpen] = useState(false);
   const [isMobileHeaderCompact, setIsMobileHeaderCompact] = useState(false);
   const [copiedBusinessNumber, setCopiedBusinessNumber] = useState(false);
   const [copiedCompanyCode, setCopiedCompanyCode] = useState(false);

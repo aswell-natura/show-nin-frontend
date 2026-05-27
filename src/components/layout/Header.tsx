@@ -14,7 +14,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import { SearchBar } from "../ui/search-bar";
 import {
   Settings,
   User,
@@ -28,10 +27,13 @@ import {
   Database,
   LogOut,
   Bell,
+  Search,
 } from "lucide-react";
 import logoUrlLight from "../../assets/show-nin.svg";
 import logoUrlDark from "../../assets/show-nin-white.svg";
 import { RecordButton } from "./RecordButton";
+import GlobalSearchDialog from "./GlobalSearchDialog";
+import { Kbd } from "../ui/kbd";
 
 interface HeaderProps {
   onMenuToggle: () => void;
@@ -40,10 +42,10 @@ interface HeaderProps {
 export default function Header({ onMenuToggle }: HeaderProps) {
   const { currentUser, activeMode, setActiveMode, logout } = useAuth();
   const { playerConfig, managerConfig, openSettingsPanel } = useLayoutConfig();
-  const { notifications, customers, resetToDefaults } = useDataStore();
+  const { notifications, resetToDefaults } = useDataStore();
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
 
   if (!currentUser) return null;
 
@@ -69,14 +71,6 @@ export default function Header({ onMenuToggle }: HeaderProps) {
   const unreadCount = notifications.filter(
     (n) => n.user_id === currentUser.id && !n.is_read,
   ).length;
-
-  const filteredCustomers =
-    searchQuery.length > 0
-      ? customers.filter(
-          (c) =>
-            c.name.includes(searchQuery) || c.industry?.some(i => i.includes(searchQuery)),
-        )
-      : [];
 
   function handleLogout() {
     logout();
@@ -127,47 +121,28 @@ export default function Header({ onMenuToggle }: HeaderProps) {
         </>
       </div>
 
-      {/* 顧客検索（コンパクト時は非表示） */}
+      {/* グローバル検索（コンパクト時は非表示） */}
       {!isCompact && (
         <div className="absolute left-1/2 -translate-x-1/2 hidden sm:block w-full max-w-sm">
-          <SearchBar
-            placeholder="顧客を検索..."
-            value={searchQuery}
-            onSearchChange={setSearchQuery}
-            isCompact={isCompact}
-          />
-
-          {filteredCustomers.length > 0 && (
-            <div className="absolute top-10 left-0 w-full bg-background border border-border rounded-lg shadow-md overflow-hidden z-50">
-              {filteredCustomers.map((c) => (
-                <button
-                  key={c.id}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted text-left"
-                  onClick={() => {
-                    navigate(`/customers/${c.id}`);
-                    setSearchQuery("");
-                  }}
-                >
-                  <div
-                    className={`w-2 h-2 rounded-full shrink-0 ${c.rank === "A" ? "bg-primary" : c.rank === "B" ? "bg-muted-foreground" : "bg-border"}`}
-                  />
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      {c.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {c.industry?.join("、")}
-                    </p>
-                  </div>
-                  <span className="ml-auto text-xs text-muted-foreground">
-                    ランク {c.rank}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={() => setIsGlobalSearchOpen(true)}
+            className="flex h-10 w-full items-center gap-2 rounded-md border border-border/50 bg-secondary/80 px-3 text-left backdrop-blur-sm transition-all duration-200 hover:border-primary/30 hover:ring-2 hover:ring-primary/20"
+          >
+            <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <span className="flex-1 truncate text-sm text-muted-foreground">
+              顧客・案件・議事録・タスクを検索...
+            </span>
+            <Kbd className="hidden md:flex">⌘K</Kbd>
+          </button>
         </div>
       )}
+
+      <GlobalSearchDialog
+        open={isGlobalSearchOpen}
+        onOpen={() => setIsGlobalSearchOpen(true)}
+        onClose={() => setIsGlobalSearchOpen(false)}
+      />
 
       {/* Dual権限時のモード切り替え */}
       {currentUser.role === "dual" && (

@@ -84,7 +84,6 @@ export function GlobalDialogProvider({ children }: { children: ReactNode }) {
           <Dialog
             key={index}
             open={true}
-            modal={isTop}
             onOpenChange={(open) => {
               if (!open && isTop) {
                 closeDialog()
@@ -107,6 +106,7 @@ export function GlobalDialogProvider({ children }: { children: ReactNode }) {
               }
               showCloseButton={isTop}
               hideOverlay={index > 0}
+              {...(!dialog.description ? { "aria-describedby": undefined } : {})}
             >
               <DialogHeader className={cn("gap-0 px-6 pt-5 sm:px-8", dialog.hideHeaderTitle ? "pb-2" : "pb-4")}>
                 <div className="flex min-h-8 items-center gap-2 pr-10 text-sm text-muted-foreground">

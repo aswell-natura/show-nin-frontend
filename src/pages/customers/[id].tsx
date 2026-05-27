@@ -32,6 +32,7 @@ import AppLayout from "../../components/layout/AppLayout";
 import { useDataStore } from "../../context/DataStoreContext";
 import { useGlobalDialog } from "../../context/GlobalDialogContext";
 import CustomerDialogForm from "@/components/customers/CustomerDialogForm";
+import TaskDialogForm from "@/components/tasks/TaskDialogForm";
 import {
   RankBadge,
   StatusBadge,
@@ -123,6 +124,25 @@ function openDetailWindow(id: string) {
   else window.open(`/minutes/${id}`, "_blank");
 }
 
+function openRecordingWindow() {
+  const width = 430;
+  const height = 780;
+  const left = Math.max(0, window.screenX + window.outerWidth - width - 24);
+  const top = Math.max(0, window.screenY + 32);
+  const features = [
+    `width=${width}`,
+    `height=${height}`,
+    `left=${left}`,
+    `top=${top}`,
+    "resizable=yes",
+    "scrollbars=yes",
+    "noopener=no",
+  ].join(",");
+  const popup = window.open("/recording", "show_nin_recording", features);
+  if (popup) popup.focus();
+  else window.location.href = "/recording";
+}
+
 export default function CustomerDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -131,6 +151,7 @@ export default function CustomerDetail() {
     projects: allProjects,
     tasks: allTasks,
     profiles,
+    addTask,
     updateCustomer,
     deleteCustomer,
   } = useDataStore();
@@ -361,6 +382,45 @@ export default function CustomerDetail() {
       if (current) return scrollTop > 8;
       if (scrollableDistance < 160) return false;
       return scrollTop > 64;
+    });
+  };
+
+  const handleOpenAddTaskDialog = () => {
+    const formId = "customer-task-add-form";
+
+    openDialog({
+      mode: "add",
+      eyebrow: "タスク",
+      breadcrumbs: ["新規作成"],
+      title: "タスクを追加",
+      hideHeaderTitle: true,
+      size: "xl",
+      content: (
+        <TaskDialogForm
+          formId={formId}
+          submitLabel="タスクを追加"
+          initialValues={{
+            customer_id: customer.id,
+            project_id:
+              effectiveProjectId === "all" ? undefined : effectiveProjectId,
+            user_id: owner?.id ?? profiles[0]?.id ?? "user-001",
+          }}
+          onSubmit={(values) => {
+            addTask(values);
+            closeDialog();
+          }}
+        />
+      ),
+      footer: (
+        <>
+          <Button type="button" variant="secondary" onClick={closeDialog}>
+            キャンセル
+          </Button>
+          <Button type="submit" form={formId} variant="primary">
+            タスクを追加
+          </Button>
+        </>
+      ),
     });
   };
 
@@ -961,7 +1021,8 @@ export default function CustomerDetail() {
                   <Button
                     variant="primary"
                     size="sm"
-                    onClick={() => navigate("/recording")}
+                    onClick={openRecordingWindow}
+                    aria-label="音声録音を開始"
                     className="h-8 md:w-8 px-3 md:px-0 md:justify-center gap-1.5 shrink-0 shadow-sm rounded-md md:rounded-full"
                   >
                     <Mic className="w-4 h-4 shrink-0" />
@@ -983,6 +1044,8 @@ export default function CustomerDetail() {
                   <Button
                     variant="primary"
                     size="sm"
+                    onClick={handleOpenAddTaskDialog}
+                    aria-label="タスクを追加"
                     className="h-8 md:w-8 px-3 md:px-0 md:justify-center gap-1.5 shrink-0 shadow-sm rounded-md md:rounded-full"
                   >
                     <Plus className="w-4 h-4 shrink-0" />

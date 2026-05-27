@@ -38,10 +38,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Tabs,
-  TabsContent,
-  TabsContents,
-} from "@/components/ui/motion-tabs";
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Tabs, TabsContent, TabsContents } from "@/components/ui/motion-tabs";
 import { cn } from "@/lib/utils";
 
 type TaskStatus = "not_started" | "in_progress" | "completed" | "overdue";
@@ -69,8 +71,8 @@ interface TaskDetailView {
 const progressOptions = Array.from({ length: 11 }, (_, index) => index * 10);
 
 const mobileTabs: { id: MobileTab; label: string }[] = [
-  { id: "record", label: "詳細" },
   { id: "related", label: "関連" },
+  { id: "record", label: "詳細" },
 ];
 
 function todayString() {
@@ -160,16 +162,18 @@ function statusLabel(status: TaskStatus, dueDate?: string) {
 
 function statusTone(status: TaskStatus, dueDate?: string) {
   const isInProgressDueSoon =
-    status === "in_progress" && dueDate !== undefined && daysUntilDue(dueDate) <= 5;
+    status === "in_progress" &&
+    dueDate !== undefined &&
+    daysUntilDue(dueDate) <= 5;
 
   return cn(
     "border px-2.5 py-1 text-xs font-bold shadow-2xs",
-    status === "completed" &&
-      "border-primary/20 bg-primary/10 text-primary",
+    status === "completed" && "border-primary/20 bg-primary/10 text-primary",
     status === "overdue" || isInProgressDueSoon
       ? "border-destructive/20 bg-destructive/10 text-destructive"
       : "",
-    (status === "not_started" || (status === "in_progress" && !isInProgressDueSoon)) &&
+    (status === "not_started" ||
+      (status === "in_progress" && !isInProgressDueSoon)) &&
       "border-border bg-background text-foreground",
   );
 }
@@ -194,7 +198,8 @@ function buildTaskView(
     projects.find((item) => item.id === task.project_id) ??
     projects.find((item) => item.customer_id === task.customer_id);
   const owner = profiles.find((profile) => profile.id === task.user_id);
-  const progressPercent = task.progress_percent ?? (task.is_completed ? 100 : 0);
+  const progressPercent =
+    task.progress_percent ?? (task.is_completed ? 100 : 0);
 
   return {
     id: task.id,
@@ -242,7 +247,15 @@ function DetailRow({
 export default function TaskDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { tasks, customers, projects, profiles, addTask, updateTask, deleteTask } = useDataStore();
+  const {
+    tasks,
+    customers,
+    projects,
+    profiles,
+    addTask,
+    updateTask,
+    deleteTask,
+  } = useDataStore();
   const { openDialog, closeDialog } = useGlobalDialog();
   const [activeTab, setActiveTab] = useState<MobileTab>("record");
   const [isMobileHeaderCompact, setIsMobileHeaderCompact] = useState(false);
@@ -255,7 +268,8 @@ export default function TaskDetail() {
   );
 
   const task = tasks.find((item) => item.id === id);
-  const selectedTaskId = selection.baseId === (id ?? "") ? selection.selectedId : (id ?? "");
+  const selectedTaskId =
+    selection.baseId === (id ?? "") ? selection.selectedId : (id ?? "");
   const selectedTask = tasks.find((item) => item.id === selectedTaskId) ?? task;
 
   const handleSelectRelatedTask = (taskId: string) => {
@@ -304,7 +318,7 @@ export default function TaskDetail() {
           item.id === task.id ||
           (item.id !== task.id &&
             (item.customer_id === task.customer_id ||
-            (task.project_id && item.project_id === task.project_id))),
+              (task.project_id && item.project_id === task.project_id))),
       )
       .map((item) => buildTaskView(item, customers, projects, profiles))
       .sort((a, b) => {
@@ -326,7 +340,11 @@ export default function TaskDetail() {
             <p className="mb-6 text-xs text-muted-foreground">
               指定されたIDのタスクデータが存在しないか、削除されています。
             </p>
-            <Button variant="primary" size="sm" onClick={() => navigate("/tasks")}>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => navigate("/tasks")}
+            >
               <ArrowLeft className="mr-1.5 h-4 w-4" />
               タスク一覧へ戻る
             </Button>
@@ -337,11 +355,11 @@ export default function TaskDetail() {
   }
 
   const isOverdue = taskView.status === "overdue";
-  const progressTone = taskView.isCompleted
-    ? "bg-emerald-500"
+  const progressColor = taskView.isCompleted
+    ? "rgb(16 185 129)"
     : isOverdue
-      ? "bg-destructive"
-      : "bg-primary";
+      ? "var(--destructive)"
+      : "var(--primary)";
 
   const handleProgressChange = (value: number) => {
     updateTask(taskView.id, {
@@ -478,23 +496,39 @@ export default function TaskDetail() {
     <div className="flex h-full flex-col bg-muted/5">
       <div className="border-b border-border/60 bg-card/80 px-4 py-4 backdrop-blur-md">
         <div className="flex items-center justify-between gap-3">
-          <div>
+          <div className="flex min-w-0 items-center gap-2">
             <h2 className="text-sm font-bold text-foreground">タスク一覧</h2>
+            <Badge
+              variant="secondary"
+              className="rounded-full border-0 bg-muted text-xs font-bold"
+            >
+              {relatedTasks.length}
+            </Badge>
           </div>
-          <Badge variant="secondary" className="border-0 bg-muted text-xs font-bold">
-            {relatedTasks.length}
-          </Badge>
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  onClick={handleOpenAddTaskDialog}
+                  aria-label="タスクを追加"
+                  className="h-8 w-8 shrink-0 rounded-full px-0 font-bold shadow-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent
+                side="bottom"
+                align="end"
+                className="hidden md:block"
+              >
+                タスクを追加
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
-        <Button
-          type="button"
-          variant="primary"
-          size="sm"
-          onClick={handleOpenAddTaskDialog}
-          className="mt-3 w-full justify-center gap-1.5 font-bold shadow-sm"
-        >
-          <Plus className="h-4 w-4" />
-          タスクの追加
-        </Button>
       </div>
       <div className="flex-1 overflow-y-auto p-4">
         <div className="flex flex-col gap-3">
@@ -507,8 +541,8 @@ export default function TaskDetail() {
                 selectedTaskId === related.id
                   ? "border-primary bg-primary/5 ring-2 ring-primary/15"
                   : related.status === "overdue"
-                  ? "border-destructive/30 bg-destructive/5"
-                  : "border-border bg-card",
+                    ? "border-destructive/30 bg-destructive/5"
+                    : "border-border bg-card",
               )}
             >
               <div className="flex items-start justify-between gap-3">
@@ -521,7 +555,10 @@ export default function TaskDetail() {
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <Badge variant="outline" className={statusTone(related.status, related.dueDate)}>
+                  <Badge
+                    variant="outline"
+                    className={statusTone(related.status, related.dueDate)}
+                  >
                     {statusLabel(related.status, related.dueDate)}
                   </Badge>
                   <span className="text-[11px] font-bold text-muted-foreground">
@@ -569,7 +606,12 @@ export default function TaskDetail() {
                   {taskView.title}
                 </h2>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <span className={cn("inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-bold", dueDateTone(taskView.dueDate, taskView.status))}>
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-bold",
+                      dueDateTone(taskView.dueDate, taskView.status),
+                    )}
+                  >
                     <Calendar className="h-3.5 w-3.5" />
                     期限: {formatDueDateWithRemaining(taskView.dueDate)}
                   </span>
@@ -599,15 +641,30 @@ export default function TaskDetail() {
                 </Button>
               </div>
 
-              <div className="flex justify-end lg:col-start-2">
+              <p className="text-sm leading-6 text-muted-foreground lg:col-span-2">
+                {taskView.summary || buildTaskDescription(taskView)}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold text-foreground">進捗</p>
+                  <p className="mt-0.5 text-[11px] font-medium text-muted-foreground">
+                    達成率を10%単位で更新
+                  </p>
+                </div>
                 <Select
                   value={String(taskView.progressPercent)}
                   onValueChange={(value) => handleProgressChange(Number(value))}
                 >
-                  <SelectTrigger className="h-10 w-32 border-border bg-background text-sm font-bold shadow-sm">
+                  <SelectTrigger
+                    aria-label="進捗率を変更"
+                    className="h-9 w-24 rounded-full border-border bg-background px-3 text-sm font-bold shadow-2xs"
+                  >
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent align="end">
                     {progressOptions.map((value) => (
                       <SelectItem key={value} value={String(value)}>
                         {value}%
@@ -616,38 +673,27 @@ export default function TaskDetail() {
                   </SelectContent>
                 </Select>
               </div>
-              <p className="text-sm leading-6 text-muted-foreground lg:col-span-2">
-                {taskView.summary || buildTaskDescription(taskView)}
-              </p>
-            </div>
-
-            <div>
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <span className="text-xs font-bold text-muted-foreground">
-                  進捗率
-                </span>
-                <span className="text-sm font-bold text-foreground">
-                  {taskView.progressPercent}%
-                </span>
-              </div>
               <div className="h-2.5 overflow-hidden rounded-full bg-muted">
                 <div
-                  className={cn("h-full rounded-full transition-all duration-500", progressTone)}
-                  style={{ width: `${taskView.progressPercent}%` }}
+                  className="h-full rounded-full transition-all duration-300"
+                  style={{
+                    width: `${taskView.progressPercent}%`,
+                    backgroundColor: progressColor,
+                  }}
                 />
               </div>
             </div>
 
             <div className="border-t border-border/70 pt-4">
-              <div className="mb-4 flex items-center justify-between gap-3">
-              </div>
-
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <DetailRow
                   icon={<Flag className="h-4 w-4" />}
                   label="ステータス"
                   value={
-                    <Badge variant="outline" className={statusTone(taskView.status, taskView.dueDate)}>
+                    <Badge
+                      variant="outline"
+                      className={statusTone(taskView.status, taskView.dueDate)}
+                    >
                       {statusLabel(taskView.status, taskView.dueDate)}
                     </Badge>
                   }
@@ -660,13 +706,18 @@ export default function TaskDetail() {
                 <DetailRow
                   icon={<Briefcase className="h-4 w-4" />}
                   label="案件"
-                  value={<span className="break-words">{taskView.project}</span>}
+                  value={
+                    <span className="break-words">{taskView.project}</span>
+                  }
                 />
                 <DetailRow
                   icon={<Flag className="h-4 w-4" />}
                   label="確度"
                   value={
-                    <Badge variant="outline" className={priorityTone(taskView.priority)}>
+                    <Badge
+                      variant="outline"
+                      className={priorityTone(taskView.priority)}
+                    >
                       {priorityLabel(taskView.priority)}
                     </Badge>
                   }
@@ -679,7 +730,11 @@ export default function TaskDetail() {
                 <DetailRow
                   icon={<Clock className="h-4 w-4" />}
                   label="進捗更新日"
-                  value={taskView.progressUpdatedAt ? formatDate(taskView.progressUpdatedAt) : "-"}
+                  value={
+                    taskView.progressUpdatedAt
+                      ? formatDate(taskView.progressUpdatedAt)
+                      : "-"
+                  }
                 />
                 <DetailRow
                   icon={<Calendar className="h-4 w-4" />}
@@ -742,7 +797,9 @@ export default function TaskDetail() {
                   {taskView.customerId ? (
                     <button
                       type="button"
-                      onClick={() => navigate(`/customers/${taskView.customerId}`)}
+                      onClick={() =>
+                        navigate(`/customers/${taskView.customerId}`)
+                      }
                       className={cn(
                         "inline-flex min-w-0 items-center gap-1.5 text-left font-bold tracking-tight text-foreground transition-colors hover:text-primary md:text-xl",
                         isMobileHeaderCompact ? "text-base" : "text-lg",

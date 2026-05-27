@@ -19,6 +19,13 @@ import {
   LinearDialogPill,
   LinearDialogTextarea,
 } from "@/components/ui/linear-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useDataStore } from "@/context/DataStoreContext";
 import { useGlobalDialog } from "@/context/GlobalDialogContext";
 import type { Task } from "@/types";
@@ -446,23 +453,29 @@ export default function TaskDialogForm({
           <h4 className="flex items-center gap-2 border-b border-border/60 pb-3 text-xs font-bold uppercase tracking-wider text-foreground">
             <ListChecks className="size-4 text-primary" /> 進捗
           </h4>
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="task_progress_percent" className="text-xs font-bold text-foreground/90">
-                進捗率
-              </label>
-              <select
-                id="task_progress_percent"
-                value={values.progress_percent}
-                onChange={(event) => updateValue("progress_percent", Number(event.target.value))}
-                className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground shadow-2xs outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20"
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[11px] font-medium text-muted-foreground">
+                達成率を10%単位で設定
+              </p>
+              <Select
+                value={String(values.progress_percent)}
+                onValueChange={(value) => updateValue("progress_percent", Number(value))}
               >
+                <SelectTrigger
+                  aria-label="進捗率を設定"
+                  className="h-9 w-24 rounded-full border-border bg-background px-3 text-sm font-bold shadow-2xs"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent align="end">
                 {progressOptions.map((progress) => (
-                  <option key={progress} value={progress}>
+                  <SelectItem key={progress} value={String(progress)}>
                     {progress}%
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
+                </SelectContent>
+              </Select>
             </div>
             <div className="h-2.5 overflow-hidden rounded-full bg-muted">
               <div

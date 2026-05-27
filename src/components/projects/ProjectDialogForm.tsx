@@ -11,7 +11,6 @@ import {
   Coins,
   User,
   Calendar,
-  Compass,
 } from "lucide-react";
 import {
   LinearDialogHeader,
@@ -61,11 +60,6 @@ const priorityLabel: Record<Project["priority"], string> = {
   1: "高",
   2: "中",
   3: "低",
-};
-
-const sourceLabel: Record<"recording" | "manual", string> = {
-  recording: "音声録音",
-  manual: "手動登録",
 };
 
 export default function ProjectDialogForm({
@@ -640,38 +634,6 @@ export default function ProjectDialogForm({
           }
         />
 
-        {/* 登録元 */}
-        <LinearDialogPill
-          icon={<Compass className="size-3.5" />}
-          label="登録元"
-          value={sourceLabel[values.source]}
-          active={true}
-          open={openPopover === "source"}
-          onOpenChange={(open) => setOpenPopover(open ? "source" : null)}
-          popoverContent={
-            <div className="flex flex-col gap-1">
-              <p className="text-xs font-bold text-muted-foreground px-2 py-1">
-                登録元を選択
-              </p>
-              {(["manual", "recording"] as ("manual" | "recording")[]).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => {
-                    updateValue("source", s);
-                    setOpenPopover(null);
-                  }}
-                  className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold hover:bg-muted text-foreground transition-colors cursor-pointer w-full text-left"
-                >
-                  <span>{sourceLabel[s]}</span>
-                  {values.source === s && (
-                    <Check className="size-3.5 text-primary" />
-                  )}
-                </button>
-              ))}
-            </div>
-          }
-        />
       </LinearDialogMetadataBar>
 
       {/* 3. Main Form Section (2カラム・カードグリッド) */}
@@ -729,10 +691,10 @@ export default function ProjectDialogForm({
         </div>
       </div>
 
-      {/* 4. Textarea (メモ・特記事項) */}
+      {/* 4. Textarea (ネクストアクション・特記事項) */}
       <div className="py-4 flex flex-col gap-2">
         <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-          <FileText className="size-3.5 text-primary" /> メモ・特記事項
+          <FileText className="size-3.5 text-primary" /> ネクストアクション・特記事項
         </h4>
         <LinearDialogTextarea
           value={values.note}

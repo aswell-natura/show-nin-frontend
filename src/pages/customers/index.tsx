@@ -152,6 +152,7 @@ export default function CustomerList() {
     const initialFilters: FilterRule[] = [];
     const filterFields = [
       "rank",
+      "status",
       "labels",
       "industry",
       "acquisition_source",
@@ -178,6 +179,7 @@ export default function CustomerList() {
   const [isFilterOpen, setIsFilterOpen] = useState(() => {
     const filterFields = [
       "rank",
+      "status",
       "labels",
       "industry",
       "acquisition_source",
@@ -365,6 +367,8 @@ export default function CustomerList() {
         switch (filter.field) {
           case "rank":
             return c.rank === val;
+          case "status":
+            return c.status === val;
           case "labels":
             return (c.labels?.join("、") ?? "").includes(val);
           case "industry":

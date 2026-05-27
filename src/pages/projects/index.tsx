@@ -834,7 +834,7 @@ export default function ProjectList() {
                                             updateProject(project.id, { customer_id: value })
                                           }
                                         >
-                                          <SelectTrigger className="h-8 w-52 border border-destructive/30 bg-destructive/5 text-xs font-medium text-destructive shadow-none">
+                                          <SelectTrigger className="h-8 w-52 rounded-full border border-destructive/30 bg-destructive/5 px-3 text-xs font-medium text-destructive shadow-2xs transition-colors hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-ring/50">
                                             <SelectValue placeholder="企業を紐づけ" />
                                           </SelectTrigger>
                                           <SelectContent>
@@ -864,7 +864,7 @@ export default function ProjectList() {
                                         })
                                       }
                                     >
-                                      <SelectTrigger className="h-8 w-28 border-none bg-secondary/50 text-xs font-semibold text-foreground shadow-none">
+                                      <SelectTrigger className="h-8 w-28 rounded-full border border-border/80 bg-muted/30 px-3 text-xs font-semibold text-foreground shadow-2xs transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50">
                                         <SelectValue />
                                       </SelectTrigger>
                                       <SelectContent>
@@ -894,7 +894,7 @@ export default function ProjectList() {
                                     >
                                       <SelectTrigger
                                         className={cn(
-                                          "h-8 w-20 border-none bg-secondary/50 text-xs font-semibold text-foreground shadow-none",
+                                          "h-8 w-20 rounded-full border border-border/80 bg-muted/30 px-3 text-xs font-semibold text-foreground shadow-2xs transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50",
                                           priorityColor[project.priority],
                                         )}
                                       >

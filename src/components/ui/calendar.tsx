@@ -1,11 +1,58 @@
 import * as React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { DayPicker, getDefaultClassNames } from "react-day-picker";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
+import { DayPicker, getDefaultClassNames, type DropdownProps } from "react-day-picker";
 import "react-day-picker/style.css";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 type CalendarProps = React.ComponentProps<typeof DayPicker>;
+
+function CalendarDropdown({
+  options,
+  value,
+  disabled,
+  onChange,
+  "aria-label": ariaLabel,
+}: DropdownProps) {
+  return (
+    <Select
+      disabled={disabled}
+      value={value === undefined ? undefined : String(value)}
+      onValueChange={(nextValue) => {
+        onChange?.({
+          target: { value: nextValue },
+        } as React.ChangeEvent<HTMLSelectElement>);
+      }}
+    >
+      <SelectTrigger
+        aria-label={ariaLabel}
+        size="sm"
+        className="min-w-18 border-border bg-background px-2 text-xs font-semibold shadow-2xs"
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent position="popper" align="start" className="pointer-events-auto min-w-20">
+        {options?.map((option) => (
+          <SelectItem
+            key={option.value}
+            value={String(option.value)}
+            disabled={option.disabled}
+            className="text-xs"
+          >
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 function Calendar({
   className,
@@ -33,15 +80,15 @@ function Calendar({
         ),
         nav: cn(
           defaultClassNames.nav,
-          "absolute inset-x-0 top-0 flex items-center justify-between",
+          "pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between",
         ),
         button_previous: cn(
           defaultClassNames.button_previous,
-          "inline-flex size-8 items-center justify-center rounded-md border border-border bg-background text-muted-foreground shadow-2xs transition hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40",
+          "pointer-events-auto inline-flex size-8 items-center justify-center rounded-md border border-border bg-background text-muted-foreground shadow-2xs transition hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40",
         ),
         button_next: cn(
           defaultClassNames.button_next,
-          "inline-flex size-8 items-center justify-center rounded-md border border-border bg-background text-muted-foreground shadow-2xs transition hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40",
+          "pointer-events-auto inline-flex size-8 items-center justify-center rounded-md border border-border bg-background text-muted-foreground shadow-2xs transition hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40",
         ),
         month_grid: cn(defaultClassNames.month_grid, "w-full border-collapse"),
         weekdays: cn(defaultClassNames.weekdays, "flex"),
@@ -72,12 +119,24 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        Chevron: ({ orientation, className, ...props }) =>
-          orientation === "left" ? (
-            <ChevronLeft className={cn("size-4", className)} {...props} />
-          ) : (
-            <ChevronRight className={cn("size-4", className)} {...props} />
-          ),
+        Dropdown: CalendarDropdown,
+        Chevron: ({ orientation, className, style }) => {
+          const iconProps = {
+            className: cn("size-4", className),
+            style: { ...style, fill: "none" },
+          };
+
+          switch (orientation) {
+            case "left":
+              return <ChevronLeft {...iconProps} />;
+            case "up":
+              return <ChevronUp {...iconProps} />;
+            case "down":
+              return <ChevronDown {...iconProps} />;
+            default:
+              return <ChevronRight {...iconProps} />;
+          }
+        },
       }}
       {...props}
     />

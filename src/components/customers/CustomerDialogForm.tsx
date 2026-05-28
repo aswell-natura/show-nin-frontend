@@ -442,10 +442,10 @@ export default function CustomerDialogForm({
           }
         />
 
-        {/* ステータス */}
+        {/* フェーズ */}
         <LinearDialogPill
           icon={<Activity className="size-3.5" />}
-          label="ステータス"
+          label="フェーズ"
           value={
             {
               lead: "リード",
@@ -461,7 +461,7 @@ export default function CustomerDialogForm({
           popoverContent={
             <div className="flex flex-col gap-1">
               <p className="text-xs font-bold text-muted-foreground px-2 py-1">
-                ステータスを選択
+                フェーズを選択
               </p>
               {(
                 [

@@ -1516,7 +1516,7 @@ export default function ProjectDetail() {
           {/* Under other info: フェーズ and 確度 */}
           <div className="border-t border-border/50 my-2 pt-4">
             <h5 className="text-xs font-bold text-muted-foreground mb-2.5">
-              ステータス・評価
+              フェーズ・評価
             </h5>
             <div className="grid grid-cols-2 gap-3">
               {/* フェーズ */}

@@ -111,6 +111,8 @@ interface MinuteLinkOverrides {
   projectId?: string;
 }
 
+const MINUTE_FILTER_FIELDS = ["owner", "date"];
+
 interface FileAnalysisFormValues {
   fileType: "audio" | "text";
   title: string;
@@ -491,25 +493,15 @@ export default function AudioMinuteList() {
     return page ? parseInt(page, 10) : 1;
   });
   const [filters, setFilters] = useState<FilterRule[]>(() => {
-    const initialFilters: FilterRule[] = [];
-    ["link", "customer", "project", "owner", "date"].forEach((field) => {
-      searchParams.getAll(field).forEach((value) => {
-        if (value) {
-          initialFilters.push({
-            id: Math.random().toString(36).slice(2, 11),
-            field,
-            operator: "contains",
-            value,
-          });
-        }
-      });
-    });
-    return initialFilters;
+    return MINUTE_FILTER_FIELDS.map((field) => ({
+      id: Math.random().toString(36).slice(2, 11),
+      field,
+      operator: "contains",
+      value: searchParams.get(field) ?? "",
+    }));
   });
   const [isFilterOpen, setIsFilterOpen] = useState(() =>
-    ["link", "customer", "project", "owner", "date"].some((field) =>
-      searchParams.has(field),
-    ),
+    MINUTE_FILTER_FIELDS.some((field) => searchParams.has(field)),
   );
   const [columns, setColumns] = useState<ListTableColumn[]>(DEFAULT_COLUMNS);
   const [openDocumentPopoverId, setOpenDocumentPopoverId] = useState<string | null>(null);
@@ -517,6 +509,7 @@ export default function AudioMinuteList() {
     Record<string, MinuteLinkOverrides>
   >({});
   const itemsPerPage = 8;
+  const activeFilterCount = filters.filter((filter) => filter.value).length;
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -724,31 +717,6 @@ export default function AudioMinuteList() {
         .sort((a, b) => a.label.localeCompare(b.label, "ja")),
     [profiles],
   );
-
-  const linkOptions = [
-    { label: "すべて", value: "all" },
-    { label: "紐づけ済み", value: "linked" },
-    { label: "未紐づけ", value: "unlinked" },
-  ];
-
-  const addFilter = () => {
-    setFilters((current) => [
-      ...current,
-      {
-        id: Math.random().toString(36).slice(2, 11),
-        field: "link",
-        operator: "contains",
-        value: "",
-      },
-    ]);
-    setCurrentPage(1);
-    setIsFilterOpen(true);
-  };
-
-  const removeFilter = (id: string) => {
-    setFilters((current) => current.filter((filter) => filter.id !== id));
-    setCurrentPage(1);
-  };
 
   const updateFilter = (id: string, updates: Partial<FilterRule>) => {
     setFilters((current) =>
@@ -969,7 +937,7 @@ export default function AudioMinuteList() {
                           variant={
                             isFilterOpen
                               ? "ghost"
-                              : filters.length > 0
+                              : activeFilterCount > 0
                                 ? "secondary"
                                 : "ghost"
                           }
@@ -977,21 +945,21 @@ export default function AudioMinuteList() {
                           onClick={() => setIsFilterOpen(!isFilterOpen)}
                           className={cn(
                             "h-10 justify-center border border-border/50 shadow-sm transition-all",
-                            filters.length === 0
+                            activeFilterCount === 0
                               ? "gap-2 px-3 md:w-10 md:px-0 md:gap-0"
                               : "gap-2 px-3 md:gap-1.5 md:px-2.5",
                             isFilterOpen
                               ? "border-primary bg-primary/10 text-primary"
-                              : filters.length > 0
+                              : activeFilterCount > 0
                                 ? "border-border bg-secondary text-foreground"
                                 : "bg-card",
                           )}
                         >
                           <Filter className="h-4 w-4" />
                           <span className="text-sm md:hidden">フィルター</span>
-                          {filters.length > 0 && (
+                          {activeFilterCount > 0 && (
                             <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                              {filters.length}
+                              {activeFilterCount}
                             </span>
                           )}
                         </Button>
@@ -1002,7 +970,7 @@ export default function AudioMinuteList() {
                       >
                         <p>
                           フィルター
-                          {filters.length > 0 ? ` (${filters.length})` : ""}
+                          {activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
                         </p>
                       </TooltipContent>
                     </Tooltip>
@@ -1043,47 +1011,14 @@ export default function AudioMinuteList() {
                             <SelectValue placeholder="項目" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="link">紐づけ状態</SelectItem>
-                            <SelectItem value="customer">企業</SelectItem>
-                            <SelectItem value="project">案件</SelectItem>
                             <SelectItem value="owner">担当者</SelectItem>
-                            <SelectItem value="date">取得日</SelectItem>
+                            <SelectItem value="date">作成日時</SelectItem>
                           </SelectContent>
                         </Select>
 
                         <div className="order-3 mx-1 hidden h-4 w-px shrink-0 bg-border/60 sm:block" />
 
-                        {filter.field === "link" ? (
-                          <Combobox
-                            options={linkOptions}
-                            value={filter.value}
-                            onValueChange={(value) =>
-                              updateFilter(filter.id, { value })
-                            }
-                            placeholder="状態を選択"
-                            className="order-4 h-8 w-full min-w-0 text-xs font-medium sm:order-3 sm:w-48"
-                          />
-                        ) : filter.field === "customer" ? (
-                          <Combobox
-                            options={customerOptions}
-                            value={filter.value}
-                            onValueChange={(value) =>
-                              updateFilter(filter.id, { value })
-                            }
-                            placeholder="企業を選択"
-                            className="order-4 h-8 w-full min-w-0 text-xs font-medium sm:order-3 sm:w-56"
-                          />
-                        ) : filter.field === "project" ? (
-                          <Combobox
-                            options={projectOptions}
-                            value={filter.value}
-                            onValueChange={(value) =>
-                              updateFilter(filter.id, { value })
-                            }
-                            placeholder="案件を選択"
-                            className="order-4 h-8 w-full min-w-0 text-xs font-medium sm:order-3 sm:w-56"
-                          />
-                        ) : filter.field === "owner" ? (
+                        {filter.field === "owner" ? (
                           <Combobox
                             options={ownerOptions}
                             value={filter.value}
@@ -1128,7 +1063,7 @@ export default function AudioMinuteList() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => removeFilter(filter.id)}
+                          onClick={() => updateFilter(filter.id, { value: "" })}
                           className="order-2 ml-auto h-8 w-8 shrink-0 rounded-lg text-muted-foreground/30 hover:bg-destructive/5 hover:text-destructive sm:order-4 sm:ml-1"
                         >
                           <X className="h-4 w-4" />
@@ -1136,24 +1071,25 @@ export default function AudioMinuteList() {
                       </div>
                     ))}
 
-                    <div className="col-span-2 flex w-full min-w-0 items-center justify-between gap-3 pt-1">
+                    <div className="col-span-2 flex w-full min-w-0 items-center justify-end gap-3 pt-1">
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={addFilter}
-                        className="h-9 shrink-0 rounded-md border border-dashed border-border px-3 text-xs font-bold text-muted-foreground transition-all hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
+                        onClick={() => undefined}
+                        className="hidden"
                       >
                         <Plus className="mr-1.5 h-4 w-4" />
                         条件追加
                       </Button>
 
-                      {filters.length > 0 && (
+                      {activeFilterCount > 0 && (
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => {
-                            setFilters([]);
-                            setIsFilterOpen(false);
+                            setFilters((current) =>
+                              current.map((filter) => ({ ...filter, value: "" })),
+                            );
                             setCurrentPage(1);
                           }}
                           className="h-9 shrink-0 gap-1.5 px-3 text-xs font-medium text-muted-foreground transition-colors hover:text-destructive"
@@ -1183,7 +1119,9 @@ export default function AudioMinuteList() {
                 size="sm"
                 onClick={() => {
                   setSearch("");
-                  setFilters([]);
+                  setFilters((current) =>
+                    current.map((filter) => ({ ...filter, value: "" })),
+                  );
                   setCurrentPage(1);
                 }}
               >

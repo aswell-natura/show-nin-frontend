@@ -87,11 +87,6 @@ export default function Header({ onMenuToggle }: HeaderProps) {
     { label: "部署", icon: Building, onClick: () => navigate("/departments") },
     { label: "所属グループ", icon: Users, onClick: () => navigate("/groups") },
     { label: "自社情報", icon: Building, onClick: () => navigate("/company") },
-    {
-      label: "登録項目の設定",
-      icon: Database,
-      onClick: () => navigate("/registration-items"),
-    },
   ];
 
   const rightPrimaryItems = [
@@ -109,7 +104,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
       icon: BarChart,
       onClick: () => navigate("/usage-status"),
     },
-    { label: "詳細設定", icon: Settings, onClick: () => navigate("/settings") },
+    { label: "機能設定", icon: Settings, onClick: () => navigate("/settings") },
     { label: "使い方", icon: HelpCircle },
     {
       label: "パスワード変更",
@@ -411,12 +406,12 @@ export default function Header({ onMenuToggle }: HeaderProps) {
                   <DropdownMenuLabel>設定</DropdownMenuLabel>
                   <DropdownMenuItem onClick={() => navigate("/settings")}>
                     <Settings className="mr-2 h-4 w-4" />
-                    <span>基本設定</span>
+                    <span>機能設定</span>
                   </DropdownMenuItem>
                   {effectiveMode === "manager" && (
                     <DropdownMenuItem>
                       <Settings className="mr-2 h-4 w-4" />
-                      <span>詳細設定</span>
+                      <span>機能設定</span>
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuGroup>

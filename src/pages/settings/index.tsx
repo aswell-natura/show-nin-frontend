@@ -10,6 +10,7 @@ import {
   Pencil,
   Plus,
   SlidersHorizontal,
+  X,
 } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -34,36 +35,65 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  loadFeatureFlags,
+  optionalFeatures,
+  saveFeatureFlags,
+  type OptionalFeatureFlags,
+  type OptionalFeatureId,
+} from "@/lib/feature-menu";
 
-const settingCards = [
+const settingSections = [
   {
-    title: "AIアシスタント設定",
-    description: "AI応答や補助機能の利用方針を管理します。",
-    icon: Bot,
-    path: "/settings/ai-assistants",
+    title: "AI機能",
+    cards: [
+      {
+        title: "AIアシスタント設定",
+        description: "AI応答や補助機能の利用方針を管理します。",
+        icon: Bot,
+        path: "/settings/ai-assistants",
+      },
+      {
+        title: "ドキュメントテンプレート設定",
+        description: "契約書や見積書などの雛形を管理します。",
+        icon: FileText,
+        path: "/settings/document-templates",
+      },
+      {
+        title: "チェックテンプレート設定",
+        description: "確認項目やチェックリストの雛形を管理します。",
+        icon: ListChecks,
+        path: "/settings/check-templates",
+      },
+    ],
   },
   {
-    title: "ドキュメントテンプレート設定",
-    description: "契約書や見積書などの雛形を管理します。",
-    icon: FileText,
-    path: "/settings/document-templates",
+    title: "補助機能",
+    cards: [
+      {
+        title: "カレンダー連携",
+        description: "外部カレンダーとの連携状態を管理します。",
+        icon: CalendarDays,
+        path: "/settings/calendar-integration",
+      },
+    ],
   },
   {
-    title: "チェックテンプレート設定",
-    description: "確認項目やチェックリストの雛形を管理します。",
-    icon: ListChecks,
-    path: "/settings/check-templates",
-  },
-  {
-    title: "カレンダー連携",
-    description: "外部カレンダーとの連携状態を管理します。",
-    icon: CalendarDays,
-    path: "/settings/calendar-integration",
-  },
-  {
-    title: "機能選択",
-    description: "サイドメニューに表示する追加機能を選択します。",
-    icon: SlidersHorizontal,
+    title: "オプション",
+    cards: [
+      {
+        title: "機能選択",
+        description: "サイドメニューに表示する追加機能を選択します。",
+        icon: SlidersHorizontal,
+        path: "/settings/features",
+      },
+      {
+        title: "登録項目の選択",
+        description: "ラベルや、フェーズなど登録フォームで使用する項目を管理します。",
+        icon: ListChecks,
+        path: "/registration-items",
+      },
+    ],
   },
 ];
 
@@ -283,13 +313,13 @@ function AiAssistantTable() {
       </div>
 
       <Dialog open={selectedAssistant !== null} onOpenChange={(open) => !open && setSelectedAssistant(null)}>
-        <DialogContent className="max-w-2xl gap-0 overflow-hidden p-0">
-          <form onSubmit={handleSave}>
+        <DialogContent className="max-h-[calc(100vh-2rem)] max-w-2xl gap-0 overflow-hidden p-0">
+          <form onSubmit={handleSave} className="flex max-h-[calc(100vh-2rem)] flex-col">
             <DialogHeader className="border-b border-border px-6 py-5">
               <DialogTitle>AIアシスタント詳細</DialogTitle>
               <DialogDescription>AIアシスタントのカラム情報を編集できます。</DialogDescription>
             </DialogHeader>
-            <div className="space-y-5 px-6 py-5">
+            <div className="custom-scrollbar flex-1 space-y-5 overflow-y-auto px-6 py-5">
               <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
                 <InputField
                   label="名前"
@@ -381,13 +411,13 @@ function DocumentTemplateTable() {
       </div>
 
       <Dialog open={selectedTemplate !== null} onOpenChange={(open) => !open && setSelectedTemplate(null)}>
-        <DialogContent className="max-w-2xl gap-0 overflow-hidden p-0">
-          <form onSubmit={handleSave}>
+        <DialogContent className="max-h-[calc(100vh-2rem)] max-w-2xl gap-0 overflow-hidden p-0">
+          <form onSubmit={handleSave} className="flex max-h-[calc(100vh-2rem)] flex-col">
             <DialogHeader className="border-b border-border px-6 py-5">
               <DialogTitle>ドキュメントテンプレート詳細</DialogTitle>
               <DialogDescription>テンプレートの内容と生成時の構成を編集できます。</DialogDescription>
             </DialogHeader>
-            <div className="space-y-5 px-6 py-5">
+            <div className="custom-scrollbar flex-1 space-y-5 overflow-y-auto px-6 py-5">
               <InputField label="タイトル" value={formValues.title} onChange={(value) => setFormValues((current) => ({ ...current, title: value }))} />
               <SelectField label="種類" value={formValues.type} options={templateTypeOptions} onChange={(value) => setFormValues((current) => ({ ...current, type: value }))} />
               <TextAreaField label="説明" value={formValues.description} rows={3} onChange={(value) => setFormValues((current) => ({ ...current, description: value }))} />
@@ -463,6 +493,13 @@ function CheckTemplateTable() {
     }));
   };
 
+  const removeCheckItem = (index: number) => {
+    setFormValues((current) => ({
+      ...current,
+      checkItems: current.checkItems.filter((_, itemIndex) => itemIndex !== index),
+    }));
+  };
+
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
       <PageHeader title="チェックテンプレート設定" description="作成済みのチェックテンプレートを一覧で確認できます。" showBackButton />
@@ -494,13 +531,13 @@ function CheckTemplateTable() {
       </div>
 
       <Dialog open={selectedTemplate !== null} onOpenChange={(open) => !open && setSelectedTemplate(null)}>
-        <DialogContent className="max-w-2xl gap-0 overflow-hidden p-0">
-          <form onSubmit={handleSave}>
+        <DialogContent className="max-h-[calc(100vh-2rem)] max-w-2xl gap-0 overflow-hidden p-0">
+          <form onSubmit={handleSave} className="flex max-h-[calc(100vh-2rem)] flex-col">
             <DialogHeader className="border-b border-border px-6 py-5">
               <DialogTitle>チェックテンプレート詳細</DialogTitle>
               <DialogDescription>チェックテンプレートの実行条件とプロンプトを編集できます。</DialogDescription>
             </DialogHeader>
-            <div className="space-y-5 px-6 py-5">
+            <div className="custom-scrollbar flex-1 space-y-5 overflow-y-auto px-6 py-5">
               <InputField label="タイトル" value={formValues.title} onChange={(value) => setFormValues((current) => ({ ...current, title: value }))} />
               <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
                 <label className="block">
@@ -532,6 +569,7 @@ function CheckTemplateTable() {
                   <span className="whitespace-nowrap text-sm font-medium text-foreground">デフォルトで適用</span>
                 </label>
               </div>
+              <TextAreaField label="プロンプト" value={formValues.prompt} rows={7} onChange={(value) => setFormValues((current) => ({ ...current, prompt: value }))} />
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="text-sm font-bold text-foreground">
@@ -554,20 +592,30 @@ function CheckTemplateTable() {
                 </p>
                 <div className="space-y-2">
                   {formValues.checkItems.map((item, index) => (
-                    <input
-                      key={index}
+                    <div key={index} className="flex items-center gap-2">
+                      <input
                       value={item}
                       onChange={(event) => updateCheckItem(index, event.target.value)}
                       placeholder="例：指名・希望職種の確認"
-                      className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20"
-                    />
+                      className="h-10 min-w-0 flex-1 rounded-lg border border-input bg-background px-3 text-sm outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => removeCheckItem(index)}
+                        aria-label="チェック項目を削除"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   ))}
                 </div>
                 <p className="text-right text-xs text-muted-foreground">
                   {formValues.checkItems.length}/{MAX_CHECK_ITEMS}
                 </p>
               </div>
-              <TextAreaField label="プロンプト" value={formValues.prompt} rows={7} onChange={(value) => setFormValues((current) => ({ ...current, prompt: value }))} />
             </div>
             <ModalFooter onCancel={() => setSelectedTemplate(null)} />
           </form>
@@ -634,6 +682,35 @@ function DetailButton({ onClick }: { onClick: () => void }) {
       <Pencil className="h-3.5 w-3.5" />
       詳細
     </Button>
+  );
+}
+
+function ToggleSwitch({
+  checked,
+  onChange,
+  ariaLabel,
+}: {
+  checked: boolean;
+  onChange: () => void;
+  ariaLabel: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={ariaLabel}
+      onClick={onChange}
+      className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
+        checked ? "bg-primary" : "bg-muted-foreground/30"
+      }`}
+    >
+      <span
+        className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+          checked ? "translate-x-6" : "translate-x-1"
+        }`}
+      />
+    </button>
   );
 }
 
@@ -891,6 +968,59 @@ function CalendarIntegrationPage() {
   );
 }
 
+function FeatureSelectionPage() {
+  const [featureFlags, setFeatureFlags] = useState<OptionalFeatureFlags>(() =>
+    loadFeatureFlags(),
+  );
+
+  const toggleFeature = (featureId: OptionalFeatureId) => {
+    setFeatureFlags((current) => {
+      const nextFlags = {
+        ...current,
+        [featureId]: !current[featureId],
+      };
+      saveFeatureFlags(nextFlags);
+      return nextFlags;
+    });
+  };
+
+  return (
+    <div className="flex h-full flex-col overflow-hidden bg-background">
+      <PageHeader title="機能選択" description="使用する追加機能を選択できます。" showBackButton />
+      <div className="flex-1 overflow-y-auto p-4 md:p-6">
+        <section className="mx-auto max-w-3xl rounded-xl border border-border bg-card shadow-sm">
+          <div className="divide-y divide-border">
+            {optionalFeatures.map((feature) => {
+              const isEnabled = featureFlags[feature.id];
+              return (
+                <div
+                  key={feature.id}
+                  id={feature.id}
+                  className="flex items-center justify-between gap-4 px-5 py-4"
+                >
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-bold text-foreground">
+                      {feature.label}
+                    </h2>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {isEnabled ? "使用中" : "未使用"}
+                    </p>
+                  </div>
+                  <ToggleSwitch
+                    checked={isEnabled}
+                    onChange={() => toggleFeature(feature.id)}
+                    ariaLabel={`${feature.label}の使用可否を切り替え`}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const navigate = useNavigate();
   const { section } = useParams();
@@ -911,29 +1041,48 @@ export default function SettingsPage() {
     return <AppLayout><CalendarIntegrationPage /></AppLayout>;
   }
 
+  if (section === "features") {
+    return <AppLayout><FeatureSelectionPage /></AppLayout>;
+  }
+
   return (
     <AppLayout>
       <div className="flex h-full flex-col overflow-hidden bg-background">
-        <PageHeader title="基本設定" description="利用環境や機能表示を管理します。" />
+        <PageHeader title="機能設定" description="利用環境や機能表示を管理します。" />
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {settingCards.map((card) => {
-              const Icon = card.icon;
-              return (
-                <button
-                  key={card.title}
-                  type="button"
-                  onClick={() => card.path && navigate(card.path)}
-                  className="rounded-lg border border-border bg-card p-4 text-left shadow-sm transition-colors hover:border-primary/40 hover:bg-primary/5"
-                >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <h2 className="mt-4 text-sm font-bold text-foreground">{card.title}</h2>
-                  <p className="mt-2 text-xs leading-5 text-muted-foreground">{card.description}</p>
-                </button>
-              );
-            })}
+          <div className="space-y-8">
+            {settingSections.map((section) => (
+              <section key={section.title}>
+                <h2 className="mb-3 text-sm font-bold text-muted-foreground">
+                  {section.title}
+                </h2>
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  {section.cards.map((card) => {
+                    const Icon = card.icon;
+                    return (
+                      <button
+                        key={card.title}
+                        type="button"
+                        onClick={() => {
+                          if ("path" in card && card.path) navigate(card.path);
+                        }}
+                        className="rounded-lg border border-border bg-card p-4 text-left shadow-sm transition-colors hover:border-primary/40 hover:bg-primary/5"
+                      >
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                          <Icon className="h-5 w-5" />
+                        </span>
+                        <h3 className="mt-4 text-sm font-bold text-foreground">
+                          {card.title}
+                        </h3>
+                        <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                          {card.description}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
           </div>
         </div>
       </div>

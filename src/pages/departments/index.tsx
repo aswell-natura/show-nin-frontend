@@ -4,6 +4,14 @@ import { Plus, Trash2 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -11,24 +19,33 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { mockProfiles } from "@/data/mock";
 
 interface DepartmentRecord {
   id: string;
   name: string;
-  memberCount: number;
+  userIds: string[];
 }
 
+const users = mockProfiles.map((profile) => ({
+  id: profile.id,
+  name: profile.name,
+  email: profile.email,
+}));
+
 const initialDepartments: DepartmentRecord[] = [
-  { id: "department-001", name: "経営企画部", memberCount: 3 },
-  { id: "department-002", name: "営業部", memberCount: 8 },
-  { id: "department-003", name: "システム開発部", memberCount: 12 },
-  { id: "department-004", name: "管理部", memberCount: 4 },
+  { id: "department-001", name: "経営企画部", userIds: ["user-004"] },
+  { id: "department-002", name: "営業部", userIds: ["user-001", "user-002"] },
+  { id: "department-003", name: "システム開発部", userIds: ["user-003", "user-004"] },
+  { id: "department-004", name: "管理部", userIds: ["user-003"] },
 ];
 
 export default function DepartmentsPage() {
   const [departments, setDepartments] = useState(initialDepartments);
   const [departmentName, setDepartmentName] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentRecord | null>(null);
+  const [formValues, setFormValues] = useState<DepartmentRecord | null>(null);
 
   const handleAddDepartment = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -49,11 +66,48 @@ export default function DepartmentsPage() {
       {
         id: `department-${Date.now()}`,
         name,
-        memberCount: 0,
+        userIds: [],
       },
     ]);
     setDepartmentName("");
     setErrorMessage("");
+  };
+
+  const openDetail = (department: DepartmentRecord) => {
+    setSelectedDepartment(department);
+    setFormValues({ ...department, userIds: [...department.userIds] });
+  };
+
+  const closeDetail = () => {
+    setSelectedDepartment(null);
+    setFormValues(null);
+  };
+
+  const toggleUser = (userId: string) => {
+    setFormValues((current) => {
+      if (!current) return current;
+      const belongs = current.userIds.includes(userId);
+      return {
+        ...current,
+        userIds: belongs
+          ? current.userIds.filter((id) => id !== userId)
+          : [...current.userIds, userId],
+      };
+    });
+  };
+
+  const handleSave = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!formValues) return;
+
+    setDepartments((current) =>
+      current.map((department) =>
+        department.id === formValues.id
+          ? { ...formValues, name: formValues.name.trim() || department.name }
+          : department,
+      ),
+    );
+    closeDetail();
   };
 
   const handleDeleteDepartment = (departmentId: string) => {
@@ -66,17 +120,13 @@ export default function DepartmentsPage() {
     <AppLayout>
       <div className="flex h-full flex-col overflow-hidden bg-background">
         <div className="shrink-0 border-b border-border bg-card px-4 py-5 md:px-6">
-          <div className="flex flex-col items-stretch justify-between gap-4 md:flex-row md:items-center">
-            <div>
-              <div className="flex w-full items-center gap-2 md:w-auto">
-                <h1 className="text-xl font-bold tracking-tight text-foreground">
-                  部署設定
-                </h1>
-              </div>
-              <p className="mt-1 text-sm text-muted-foreground">
-                利用ユーザーに割り当てる部署を追加・削除できます。
-              </p>
-            </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
+              部署設定
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              利用ユーザーに割り当てる部署を追加・編集できます。
+            </p>
           </div>
         </div>
 
@@ -109,11 +159,7 @@ export default function DepartmentsPage() {
                   {errorMessage}
                 </p>
               ) : null}
-              <Button
-                type="submit"
-                variant="primary"
-                className="mt-4 w-full gap-2"
-              >
+              <Button type="submit" variant="primary" className="mt-4 w-full gap-2">
                 <Plus className="h-4 w-4" />
                 追加
               </Button>
@@ -130,12 +176,16 @@ export default function DepartmentsPage() {
                 </TableHeader>
                 <TableBody>
                   {departments.map((department) => (
-                    <TableRow key={department.id}>
+                    <TableRow
+                      key={department.id}
+                      className="cursor-pointer"
+                      onClick={() => openDetail(department)}
+                    >
                       <TableCell className="font-medium text-foreground">
                         {department.name}
                       </TableCell>
                       <TableCell className="text-right text-muted-foreground">
-                        {department.memberCount}人
+                        {department.userIds.length}人
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
@@ -143,7 +193,10 @@ export default function DepartmentsPage() {
                           variant="destructive"
                           size="sm"
                           className="gap-1.5"
-                          onClick={() => handleDeleteDepartment(department.id)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleDeleteDepartment(department.id);
+                          }}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                           削除
@@ -157,6 +210,71 @@ export default function DepartmentsPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={selectedDepartment !== null} onOpenChange={(open) => !open && closeDetail()}>
+        <DialogContent className="max-w-2xl p-6">
+          {formValues ? (
+            <form onSubmit={handleSave}>
+              <DialogHeader>
+                <DialogTitle>部署詳細</DialogTitle>
+                <DialogDescription>
+                  部署名と、この部署に属するユーザーを編集できます。
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-5 py-5">
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-foreground">
+                    部署名
+                  </span>
+                  <input
+                    value={formValues.name}
+                    onChange={(event) =>
+                      setFormValues((current) =>
+                        current ? { ...current, name: event.target.value } : current,
+                      )
+                    }
+                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20"
+                  />
+                </label>
+
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">所属ユーザー</h3>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {users.map((user) => {
+                      const active = formValues.userIds.includes(user.id);
+                      return (
+                        <button
+                          key={user.id}
+                          type="button"
+                          onClick={() => toggleUser(user.id)}
+                          className={`rounded-lg border px-3 py-2 text-left transition-colors ${
+                            active
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border bg-muted/30 text-muted-foreground hover:bg-muted"
+                          }`}
+                        >
+                          <span className="block text-sm font-bold">{user.name}</span>
+                          <span className="mt-0.5 block truncate text-xs opacity-80">
+                            {user.email}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="secondary" onClick={closeDetail}>
+                  キャンセル
+                </Button>
+                <Button type="submit" variant="primary">
+                  保存
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

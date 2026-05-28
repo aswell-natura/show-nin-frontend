@@ -1,4 +1,4 @@
-import { type CSSProperties } from "react";
+import { type CSSProperties, type HTMLAttributes } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
@@ -21,6 +21,21 @@ export interface ListTableColumn {
   sortable?: boolean;
   align?: "left" | "center" | "right";
   draggable?: boolean;
+}
+
+export function ListTableSurface({
+  className,
+  ...props
+}: HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-xl border border-border/50 bg-card shadow-none ring-1 ring-foreground/10 transition-shadow duration-200",
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 interface SortableListTableHeadProps {
@@ -60,7 +75,7 @@ export function SortableListTableHead({
       style={style}
       className={cn(
         column.width,
-        "relative whitespace-nowrap bg-transparent px-4 py-3.5 text-[11px] font-bold text-muted-foreground/75 tracking-wider uppercase border-b border-border",
+        "relative whitespace-nowrap bg-transparent px-4 py-3.5 text-[11px] font-bold text-muted-foreground/75 tracking-wider uppercase border-b border-border/50",
         isDragging && "bg-background/90 backdrop-blur-md shadow-lg border-x border-y border-border/60 z-30",
         isSortable && "cursor-pointer transition-colors hover:text-foreground",
       )}

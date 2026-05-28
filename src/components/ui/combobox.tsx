@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Check, ChevronsUpDown, Search, Plus } from "lucide-react"
+import { Check, ChevronsUpDown, Search, Plus, RotateCcw } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -14,6 +14,7 @@ export interface ComboboxProps {
   className?: string
   onCreateOptionQuick?: (search: string) => void
   onCreateOptionDetail?: (search: string) => void
+  labelPrefix?: string
 }
 
 export function Combobox({
@@ -26,6 +27,7 @@ export function Combobox({
   className,
   onCreateOptionQuick,
   onCreateOptionDetail,
+  labelPrefix,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
   const [search, setSearch] = React.useState("")
@@ -46,21 +48,52 @@ export function Combobox({
       : "検索..."
   )
 
+  const hasValue = !!value
+  const isFullWidth = className?.includes("w-full")
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="secondary"
-          role="combobox"
-          aria-expanded={open}
-          className={cn("w-full justify-between h-8 text-xs font-normal border-none shadow-none bg-secondary/50", className)}
-        >
-          <span className="truncate">
-            {selectedOption ? selectedOption.label : placeholder}
-          </span>
-          <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
+      <div className={cn("relative inline-flex items-center", isFullWidth ? "w-full" : "w-auto")}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="secondary"
+            role="combobox"
+            aria-expanded={open}
+            className={cn(
+              "w-full justify-between h-8 text-xs font-normal border-none shadow-none bg-secondary/50",
+              className,
+              hasValue && "pr-9",
+            )}
+          >
+            <span className="flex min-w-0 flex-1 items-center gap-1.5 pr-1">
+              {labelPrefix && (
+                <span className="text-xs font-bold opacity-80 shrink-0">
+                  {labelPrefix}
+                </span>
+              )}
+              {labelPrefix && <span className="w-px h-3.5 bg-border/60 shrink-0" />}
+              <span className={cn("min-w-0 truncate", selectedOption ? "font-semibold" : "opacity-70")}>
+                {selectedOption ? selectedOption.label : placeholder}
+              </span>
+            </span>
+            {!hasValue && <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />}
+          </Button>
+        </PopoverTrigger>
+        {hasValue && (
+          <button
+            type="button"
+            aria-label="クリア"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onValueChange("");
+            }}
+            className="absolute right-2 top-1/2 inline-flex -translate-y-1/2 items-center justify-center rounded-full p-1 text-muted-foreground transition hover:text-destructive hover:bg-destructive/10 opacity-70 hover:opacity-100 z-10"
+          >
+            <RotateCcw className="h-3 w-3" />
+          </button>
+        )}
+      </div>
       <PopoverContent className="w-full min-w-[200px] p-0 shadow-lg border-border/50">
         <div className="flex items-center border-b border-border px-3 h-9">
           <Search className="mr-2 h-3.5 w-3.5 shrink-0 opacity-50" />

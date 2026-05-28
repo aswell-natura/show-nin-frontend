@@ -23,7 +23,6 @@ import {
   RotateCcw,
   Search,
   ChevronRight,
-  X,
 } from "lucide-react";
 
 import AppLayout from "../../components/layout/AppLayout";
@@ -35,7 +34,18 @@ import type { Project, ProjectStatus } from "../../types";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import {
+  activeFilterComboboxClassName,
+  filterComboboxClassName,
+  filterDateButtonClassName,
+  FilterPill,
+  filterPriceInputClassName,
+  FilterRangeSeparator,
+  formatPriceInputValue,
+  parsePriceInputValue,
+} from "@/components/ui/filter-pill";
+import {
   ListPagination,
+  ListTableSurface,
   SortableListTableHead,
   type ListSortOrder,
   type ListTableColumn,
@@ -516,13 +526,13 @@ export default function ProjectList() {
                 </div>
 
                 <div className="flex flex-1 flex-col items-stretch gap-3 sm:flex-row sm:items-center md:flex-initial md:justify-end">
-                  <div className="flex flex-1 flex-col items-stretch justify-end gap-3 sm:flex-row sm:items-center sm:gap-2 md:flex-initial">
+                  <div className="flex flex-1 flex-row items-center justify-end gap-2 md:flex-initial">
                     <div
                       className={cn(
-                        "max-w-full shrink-0 transition-all duration-300 ease-in-out",
+                        "min-w-0 flex-1 transition-all duration-300 ease-in-out sm:flex-initial sm:shrink-0",
                         isSearchFocused || search.trim() !== ""
-                          ? "w-full sm:w-72 md:w-80"
-                          : "w-full sm:w-44 md:w-48",
+                          ? "sm:w-72 md:w-80"
+                          : "sm:w-44 md:w-48",
                       )}
                     >
                       <SearchBar
@@ -554,10 +564,7 @@ export default function ProjectList() {
                               setIsFilterOpen((current) => !current)
                             }
                             className={cn(
-                              "h-10 justify-center border border-border/50 shadow-sm transition-all sm:flex-initial",
-                              activeFilterCount === 0
-                                ? "px-3 md:w-10 md:px-0"
-                                : "gap-2 px-3 md:px-2.5",
+                              "relative h-10 w-10 justify-center border border-border/50 p-0 shadow-sm transition-all",
                               isFilterOpen
                                 ? "border-primary bg-primary/10 text-primary"
                                 : activeFilterCount > 0
@@ -566,11 +573,8 @@ export default function ProjectList() {
                             )}
                           >
                             <Filter className="h-4 w-4" />
-                            <span className="text-sm md:hidden">
-                              フィルター
-                            </span>
                             {activeFilterCount > 0 && (
-                              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                              <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
                                 {activeFilterCount}
                               </span>
                             )}
@@ -602,91 +606,83 @@ export default function ProjectList() {
               </div>
 
               {isFilterOpen && (
-                <>
-                  <div className="mt-3 rounded-xl border border-border/80 bg-muted/40 p-3 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200 md:p-4">
-                    <div className="grid grid-cols-2 sm:flex sm:flex-row sm:flex-wrap sm:items-center gap-3 w-full min-w-0">
-                    {filters.map((filter) => (
-                      <div
-                        key={filter.id}
-                        className={cn(
-                          "flex flex-wrap sm:flex-nowrap items-center gap-2 p-2 sm:p-1.5 bg-background border border-border/60 rounded-xl shadow-sm animate-in zoom-in-95 duration-200 w-full sm:w-auto min-w-0 overflow-hidden",
-                          filter.field === "amount" || filter.field === "next_action_date"
-                            ? "col-span-2"
-                            : "col-span-1",
-                        )}
-                      >
-                        <Select
-                          value={filter.field}
-                          onValueChange={(value) =>
-                            updateFilter(filter.id, { field: value, value: "" })
-                          }
-                        >
-                          <SelectTrigger className="order-1 h-8 flex-1 sm:flex-initial sm:w-28 bg-muted/30 border-none shadow-none text-xs font-bold truncate min-w-[80px] sm:min-w-[120px]">
-                            <SelectValue placeholder="項目" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="status">フェーズ</SelectItem>
-                            <SelectItem value="priority">確度</SelectItem>
-                            <SelectItem value="amount">金額</SelectItem>
-                            <SelectItem value="owner">担当者</SelectItem>
-                            <SelectItem value="next_action_date">次回アクション</SelectItem>
-                          </SelectContent>
-                        </Select>
+                <div className="mt-3 rounded-xl border border-border bg-card p-3 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
+                    {filters.map((filter) => {
+                      const labelMap: Record<string, string> = {
+                        status: "フェーズ",
+                        priority: "確度",
+                        amount: "金額",
+                        owner: "担当者",
+                        next_action_date: "次回アクション",
+                        updated_at: "最終更新",
+                      };
 
-                        <div className="order-3 w-px h-4 bg-border/60 mx-1 shrink-0 hidden sm:block" />
+                      const hasValue = !!filter.value;
+                      const isRange = filter.field === "amount" || filter.field === "updated_at" || filter.field === "next_action_date";
 
-                        <FilterValueControl
-                          filter={filter}
-                          customerOptions={customerOptions}
-                          ownerOptions={ownerOptions}
-                          onChange={(value) =>
-                            updateFilter(filter.id, { value })
-                          }
-                        />
+                      return (
+                        <div key={filter.id} className="flex min-w-0">
+                          {isRange ? (
+                            <FilterPill
+                              label={labelMap[filter.field]}
+                              active={hasValue}
+                              className={cn(
+                                filter.field === "amount"
+                                  ? "sm:min-w-[320px]"
+                                  : "sm:min-w-[300px]",
+                              )}
+                              onClear={
+                                hasValue
+                                  ? () => updateFilter(filter.id, { value: "" })
+                                  : undefined
+                              }
+                            >
+                              <FilterValueControl
+                                filter={filter}
+                                customerOptions={customerOptions}
+                                ownerOptions={ownerOptions}
+                                onChange={(value) =>
+                                  updateFilter(filter.id, { value })
+                                }
+                              />
+                            </FilterPill>
+                          ) : (
+                            <FilterValueControl
+                              filter={filter}
+                              customerOptions={customerOptions}
+                              ownerOptions={ownerOptions}
+                              onChange={(value) =>
+                                updateFilter(filter.id, { value })
+                              }
+                              labelPrefix={labelMap[filter.field]}
+                              hasValue={hasValue}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
 
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => updateFilter(filter.id, { value: "" })}
-                          className="order-2 sm:order-4 w-8 h-8 text-muted-foreground/30 hover:text-destructive hover:bg-destructive/5 rounded-lg ml-auto sm:ml-1 shrink-0"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-
-                    <div className="col-span-2 flex items-center justify-end gap-3 pt-1 w-full min-w-0">
+                    {activeFilterCount > 0 && (
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => undefined}
-                        className="hidden"
+                        onClick={() => {
+                          setFilters((current) =>
+                            current.map((filter) => ({ ...filter, value: "" })),
+                          );
+                          setCurrentPage(1);
+                        }}
+                        className="ml-auto h-7 px-2 gap-1 text-xs text-muted-foreground hover:text-destructive font-medium transition-colors shrink-0"
                       >
-                        <Plus className="w-4 h-4 mr-1.5" />
-                        条件追加
+                        <RotateCcw className="w-3 h-3" />
+                        すべてクリア
                       </Button>
-
-                      {activeFilterCount > 0 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setFilters((current) =>
-                              current.map((filter) => ({ ...filter, value: "" })),
-                            );
-                            setCurrentPage(1);
-                          }}
-                          className="h-9 px-3 text-muted-foreground hover:text-destructive gap-1.5 rounded-md text-xs font-bold transition-all shrink-0 ml-auto"
-                        >
-                          <RotateCcw className="w-3.5 h-3.5" />
-                          条件クリア
-                        </Button>
-                      )}
-                    </div>
-                    </div>
+                    )}
                   </div>
-                </>
+                </div>
               )}
+
             </div>
           </div>
 
@@ -713,8 +709,9 @@ export default function ProjectList() {
               </Button>
             </div>
           ) : (
+            <>
             <div className="mt-4 px-4 pb-6 md:px-6 lg:pb-10">
-              <div className="relative overflow-hidden rounded-lg border border-border bg-background dark:border-border/60">
+              <ListTableSurface>
                 {/* Left Scroll Indicator */}
                 <div
                   className={cn(
@@ -740,7 +737,7 @@ export default function ProjectList() {
                 >
                   <Table className="min-w-[1480px] bg-transparent text-xs text-foreground">
                     <TableHeader className="bg-transparent">
-                      <TableRow className="border-b border-border hover:bg-transparent">
+                      <TableRow className="border-b border-border/50 hover:bg-transparent">
                         <SortableContext
                           items={columns.map((column) => column.id)}
                           strategy={horizontalListSortingStrategy}
@@ -775,7 +772,7 @@ export default function ProjectList() {
                           key={project.id}
                           onClick={() => navigate(`/projects/${project.id}`)}
                           className={cn(
-                            "group cursor-pointer border-b border-border bg-transparent transition-all duration-200 hover:bg-muted",
+                            "group cursor-pointer border-b border-border/50 bg-transparent transition-all duration-200 hover:bg-muted",
                             isUnlinked &&
                               "bg-destructive/[0.02] hover:bg-destructive/[0.06]",
                           )}
@@ -977,7 +974,8 @@ export default function ProjectList() {
                     </TableBody>
                   </Table>
                 </DndContext>
-              </div>
+                </div>
+              </ListTableSurface>
             </div>
 
               <ListPagination
@@ -987,7 +985,7 @@ export default function ProjectList() {
                 itemsPerPage={itemsPerPage}
                 onPageChange={setCurrentPage}
               />
-            </div>
+            </>
           )}
         </div>
       </div>
@@ -1000,6 +998,8 @@ interface FilterValueControlProps {
   customerOptions: { label: string; value: string }[];
   ownerOptions: { label: string; value: string }[];
   onChange: (value: string) => void;
+  labelPrefix?: string;
+  hasValue?: boolean;
 }
 
 function FilterValueControl({
@@ -1007,6 +1007,8 @@ function FilterValueControl({
   customerOptions,
   ownerOptions,
   onChange,
+  labelPrefix,
+  hasValue,
 }: FilterValueControlProps) {
   const optionMap: Record<string, { label: string; value: string }[]> = {
     status: statusOptions,
@@ -1017,7 +1019,7 @@ function FilterValueControl({
 
   if (filter.field === "updated_at" || filter.field === "next_action_date") {
     return (
-      <div className="order-4 sm:order-3 flex items-center gap-1 w-full sm:w-auto min-w-0">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
         <DatePicker
           value={(filter.value.split(",")[0] || "").replace(/\//g, "-")}
           onChange={(value) => {
@@ -1026,12 +1028,12 @@ function FilterValueControl({
             onChange(`${dateVal},${parts[1] || ""}`);
           }}
           size="sm"
-          className="min-w-0 flex-1 sm:w-32 sm:flex-initial"
-          buttonClassName="text-xs"
+          className="w-full sm:w-24"
+          buttonClassName={filterDateButtonClassName}
+          clearable={false}
+          placeholder="開始"
         />
-        <span className="text-xs text-muted-foreground font-bold shrink-0">
-          〜
-        </span>
+        <FilterRangeSeparator />
         <DatePicker
           value={(filter.value.split(",")[1] || "").replace(/\//g, "-")}
           onChange={(value) => {
@@ -1040,8 +1042,10 @@ function FilterValueControl({
             onChange(`${parts[0] || ""},${dateVal}`);
           }}
           size="sm"
-          className="min-w-0 flex-1 sm:w-32 sm:flex-initial"
-          buttonClassName="text-xs"
+          className="w-full sm:w-24"
+          buttonClassName={filterDateButtonClassName}
+          clearable={false}
+          placeholder="終了"
         />
       </div>
     );
@@ -1049,29 +1053,33 @@ function FilterValueControl({
 
   if (filter.field === "amount") {
     return (
-      <div className="order-4 sm:order-3 flex items-center gap-1 w-full sm:w-auto min-w-0">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
         <input
-          type="number"
-          value={filter.value.split(",")[0] || ""}
+          type="text"
+          inputMode="numeric"
+          value={formatPriceInputValue(filter.value.split(",")[0] || "")}
           onChange={(e) => {
             const parts = filter.value.split(",");
-            onChange(`${e.target.value},${parts[1] || ""}`);
+            const nextMin = parsePriceInputValue(e.target.value);
+            const nextMax = parts[1] || "";
+            onChange(nextMin || nextMax ? `${nextMin},${nextMax}` : "");
           }}
           placeholder="下限"
-          className="h-8 flex-1 sm:flex-initial sm:w-28 rounded-lg border border-border bg-background px-2.5 text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium min-w-0"
+          className={filterPriceInputClassName}
         />
-        <span className="text-xs text-muted-foreground font-bold shrink-0">
-          〜
-        </span>
+        <FilterRangeSeparator />
         <input
-          type="number"
-          value={filter.value.split(",")[1] || ""}
+          type="text"
+          inputMode="numeric"
+          value={formatPriceInputValue(filter.value.split(",")[1] || "")}
           onChange={(e) => {
             const parts = filter.value.split(",");
-            onChange(`${parts[0] || ""},${e.target.value}`);
+            const nextMin = parts[0] || "";
+            const nextMax = parsePriceInputValue(e.target.value);
+            onChange(nextMin || nextMax ? `${nextMin},${nextMax}` : "");
           }}
           placeholder="上限"
-          className="h-8 flex-1 sm:flex-initial sm:w-28 rounded-lg border border-border bg-background px-2.5 text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium min-w-0"
+          className={filterPriceInputClassName}
         />
       </div>
     );
@@ -1082,8 +1090,12 @@ function FilterValueControl({
       options={optionMap[filter.field] ?? []}
       value={filter.value}
       onValueChange={onChange}
-      placeholder="値を選択"
-      className="order-4 sm:order-3 w-full sm:w-48 h-8 text-xs font-medium min-w-0"
+      placeholder="選択"
+      labelPrefix={labelPrefix}
+      className={cn(
+        filterComboboxClassName,
+        hasValue && activeFilterComboboxClassName,
+      )}
     />
   );
 }

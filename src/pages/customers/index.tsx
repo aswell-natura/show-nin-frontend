@@ -11,14 +11,17 @@ import {
 } from "../../components/dashboard/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { SearchBar } from "@/components/ui/search-bar";
-import { cn } from "@/lib/utils";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  activeFilterComboboxClassName,
+  FilterPill,
+  filterComboboxClassName,
+  filterPriceInputClassName,
+  FilterRangeSeparator,
+  formatPriceInputValue,
+  parsePriceInputValue,
+} from "@/components/ui/filter-pill";
+import { cn } from "@/lib/utils";
+
 import {
   Table,
   TableBody,
@@ -29,6 +32,7 @@ import {
 } from "@/components/ui/table";
 import {
   ListPagination,
+  ListTableSurface,
   SortableListTableHead,
   type ListSortOrder,
   type ListTableColumn,
@@ -48,7 +52,6 @@ import { Combobox } from "@/components/ui/combobox";
 import {
   Filter,
   Plus,
-  X,
   ChevronRight,
   Search,
   RotateCcw,
@@ -499,14 +502,14 @@ export default function CustomerList() {
 
                 {/* 右側: 検索バー (コンパクト＆クリック拡張機能付き) ＆ 各種操作ボタン */}
                 <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center flex-1 md:flex-initial md:justify-end">
-                  <div className="flex-1 md:flex-initial flex flex-col sm:flex-row gap-3 sm:gap-2 items-stretch sm:items-center justify-end">
+                  <div className="flex flex-1 flex-row items-center justify-end gap-2 md:flex-initial">
                     {/* 検索バー: 非フォーカス時はコンパクト、クリック・フォーカス時または検索文字列あり時にスムーズに拡張 */}
                     <div
                       className={cn(
-                        "transition-all duration-300 ease-in-out max-w-full shrink-0",
+                        "min-w-0 flex-1 transition-all duration-300 ease-in-out sm:flex-initial sm:shrink-0",
                         isSearchFocused || search.trim() !== ""
-                          ? "w-full sm:w-72 md:w-80"
-                          : "w-full sm:w-44 md:w-48",
+                          ? "sm:w-72 md:w-80"
+                          : "sm:w-44 md:w-48",
                       )}
                     >
                       <SearchBar
@@ -523,7 +526,7 @@ export default function CustomerList() {
                     </div>
 
                     {/* フィルター ＆ ピン留めのみ */}
-                    <div className="flex gap-2 items-center justify-between sm:justify-center shrink-0 w-full sm:w-auto">
+                    <div className="flex shrink-0 items-center justify-center">
                       <TooltipProvider delayDuration={200}>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -538,10 +541,7 @@ export default function CustomerList() {
                               size="md"
                               onClick={() => setIsFilterOpen(!isFilterOpen)}
                               className={cn(
-                                "h-10 border border-border/50 transition-all shadow-sm flex-1 sm:flex-initial justify-center",
-                                activeFilterCount === 0
-                                  ? "px-3 md:w-10 md:px-0 gap-2 md:gap-0"
-                                  : "px-3 md:px-2.5 gap-2 md:gap-1.5",
+                                "relative h-10 w-10 justify-center border border-border/50 p-0 shadow-sm transition-all",
                                 isFilterOpen
                                   ? "bg-primary/10 text-primary border-primary shadow-sm"
                                   : activeFilterCount > 0
@@ -550,13 +550,10 @@ export default function CustomerList() {
                               )}
                             >
                               <Filter className="w-4 h-4" />
-                              <span className="text-sm md:hidden">
-                                フィルター
-                              </span>
                               {activeFilterCount > 0 && (
                                 <span
                                   className={cn(
-                                    "flex items-center justify-center text-[10px] font-bold rounded-full w-4 h-4",
+                                    "absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold",
                                     isFilterOpen
                                       ? "bg-primary text-primary-foreground"
                                       : "bg-primary text-primary-foreground",
@@ -594,160 +591,130 @@ export default function CustomerList() {
                 </div>
               </div>
 
-              {/* 詳細フィルターエリア (スティッキー内) */}
+              {/* 詳細フィルターエリア */}
               {isFilterOpen && (
-                <>
-                  <div className="p-3 md:p-4 bg-muted/40 border border-border/80 rounded-xl animate-in fade-in slide-in-from-top-2 duration-200 shadow-sm mt-3">
-                    <div className="grid grid-cols-2 sm:flex sm:flex-row sm:flex-wrap sm:items-center gap-3 w-full min-w-0">
-                    {filters.map((filter) => (
-                      <div
-                        key={filter.id}
-                        className={cn(
-                          "flex flex-wrap sm:flex-nowrap items-center gap-2 p-2 sm:p-1.5 bg-background border border-border/60 rounded-xl shadow-sm animate-in zoom-in-95 duration-200 w-full sm:w-auto min-w-0 overflow-hidden",
-                          filter.field === "amount"
-                            ? "col-span-2"
-                            : "col-span-1",
-                        )}
+                <div className="mt-3 rounded-xl border border-border bg-card p-3 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
+                    {filters.map((filter) => {
+                      const labelMap: Record<string, string> = {
+                        rank: "ランク",
+                        status: "フェーズ",
+                        labels: "ラベル",
+                        acquisition_source: "流入経路",
+                        amount: "金額",
+                      };
+                      
+                      const hasValue = !!filter.value;
+                      const isAmount = filter.field === "amount";
+
+                      return (
+                        <div key={filter.id} className="flex min-w-0">
+                          {isAmount ? (
+                            <FilterPill
+                              label={labelMap[filter.field]}
+                              active={hasValue}
+                              className="sm:min-w-[320px]"
+                              onClear={
+                                hasValue
+                                  ? () => updateFilter(filter.id, { value: "" })
+                                  : undefined
+                              }
+                            >
+                              <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={formatPriceInputValue(
+                                    filter.value.split(",")[0] || "",
+                                  )}
+                                  onChange={(e) => {
+                                    const parts = filter.value.split(",");
+                                    const nextMin = parsePriceInputValue(
+                                      e.target.value,
+                                    );
+                                    const nextMax = parts[1] || "";
+                                    updateFilter(filter.id, {
+                                      value:
+                                        nextMin || nextMax
+                                          ? `${nextMin},${nextMax}`
+                                          : "",
+                                    });
+                                  }}
+                                  placeholder="下限"
+                                  className={filterPriceInputClassName}
+                                />
+                                <FilterRangeSeparator />
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={formatPriceInputValue(
+                                    filter.value.split(",")[1] || "",
+                                  )}
+                                  onChange={(e) => {
+                                    const parts = filter.value.split(",");
+                                    const nextMin = parts[0] || "";
+                                    const nextMax = parsePriceInputValue(
+                                      e.target.value,
+                                    );
+                                    updateFilter(filter.id, {
+                                      value:
+                                        nextMin || nextMax
+                                          ? `${nextMin},${nextMax}`
+                                          : "",
+                                    });
+                                  }}
+                                  placeholder="上限"
+                                  className={filterPriceInputClassName}
+                                />
+                              </div>
+                            </FilterPill>
+                          ) : (
+                            <Combobox
+                              options={
+                                filter.field === "rank"
+                                  ? rankOptions
+                                  : filter.field === "status"
+                                    ? statusOptions
+                                    : filter.field === "labels"
+                                      ? allLabels
+                                      : allAcquisitionSources
+                              }
+                              value={filter.value}
+                              onValueChange={(val) =>
+                                updateFilter(filter.id, { value: val })
+                              }
+                              placeholder="選択"
+                              labelPrefix={labelMap[filter.field]}
+                              className={cn(
+                                filterComboboxClassName,
+                                hasValue && activeFilterComboboxClassName,
+                              )}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {activeFilterCount > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setFilters((current) =>
+                            current.map((filter) => ({ ...filter, value: "" })),
+                          );
+                          setCurrentPage(1);
+                        }}
+                        className="ml-auto h-7 px-2 gap-1 text-xs text-muted-foreground hover:text-destructive font-medium transition-colors shrink-0"
                       >
-                        <Select
-                          value={filter.field}
-                          onValueChange={(val) =>
-                            updateFilter(filter.id, { field: val, value: "" })
-                          }
-                        >
-                          <SelectTrigger className="order-1 h-8 flex-1 sm:flex-initial sm:w-28 bg-muted/30 border-none shadow-none text-xs font-bold truncate min-w-[80px] sm:min-w-[120px]">
-                            <SelectValue placeholder="項目" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="rank">ランク</SelectItem>
-                            <SelectItem value="status">フェーズ</SelectItem>
-                            <SelectItem value="labels">ラベル</SelectItem>
-                            <SelectItem value="acquisition_source">
-                              流入経路
-                            </SelectItem>
-                            <SelectItem value="amount">金額</SelectItem>
-                          </SelectContent>
-                        </Select>
-
-                        <div className="order-3 w-px h-4 bg-border/60 mx-1 shrink-0 hidden sm:block" />
-
-                        {filter.field === "rank" ? (
-                          <Combobox
-                            options={rankOptions}
-                            value={filter.value}
-                            onValueChange={(val) =>
-                              updateFilter(filter.id, { value: val })
-                            }
-                            placeholder="ランクを選択"
-                            className="order-4 sm:order-3 w-full sm:w-48 h-8 text-xs font-medium min-w-0"
-                          />
-                        ) : filter.field === "status" ? (
-                          <Combobox
-                            options={statusOptions}
-                            value={filter.value}
-                            onValueChange={(val) =>
-                              updateFilter(filter.id, { value: val })
-                            }
-                            placeholder="フェーズを選択"
-                            className="order-4 sm:order-3 w-full sm:w-48 h-8 text-xs font-medium min-w-0"
-                          />
-                        ) : filter.field === "labels" ? (
-                          <Combobox
-                            options={allLabels}
-                            value={filter.value}
-                            onValueChange={(val) =>
-                              updateFilter(filter.id, { value: val })
-                            }
-                            placeholder="ラベルを選択"
-                            className="order-4 sm:order-3 w-full sm:w-48 h-8 text-xs font-medium min-w-0"
-                          />
-                        ) : filter.field === "acquisition_source" ? (
-                          <Combobox
-                            options={allAcquisitionSources}
-                            value={filter.value}
-                            onValueChange={(val) =>
-                              updateFilter(filter.id, { value: val })
-                            }
-                            placeholder="流入経路を選択"
-                            className="order-4 sm:order-3 w-full sm:w-48 h-8 text-xs font-medium min-w-0"
-                          />
-                        ) : filter.field === "amount" ? (
-                          <div className="order-4 sm:order-3 flex items-center gap-1 w-full sm:w-auto min-w-0">
-                            <input
-                              type="number"
-                              value={filter.value.split(",")[0] || ""}
-                              onChange={(e) => {
-                                const parts = filter.value.split(",");
-                                updateFilter(filter.id, {
-                                  value: `${e.target.value},${parts[1] || ""}`,
-                                });
-                              }}
-                              placeholder="下限"
-                              className="h-8 flex-1 sm:flex-initial sm:w-28 rounded-lg border border-border bg-background px-2.5 text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium min-w-0"
-                            />
-                            <span className="text-xs text-muted-foreground font-bold shrink-0">
-                              〜
-                            </span>
-                            <input
-                              type="number"
-                              value={filter.value.split(",")[1] || ""}
-                              onChange={(e) => {
-                                const parts = filter.value.split(",");
-                                updateFilter(filter.id, {
-                                  value: `${parts[0] || ""},${e.target.value}`,
-                                });
-                              }}
-                              placeholder="上限"
-                              className="h-8 flex-1 sm:flex-initial sm:w-28 rounded-lg border border-border bg-background px-2.5 text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium min-w-0"
-                            />
-                          </div>
-                        ) : (
-                          <input
-                            type="text"
-                            value={filter.value}
-                            onChange={(e) =>
-                              updateFilter(filter.id, {
-                                value: e.target.value,
-                              })
-                            }
-                            placeholder="値を入力"
-                            className="order-4 sm:order-3 h-8 w-full sm:w-48 rounded-lg border border-border bg-background px-3 text-xs outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium min-w-0"
-                          />
-                        )}
-
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => updateFilter(filter.id, { value: "" })}
-                          className="order-2 sm:order-4 w-8 h-8 text-muted-foreground/30 hover:text-destructive hover:bg-destructive/5 rounded-lg ml-auto sm:ml-1 shrink-0"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))}
-
-                    <div className="col-span-2 flex items-center justify-end gap-3 pt-1 w-full min-w-0">
-                      {activeFilterCount > 0 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setFilters((current) =>
-                              current.map((filter) => ({ ...filter, value: "" })),
-                            );
-                            setCurrentPage(1);
-                          }}
-                          className="h-9 px-3 gap-1.5 text-xs text-muted-foreground hover:text-destructive font-medium transition-colors shrink-0"
-                        >
-                          <RotateCcw className="w-3.5 h-3.5" />
-                          条件クリア
-                        </Button>
-                      )}
-                    </div>
-                    </div>
+                        <RotateCcw className="w-3 h-3" />
+                        すべてクリア
+                      </Button>
+                    )}
                   </div>
-                </>
+                </div>
               )}
+
             </div>
           </div>
 
@@ -774,8 +741,9 @@ export default function CustomerList() {
               </Button>
             </div>
           ) : (
+            <>
             <div className="px-4 md:px-6 pb-6 lg:pb-10 mt-4">
-              <div className="relative overflow-hidden rounded-lg border border-border bg-background dark:border-border/60">
+              <ListTableSurface>
                 {/* Left Scroll Indicator */}
                 <div
                   className={cn(
@@ -801,7 +769,7 @@ export default function CustomerList() {
                 >
                   <Table className="min-w-[600px] bg-transparent text-xs text-foreground sm:min-w-[920px]">
                     <TableHeader className="bg-transparent">
-                      <TableRow className="border-b border-border hover:bg-transparent">
+                      <TableRow className="border-b border-border/50 hover:bg-transparent">
                         <SortableContext
                           items={columns
                             .filter((c) => c.draggable !== false)
@@ -838,7 +806,7 @@ export default function CustomerList() {
                               navigate(`/customers/${customer.id}`)
                             }
                             className={cn(
-                              "group cursor-pointer border-b border-border bg-transparent transition-all duration-200 hover:bg-muted",
+                              "group cursor-pointer border-b border-border/50 bg-transparent transition-all duration-200 hover:bg-muted",
                               isMinimalCustomer &&
                                 "bg-destructive/[0.02] hover:bg-destructive/[0.06]",
                             )}
@@ -1153,7 +1121,8 @@ export default function CustomerList() {
                     </TableBody>
                   </Table>
                 </DndContext>
-              </div>
+                </div>
+              </ListTableSurface>
             </div>
 
               <ListPagination
@@ -1163,7 +1132,7 @@ export default function CustomerList() {
                 itemsPerPage={itemsPerPage}
                 onPageChange={setCurrentPage}
               />
-            </div>
+            </>
           )}
         </div>
       </div>

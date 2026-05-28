@@ -77,7 +77,8 @@ Spacing variables in `src/index.css` range from `--space-1` (`0.25rem`) through 
 - Use `AppLayout` with a quiet `bg-muted/5` scrolling workspace and a `bg-background/95 backdrop-blur-md` header surface.
 - Keep the page title, contextual tooltip, responsive primary action, expanding `SearchBar`, and filter controls in one clear header band.
 - Synchronize search, sorting, filters, and pagination through `useSearchParams`, so an operational view is bookmarkable and recoverable.
-- Render data in a bordered `Card` table with muted header rows and compact `px-4 py-3.5` cells.
+- Render data in `ListTableSurface` from `src/components/ui/list-table.tsx`, matching dashboard widget surfaces: `rounded-xl`, `bg-card`, `border border-border/50`, `ring-1 ring-foreground/10`, and `shadow-none`.
+- Keep list table header and row dividers quiet with `border-border/50`; reserve stronger borders for selected, dragged, or risk states.
 - Support drag-reordered column headers through `@dnd-kit` where users compare many attributes.
 - Make full rows navigable, revealing a primary-colored chevron on hover; stop propagation inside editable controls.
 

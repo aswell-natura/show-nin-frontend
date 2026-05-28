@@ -22,7 +22,6 @@ import {
   RotateCcw,
   Search,
   ChevronRight,
-  X,
 } from "lucide-react";
 
 import AppLayout from "../../components/layout/AppLayout";
@@ -34,7 +33,16 @@ import type { Task } from "../../types";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import {
+  activeFilterComboboxClassName,
+  filterComboboxClassName,
+  filterDateButtonClassName,
+  FilterPill,
+  filterRangeInputClassName,
+  FilterRangeSeparator,
+} from "@/components/ui/filter-pill";
+import {
   ListPagination,
+  ListTableSurface,
   SortableListTableHead,
   type ListSortOrder,
   type ListTableColumn,
@@ -501,13 +509,13 @@ export default function TaskBoard() {
                 </div>
 
                 <div className="flex flex-1 flex-col items-stretch gap-3 sm:flex-row sm:items-center md:flex-initial md:justify-end">
-                  <div className="flex flex-1 flex-col items-stretch justify-end gap-3 sm:flex-row sm:items-center sm:gap-2 md:flex-initial">
+                  <div className="flex flex-1 flex-row items-center justify-end gap-2 md:flex-initial">
                     <div
                       className={cn(
-                        "max-w-full shrink-0 transition-all duration-300 ease-in-out",
+                        "min-w-0 flex-1 transition-all duration-300 ease-in-out sm:flex-initial sm:shrink-0",
                         isSearchFocused || search.trim() !== ""
-                          ? "w-full sm:w-72 md:w-80"
-                          : "w-full sm:w-44 md:w-48",
+                          ? "sm:w-72 md:w-80"
+                          : "sm:w-44 md:w-48",
                       )}
                     >
                       <SearchBar
@@ -523,7 +531,7 @@ export default function TaskBoard() {
                       />
                     </div>
 
-                    <div className="flex w-full shrink-0 items-center justify-between gap-2 sm:w-auto sm:justify-center">
+                    <div className="flex shrink-0 items-center justify-center">
                       <TooltipProvider delayDuration={200}>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -538,10 +546,7 @@ export default function TaskBoard() {
                               size="md"
                               onClick={() => setIsFilterOpen(!isFilterOpen)}
                               className={cn(
-                                "h-10 flex-1 justify-center border border-border/50 shadow-sm transition-all sm:flex-initial",
-                                activeFilterCount === 0
-                                  ? "gap-2 px-3 md:w-10 md:px-0 md:gap-0"
-                                  : "gap-2 px-3 md:gap-1.5 md:px-2.5",
+                                "relative h-10 w-10 justify-center border border-border/50 p-0 shadow-sm transition-all",
                                 isFilterOpen
                                   ? "border-primary bg-primary/10 text-primary"
                                   : activeFilterCount > 0
@@ -550,9 +555,8 @@ export default function TaskBoard() {
                               )}
                             >
                               <Filter className="h-4 w-4" />
-                              <span className="text-sm md:hidden">フィルター</span>
                               {activeFilterCount > 0 && (
-                                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
                                   {activeFilterCount}
                                 </span>
                               )}
@@ -602,178 +606,164 @@ export default function TaskBoard() {
               </div>
 
               {isFilterOpen && (
-                <>
-                  <div className="mt-3 rounded-xl border border-border/80 bg-muted/40 p-3 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200 md:p-4">
-                    <div className="grid w-full min-w-0 grid-cols-2 gap-3 sm:flex sm:flex-row sm:flex-wrap sm:items-center">
-                    {filters.map((filter) => (
-                      <div
-                        key={filter.id}
-                        className={cn(
-                          "flex w-full min-w-0 flex-wrap items-center gap-2 overflow-hidden rounded-xl border border-border/60 bg-background p-2 shadow-sm animate-in zoom-in-95 duration-200 sm:w-auto sm:flex-nowrap sm:p-1.5",
-                          filter.field === "progress" || filter.field === "date"
-                            ? "col-span-2"
-                            : "col-span-1",
-                        )}
-                      >
-                        <Select
-                          value={filter.field}
-                          onValueChange={(value) =>
-                            updateFilter(filter.id, { field: value, value: "" })
-                          }
-                        >
-                          <SelectTrigger className="order-1 h-8 min-w-[80px] flex-1 truncate border-none bg-muted/30 text-xs font-bold shadow-none sm:w-32 sm:flex-initial">
-                            <SelectValue placeholder="項目" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="status">フェーズ</SelectItem>
-                            <SelectItem value="date">期限</SelectItem>
-                            <SelectItem value="progress">進捗</SelectItem>
-                            <SelectItem value="priority">確度</SelectItem>
-                            <SelectItem value="owner">担当者</SelectItem>
-                          </SelectContent>
-                        </Select>
+                <div className="mt-3 rounded-xl border border-border bg-card p-3 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
+                    {filters.map((filter) => {
+                      const labelMap: Record<string, string> = {
+                        status: "フェーズ",
+                        date: "期限",
+                        progress: "進捗",
+                        priority: "確度",
+                        owner: "担当者",
+                      };
 
-                        <div className="order-3 mx-1 hidden h-4 w-px shrink-0 bg-border/60 sm:block" />
+                      const hasValue = !!filter.value;
+                      const isDate = filter.field === "date";
+                      const isProgress = filter.field === "progress";
 
-                        {filter.field === "status" ? (
-                          <Combobox
-                            options={statusOptions}
-                            value={filter.value}
-                            onValueChange={(value) =>
-                              updateFilter(filter.id, { value })
-                            }
-                            placeholder="フェーズを選択"
-                            className="order-4 h-8 w-full min-w-0 text-xs font-medium sm:order-3 sm:w-48"
-                          />
-                        ) : filter.field === "priority" ? (
-                          <Combobox
-                            options={priorityOptions}
-                            value={filter.value}
-                            onValueChange={(value) =>
-                              updateFilter(filter.id, { value })
-                            }
-                            placeholder="確度を選択"
-                            className="order-4 h-8 w-full min-w-0 text-xs font-medium sm:order-3 sm:w-48"
-                          />
-                        ) : filter.field === "owner" ? (
-                          <Combobox
-                            options={ownerOptions}
-                            value={filter.value}
-                            onValueChange={(value) =>
-                              updateFilter(filter.id, { value })
-                            }
-                            placeholder="担当者を選択"
-                            className="order-4 h-8 w-full min-w-0 text-xs font-medium sm:order-3 sm:w-48"
-                          />
-                        ) : filter.field === "date" ? (
-                          <div className="order-4 flex w-full min-w-0 items-center gap-1 sm:order-3 sm:w-auto">
-                            <DatePicker
-                              value={filter.value.split(",")[0] || ""}
-                              onChange={(value) => {
-                                const parts = filter.value.split(",");
-                                updateFilter(filter.id, {
-                                  value: `${value},${parts[1] || ""}`,
-                                });
-                              }}
-                              size="sm"
-                              className="min-w-0 flex-1 sm:w-32 sm:flex-initial"
-                              buttonClassName="text-xs"
+                      return (
+                        <div key={filter.id} className="flex min-w-0">
+                          {isDate ? (
+                            <FilterPill
+                              label={labelMap[filter.field]}
+                              active={hasValue}
+                              className="sm:min-w-[300px]"
+                              onClear={
+                                hasValue
+                                  ? () => updateFilter(filter.id, { value: "" })
+                                  : undefined
+                              }
+                            >
+                              <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+                                <DatePicker
+                                  value={filter.value.split(",")[0] || ""}
+                                  onChange={(value) => {
+                                    const parts = filter.value.split(",");
+                                    updateFilter(filter.id, {
+                                      value: `${value},${parts[1] || ""}`,
+                                    });
+                                  }}
+                                  size="sm"
+                                  className="w-full sm:w-24"
+                                  buttonClassName={filterDateButtonClassName}
+                                  clearable={false}
+                                  placeholder="開始"
+                                />
+                                <FilterRangeSeparator />
+                                <DatePicker
+                                  value={filter.value.split(",")[1] || ""}
+                                  onChange={(value) => {
+                                    const parts = filter.value.split(",");
+                                    updateFilter(filter.id, {
+                                      value: `${parts[0] || ""},${value}`,
+                                    });
+                                  }}
+                                  size="sm"
+                                  className="w-full sm:w-24"
+                                  buttonClassName={filterDateButtonClassName}
+                                  clearable={false}
+                                  placeholder="終了"
+                                />
+                              </div>
+                            </FilterPill>
+                          ) : isProgress ? (
+                            <FilterPill
+                              label={labelMap[filter.field]}
+                              active={hasValue}
+                              className="sm:min-w-[250px]"
+                              onClear={
+                                hasValue
+                                  ? () => updateFilter(filter.id, { value: "" })
+                                  : undefined
+                              }
+                            >
+                              <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  value={filter.value.split(",")[0] || ""}
+                                  onChange={(event) => {
+                                    const parts = filter.value.split(",");
+                                    const nextMin = event.target.value;
+                                    const nextMax = parts[1] || "";
+                                    updateFilter(filter.id, {
+                                      value:
+                                        nextMin || nextMax
+                                          ? `${nextMin},${nextMax}`
+                                          : "",
+                                    });
+                                  }}
+                                  placeholder="下限"
+                                  className={filterRangeInputClassName}
+                                />
+                                <FilterRangeSeparator />
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  value={filter.value.split(",")[1] || ""}
+                                  onChange={(event) => {
+                                    const parts = filter.value.split(",");
+                                    const nextMin = parts[0] || "";
+                                    const nextMax = event.target.value;
+                                    updateFilter(filter.id, {
+                                      value:
+                                        nextMin || nextMax
+                                          ? `${nextMin},${nextMax}`
+                                          : "",
+                                    });
+                                  }}
+                                  placeholder="上限"
+                                  className={filterRangeInputClassName}
+                                />
+                              </div>
+                            </FilterPill>
+                          ) : (
+                            <Combobox
+                              options={
+                                filter.field === "status"
+                                  ? statusOptions
+                                  : filter.field === "priority"
+                                    ? priorityOptions
+                                    : ownerOptions
+                              }
+                              value={filter.value}
+                              onValueChange={(val) =>
+                                updateFilter(filter.id, { value: val })
+                              }
+                              placeholder="選択"
+                              labelPrefix={labelMap[filter.field]}
+                              className={cn(
+                                filterComboboxClassName,
+                                hasValue && activeFilterComboboxClassName,
+                              )}
                             />
-                            <span className="shrink-0 text-xs font-bold text-muted-foreground">
-                              -
-                            </span>
-                            <DatePicker
-                              value={filter.value.split(",")[1] || ""}
-                              onChange={(value) => {
-                                const parts = filter.value.split(",");
-                                updateFilter(filter.id, {
-                                  value: `${parts[0] || ""},${value}`,
-                                });
-                              }}
-                              size="sm"
-                              className="min-w-0 flex-1 sm:w-32 sm:flex-initial"
-                              buttonClassName="text-xs"
-                            />
-                          </div>
-                        ) : filter.field === "progress" ? (
-                          <div className="order-4 flex w-full min-w-0 items-center gap-1 sm:order-3 sm:w-auto">
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              value={filter.value.split(",")[0] || ""}
-                              onChange={(event) => {
-                                const parts = filter.value.split(",");
-                                updateFilter(filter.id, {
-                                  value: `${event.target.value},${parts[1] || ""}`,
-                                });
-                              }}
-                              placeholder="下限"
-                              className="h-8 min-w-0 flex-1 rounded-lg border border-border bg-background px-2.5 text-xs font-medium outline-none transition-all focus:ring-2 focus:ring-primary/10 sm:w-24 sm:flex-initial"
-                            />
-                            <span className="shrink-0 text-xs font-bold text-muted-foreground">
-                              -
-                            </span>
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              value={filter.value.split(",")[1] || ""}
-                              onChange={(event) => {
-                                const parts = filter.value.split(",");
-                                updateFilter(filter.id, {
-                                  value: `${parts[0] || ""},${event.target.value}`,
-                                });
-                              }}
-                              placeholder="上限"
-                              className="h-8 min-w-0 flex-1 rounded-lg border border-border bg-background px-2.5 text-xs font-medium outline-none transition-all focus:ring-2 focus:ring-primary/10 sm:w-24 sm:flex-initial"
-                            />
-                          </div>
-                        ) : null}
+                          )}
+                        </div>
+                      );
+                    })}
 
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => updateFilter(filter.id, { value: "" })}
-                          className="order-2 ml-auto h-8 w-8 shrink-0 rounded-lg text-muted-foreground/30 hover:bg-destructive/5 hover:text-destructive sm:order-4 sm:ml-1"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-
-                    <div className="col-span-2 flex w-full min-w-0 items-center justify-end gap-3 pt-1">
+                    {activeFilterCount > 0 && (
                       <Button
                         variant="ghost"
                         size="sm"
-                          onClick={() => undefined}
-                          className="hidden"
+                        onClick={() => {
+                          setFilters((current) =>
+                            current.map((filter) => ({ ...filter, value: "" })),
+                          );
+                          setCurrentPage(1);
+                        }}
+                        className="ml-auto h-7 px-2 gap-1 text-xs text-muted-foreground hover:text-destructive font-medium transition-colors shrink-0"
                       >
-                        <Plus className="mr-1.5 h-4 w-4" />
-                        条件追加
+                        <RotateCcw className="h-3 w-3" />
+                        すべてクリア
                       </Button>
-
-                      {activeFilterCount > 0 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setFilters((current) =>
-                              current.map((filter) => ({ ...filter, value: "" })),
-                            );
-                            setCurrentPage(1);
-                          }}
-                          className="h-9 shrink-0 gap-1.5 px-3 text-xs font-medium text-muted-foreground transition-colors hover:text-destructive"
-                        >
-                          <RotateCcw className="h-3.5 w-3.5" />
-                          条件クリア
-                        </Button>
-                      )}
-                    </div>
-                    </div>
+                    )}
                   </div>
-                </>
+                </div>
               )}
+
             </div>
           </div>
 
@@ -800,8 +790,9 @@ export default function TaskBoard() {
               </Button>
             </div>
           ) : (
+            <>
             <div className="mt-4 px-4 pb-6 md:px-6 lg:pb-10">
-              <div className="relative overflow-hidden rounded-lg border border-border bg-background dark:border-border/60">
+              <ListTableSurface>
                 {/* Left Scroll Indicator */}
                 <div
                   className={cn(
@@ -827,7 +818,7 @@ export default function TaskBoard() {
                 >
                   <Table className="min-w-[600px] bg-transparent text-xs text-foreground sm:min-w-[1280px]">
                     <TableHeader className="bg-transparent">
-                      <TableRow className="border-b border-border hover:bg-transparent">
+                      <TableRow className="border-b border-border/50 hover:bg-transparent">
                         <SortableContext
                           items={columns.map((column) => column.id)}
                           strategy={horizontalListSortingStrategy}
@@ -851,7 +842,7 @@ export default function TaskBoard() {
                           key={task.id}
                           onClick={() => navigate(`/tasks/${task.id}`)}
                           className={cn(
-                            "group cursor-pointer border-b border-border bg-transparent transition-all duration-200 hover:bg-muted",
+                            "group cursor-pointer border-b border-border/50 bg-transparent transition-all duration-200 hover:bg-muted",
                             task.isCompleted &&
                               "bg-muted/10 text-muted-foreground/80 hover:bg-muted/25",
                           )}
@@ -1012,7 +1003,8 @@ export default function TaskBoard() {
                     </TableBody>
                   </Table>
                 </DndContext>
-              </div>
+                </div>
+              </ListTableSurface>
             </div>
 
               <ListPagination
@@ -1022,7 +1014,7 @@ export default function TaskBoard() {
                 itemsPerPage={itemsPerPage}
                 onPageChange={setCurrentPage}
               />
-            </div>
+            </>
           )}
         </div>
       </div>

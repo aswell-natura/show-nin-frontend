@@ -51,12 +51,11 @@ import {
   Plus,
   X,
   ChevronRight,
-  Pin,
-  PinOff,
   Search,
   RotateCcw,
   Info,
   AlertCircle,
+  Pin,
 } from "lucide-react";
 import {
   DndContext,
@@ -92,8 +91,8 @@ function formatDateTime(iso: string) {
 }
 
 const DEFAULT_COLUMNS: ListTableColumn[] = [
-  { id: "pin", label: "ピン留め", width: "w-16" },
-  { id: "rank", label: "ランク", width: "w-16" },
+  { id: "pin", label: "", width: "w-12", sortable: false, draggable: false },
+  { id: "rank", label: "ランク", width: "w-16", align: "center" },
   { id: "company_code", label: "企業コード", width: "w-24" },
   { id: "name", label: "顧客名", width: "w-64" },
   { id: "phone", label: "電話番号", width: "w-32" },
@@ -137,6 +136,15 @@ export default function CustomerList() {
   const { openDialog, closeDialog } = useGlobalDialog();
 
   const [search, setSearch] = useState(() => searchParams.get("q") || "");
+  const [showLeftIndicator, setShowLeftIndicator] = useState(false);
+  const [showRightIndicator, setShowRightIndicator] = useState(true);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const scrollRight = target.scrollWidth - target.scrollLeft - target.clientWidth;
+    setShowLeftIndicator(target.scrollLeft > 5);
+    setShowRightIndicator(scrollRight > 5);
+  };
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [sortKey, setSortKey] = useState<string>(
     () => searchParams.get("sort") || "accessed",
@@ -484,11 +492,13 @@ export default function CustomerList() {
     return filtered.slice(start, start + itemsPerPage);
   }, [filtered, currentPage, itemsPerPage]);
 
+
+
   return (
     <AppLayout>
       <div className="flex flex-col h-full bg-background overflow-hidden">
         {/* 独立スクロールするメインコンテンツエリア */}
-        <div className="flex-1 overflow-auto bg-muted/5 custom-scrollbar">
+        <div className="flex-1 overflow-auto bg-muted/5 custom-scrollbar pb-28 md:pb-0">
           {/* ヘッダー＆操作バー */}
           <div className="bg-background/95 backdrop-blur-md">
             <div className="px-4 md:px-6 pt-6 pb-4">
@@ -862,17 +872,37 @@ export default function CustomerList() {
             </div>
           ) : (
             <div className="px-4 md:px-6 pb-6 lg:pb-10 mt-4">
-              <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
+              <div className="relative overflow-hidden rounded-lg border border-border bg-background dark:border-border/60">
+                {/* Left Scroll Indicator */}
+                <div
+                  className={cn(
+                    "absolute left-0 top-0 bottom-0 w-8 pointer-events-none bg-gradient-to-r from-background to-transparent z-10 transition-opacity duration-300",
+                    showLeftIndicator ? "opacity-100" : "opacity-0"
+                  )}
+                />
+                {/* Right Scroll Indicator */}
+                <div
+                  className={cn(
+                    "absolute right-0 top-0 bottom-0 w-8 pointer-events-none bg-gradient-to-l from-background to-transparent z-10 transition-opacity duration-300",
+                    showRightIndicator ? "opacity-100" : "opacity-0"
+                  )}
+                />
+                <div
+                  className="overflow-x-auto bg-background custom-horizontal-scrollbar"
+                  onScroll={handleScroll}
+                >
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
                   onDragEnd={handleDragEnd}
                 >
-                  <Table className="min-w-[600px] bg-card text-xs text-foreground sm:min-w-[920px]">
-                    <TableHeader className="bg-muted/40">
+                  <Table className="min-w-[600px] bg-transparent text-xs text-foreground sm:min-w-[920px]">
+                    <TableHeader className="bg-transparent">
                       <TableRow className="border-b border-border hover:bg-transparent">
                         <SortableContext
-                          items={columns.map((column) => column.id)}
+                          items={columns
+                            .filter((c) => c.draggable !== false)
+                            .map((column) => column.id)}
                           strategy={horizontalListSortingStrategy}
                         >
                           {columns.map((column) => (
@@ -885,7 +915,7 @@ export default function CustomerList() {
                             />
                           ))}
                         </SortableContext>
-                        <TableHead className="w-12 px-3 py-3" />
+                        <TableHead className="sticky right-0 z-20 w-12 bg-gradient-to-l from-background to-transparent px-3 py-3" />
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -905,58 +935,66 @@ export default function CustomerList() {
                               navigate(`/customers/${customer.id}`)
                             }
                             className={cn(
-                              "group cursor-pointer border-b border-border/70 bg-card transition-colors duration-200 last:border-b-0 hover:bg-muted/40",
+                              "group cursor-pointer border-b border-border bg-transparent transition-all duration-200 hover:bg-muted",
                               isMinimalCustomer &&
-                                "bg-destructive/5 hover:bg-destructive/10",
+                                "bg-destructive/[0.02] hover:bg-destructive/[0.06]",
                             )}
                           >
                             {columns.map((column) => {
                               switch (column.id) {
-                                case "pin":
+                                case "pin": {
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="border-r border-border/60 px-2 py-3.5"
+                                      className="px-3 py-4 text-xs font-semibold text-muted-foreground/60 text-center"
                                     >
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          updateCustomer(customer.id, {
-                                            is_pinned: !customer.is_pinned,
-                                          });
-                                        }}
-                                        className={cn(
-                                          "flex h-7 w-7 items-center justify-center rounded-md transition-all",
-                                          customer.is_pinned
-                                            ? "text-primary bg-primary/10"
-                                            : "text-muted-foreground/30 hover:text-muted-foreground hover:bg-muted",
-                                        )}
-                                      >
-                                        {customer.is_pinned ? (
-                                          <Pin className="w-3.5 h-3.5 fill-current" />
-                                        ) : (
-                                          <PinOff className="w-3.5 h-3.5" />
-                                        )}
-                                      </button>
+                                      <div className="flex items-center justify-center">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            updateCustomer(customer.id, {
+                                              is_pinned: !customer.is_pinned,
+                                            });
+                                          }}
+                                          className={cn(
+                                            "flex h-7 w-7 items-center justify-center rounded-md transition-all outline-none",
+                                            customer.is_pinned
+                                              ? "text-blue-500 bg-blue-500/10"
+                                              : "text-muted-foreground/30 hover:text-blue-500 hover:bg-blue-500/5 hover:scale-110",
+                                          )}
+                                        >
+                                          <Pin
+                                            className={cn(
+                                              "w-4 h-4 transition-transform duration-200",
+                                              customer.is_pinned
+                                                ? "fill-blue-500 stroke-blue-600 rotate-45"
+                                                : "stroke-current"
+                                            )}
+                                          />
+                                        </button>
+                                      </div>
                                     </TableCell>
                                   );
+                                }
                                 case "rank":
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="px-2 py-3.5"
+                                      className="px-2 py-4 text-center"
                                     >
-                                      <RankBadge
-                                        rank={customer.rank}
-                                        size="sm"
-                                      />
+                                      <div className="flex justify-center">
+                                        <RankBadge
+                                          rank={customer.rank}
+                                          size="sm"
+                                        />
+                                      </div>
                                     </TableCell>
                                   );
                                 case "company_code":
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="px-3 py-3.5 text-xs font-mono font-bold text-foreground"
+                                      className="px-3 py-4 text-xs font-mono font-bold text-foreground"
                                     >
                                       {customer.company_code || "-"}
                                     </TableCell>
@@ -965,43 +1003,45 @@ export default function CustomerList() {
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="px-3 py-3.5"
+                                      className="px-3 py-4"
                                     >
-                                      <div className="flex flex-col gap-0.5">
-                                        <div className="flex items-center gap-1.5">
-                                          <span className="max-w-[16rem] truncate text-xs font-bold text-foreground transition-colors group-hover:text-primary">
-                                            {customer.name}
-                                          </span>
-                                          {isMinimalCustomer && (
-                                            <TooltipProvider
-                                              delayDuration={100}
-                                            >
-                                              <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                  <span
-                                                    className="inline-flex items-center text-amber-500 cursor-help"
-                                                    onClick={(e) => {
-                                                      e.stopPropagation();
-                                                    }}
+                                      <div className="flex items-center gap-3">
+                                        <div className="flex flex-col gap-0.5 min-w-0">
+                                          <div className="flex items-center gap-1.5">
+                                             <span className="truncate text-xs font-bold text-foreground">
+                                               {customer.name}
+                                             </span>
+                                            {isMinimalCustomer && (
+                                              <TooltipProvider
+                                                delayDuration={100}
+                                              >
+                                                <Tooltip>
+                                                  <TooltipTrigger asChild>
+                                                    <span
+                                                      className="inline-flex items-center text-amber-500 cursor-help"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                      }}
+                                                    >
+                                                      <AlertCircle className="w-4 h-4 animate-pulse" />
+                                                    </span>
+                                                  </TooltipTrigger>
+                                                  <TooltipContent
+                                                    side="top"
+                                                    className="bg-popover text-popover-foreground border border-border shadow-md"
                                                   >
-                                                    <AlertCircle className="w-4 h-4 animate-pulse" />
-                                                  </span>
-                                                </TooltipTrigger>
-                                                <TooltipContent
-                                                  side="top"
-                                                  className="bg-popover text-popover-foreground border border-border shadow-md"
-                                                >
-                                                  <p>
-                                                    詳細情報が不足しています
-                                                  </p>
-                                                </TooltipContent>
-                                              </Tooltip>
-                                            </TooltipProvider>
-                                          )}
+                                                    <p>
+                                                      詳細情報が不足しています
+                                                    </p>
+                                                  </TooltipContent>
+                                                </Tooltip>
+                                              </TooltipProvider>
+                                            )}
+                                          </div>
+                                          <span className="text-xs text-muted-foreground truncate max-w-[12rem]">
+                                            {customer.industry?.join("、") || "未設定"}
+                                          </span>
                                         </div>
-                                        <span className="text-xs text-muted-foreground">
-                                          {customer.industry?.join("、")}
-                                        </span>
                                       </div>
                                     </TableCell>
                                   );
@@ -1009,7 +1049,7 @@ export default function CustomerList() {
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="px-3 py-3.5 text-xs text-foreground font-medium"
+                                      className="px-3 py-4 text-xs text-foreground font-medium"
                                     >
                                       {customer.phone || "-"}
                                     </TableCell>
@@ -1018,7 +1058,7 @@ export default function CustomerList() {
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="px-3 py-3.5 text-xs text-foreground truncate max-w-[12rem]"
+                                      className="px-3 py-4 text-xs text-foreground truncate max-w-[12rem]"
                                     >
                                       {customer.email || "-"}
                                     </TableCell>
@@ -1027,7 +1067,7 @@ export default function CustomerList() {
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="px-3 py-3.5"
+                                      className="px-3 py-4"
                                     >
                                       {customer.status ? (
                                         <StatusBadge status={customer.status} />
@@ -1040,7 +1080,7 @@ export default function CustomerList() {
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="px-3 py-3.5"
+                                      className="px-3 py-4"
                                     >
                                       <div className="flex flex-wrap gap-1 max-w-[12rem]">
                                         {customer.labels &&
@@ -1065,7 +1105,7 @@ export default function CustomerList() {
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="px-3 py-3.5 text-xs text-foreground font-medium truncate max-w-[8rem]"
+                                      className="px-3 py-4 text-xs text-foreground font-medium truncate max-w-[8rem]"
                                     >
                                       {getAcquisitionSource(customer)}
                                     </TableCell>
@@ -1078,7 +1118,7 @@ export default function CustomerList() {
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="px-3 py-3.5 text-xs font-bold text-foreground"
+                                      className="px-3 py-4 text-xs font-bold text-foreground"
                                     >
                                       {totalAmount > 0
                                         ? `¥${totalAmount.toLocaleString()}`
@@ -1090,7 +1130,7 @@ export default function CustomerList() {
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="px-3 py-3.5"
+                                      className="px-3 py-4"
                                     >
                                       {activeProjects.length > 0 ? (
                                         <Popover
@@ -1186,7 +1226,7 @@ export default function CustomerList() {
                                   return (
                                     <TableCell
                                       key={column.id}
-                                      className="px-3 py-3.5 text-xs font-semibold text-foreground"
+                                      className="px-3 py-4 text-xs font-semibold text-foreground"
                                     >
                                       {formatDateTime(
                                         customer.last_accessed_at,
@@ -1197,9 +1237,11 @@ export default function CustomerList() {
                                   return null;
                               }
                             })}
-                            <TableCell className="px-3 py-3.5 text-right">
-                              <div className="flex items-center justify-end pr-4">
-                                <ChevronRight className="w-4.5 h-4.5 text-muted-foreground opacity-0 -translate-x-2 transition-all duration-300 ease-out group-hover:opacity-100 group-hover:translate-x-0 group-hover:text-primary" />
+                            <TableCell className="sticky right-0 z-10 bg-gradient-to-l from-background to-transparent group-hover:from-muted group-hover:to-transparent transition-all duration-200 px-3 py-4 text-right">
+                              <div className="flex items-center justify-end">
+                                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted/40 backdrop-blur-sm text-muted-foreground border border-border/50 shadow-2xs opacity-0 group-hover:opacity-100 transition-all duration-200">
+                                  <ChevronRight className="w-4 h-4" />
+                                </div>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -1209,6 +1251,7 @@ export default function CustomerList() {
                   </Table>
                 </DndContext>
               </div>
+            </div>
 
               <ListPagination
                 currentPage={currentPage}

@@ -7,6 +7,7 @@ import {
 import { Plus, Send, UserPlus, X } from "lucide-react";
 
 import AppLayout from "@/components/layout/AppLayout";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import {
@@ -40,6 +41,7 @@ interface UserRecord {
 
 const roleOptions: UserRole[] = ["管理者", "一般ユーザー"];
 const statusOptions: UserStatus[] = ["有効", "無効"];
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const initialUsers: UserRecord[] = [
   {
@@ -490,4 +492,17 @@ function SelectField({
       </select>
     </label>
   );
+}
+
+function UserStatusBadge({ status }: { status: UserStatus }) {
+  const className =
+    status === "有効"
+      ? "border-0 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400"
+      : "border-0 bg-muted text-muted-foreground hover:bg-muted";
+
+  return <Badge className={className}>{status}</Badge>;
+}
+
+function isEmail(value: string) {
+  return emailPattern.test(value);
 }

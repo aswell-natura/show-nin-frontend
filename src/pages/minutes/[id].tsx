@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { useMemo, useState, useRef, useEffect, type FormEvent, type ReactNode } from 'react'
 import CustomerDialogForm from '@/components/customers/CustomerDialogForm'
 import { Button } from '@/components/ui/button'
 import { Combobox } from '@/components/ui/combobox'
@@ -6,6 +6,7 @@ import { useGlobalDialog } from '@/context/GlobalDialogContext'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useDataStore } from '../../context/DataStoreContext'
 import { mockAudioMinutes } from '../../data/mock'
+import { Play, Pause, Volume2, VolumeX, Copy, Check } from 'lucide-react'
 
 const documentTemplates = [
   { title: '見積書', description: '商談内容から金額や条件を整理して作成' },
@@ -56,22 +57,22 @@ function renderMarkdown(text: string): ReactNode[] {
 
   lines.forEach((line, i) => {
     if (line.startsWith('### ')) {
-      nodes.push(<h3 key={i} className="mt-4 mb-1.5 text-sm font-bold text-gray-900">{line.slice(4)}</h3>)
+      nodes.push(<h3 key={i} className="mt-4 mb-1.5 text-sm font-bold text-foreground">{line.slice(4)}</h3>)
     } else if (line.startsWith('## ')) {
-      nodes.push(<h2 key={i} className="mt-5 mb-2 border-b border-gray-100 pb-1 text-base font-bold text-gray-900">{line.slice(3)}</h2>)
+      nodes.push(<h2 key={i} className="mt-5 mb-2 border-b border-border/50 pb-1 text-base font-bold text-foreground">{line.slice(3)}</h2>)
     } else if (line.startsWith('# ')) {
-      nodes.push(<h1 key={i} className="mt-2 mb-3 text-lg font-bold text-gray-900">{line.slice(2)}</h1>)
+      nodes.push(<h1 key={i} className="mt-2 mb-3 text-lg font-bold text-foreground">{line.slice(2)}</h1>)
     } else if (line.startsWith('- ') || line.startsWith('・ ')) {
       nodes.push(
-        <div key={i} className="flex gap-2 text-sm leading-relaxed text-gray-700">
-          <span className="mt-0.5 shrink-0 text-gray-400">・</span>
+        <div key={i} className="flex gap-2 text-sm leading-relaxed text-foreground/90">
+          <span className="mt-0.5 shrink-0 text-muted-foreground/60">・</span>
           <span>{renderInline(line.slice(2))}</span>
         </div>,
       )
     } else if (line.trim() === '') {
       nodes.push(<div key={i} className="h-2" />)
     } else {
-      nodes.push(<p key={i} className="text-sm leading-relaxed text-gray-700">{renderInline(line)}</p>)
+      nodes.push(<p key={i} className="text-sm leading-relaxed text-foreground/90">{renderInline(line)}</p>)
     }
   })
 
@@ -124,11 +125,17 @@ function EntityPill({
   className?: string
 }) {
   return (
-    <div className={`flex min-w-0 items-center gap-2 rounded-lg border px-3 py-2 ${warning ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-gray-50'} ${className}`}>
-      <span className={warning ? 'text-amber-400' : 'text-gray-400'}>{icon}</span>
+    <div
+      className={`flex min-w-0 items-center gap-2 rounded-lg border px-3 py-2 transition-colors ${
+        warning
+          ? 'border-destructive/20 bg-destructive/5 text-destructive dark:bg-destructive/10'
+          : 'border-border bg-card text-foreground'
+      } ${className}`}
+    >
+      <span className={warning ? 'text-destructive' : 'text-muted-foreground'}>{icon}</span>
       <div className="min-w-0">
-        <p className={`text-xs ${warning ? 'text-amber-500' : 'text-gray-400'}`}>{label}</p>
-        <p className={`truncate text-sm font-medium ${warning ? 'text-amber-700' : 'text-gray-800'}`}>{value}</p>
+        <p className={`text-xs ${warning ? 'text-destructive/80' : 'text-muted-foreground'}`}>{label}</p>
+        <p className={`truncate text-sm font-semibold ${warning ? 'text-destructive' : 'text-foreground'}`}>{value}</p>
       </div>
     </div>
   )
@@ -280,7 +287,7 @@ function MinuteEditForm({
   return (
     <form id={formId} onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-2">
-        <label htmlFor="minute-title" className="text-xs font-bold text-gray-500">
+        <label htmlFor="minute-title" className="text-xs font-bold text-muted-foreground">
           議事録名
         </label>
         <input
@@ -288,14 +295,14 @@ function MinuteEditForm({
           type="text"
           value={values.title}
           onChange={event => updateValue('title', event.target.value)}
-          className="h-11 w-full rounded-xl border border-gray-200 bg-white px-3 text-sm font-medium text-gray-900 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+          className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm font-medium text-foreground outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/25"
           placeholder="議事録名を入力"
         />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <label className="text-xs font-bold text-gray-500">企業</label>
+          <label className="text-xs font-bold text-muted-foreground">企業</label>
           <Combobox
             options={customerOptions}
             value={values.customer_id}
@@ -307,12 +314,12 @@ function MinuteEditForm({
             onCreateOptionQuick={handleCreateCustomerQuick}
             onCreateOptionDetail={handleCreateCustomerDetail}
             placeholder="企業名で検索..."
-            className="h-11 rounded-xl border border-gray-200 bg-white text-sm font-medium shadow-sm"
+            className="h-11 rounded-xl border border-border bg-background text-foreground text-sm font-medium shadow-sm"
           />
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs font-bold text-gray-500">案件</label>
+          <label className="text-xs font-bold text-muted-foreground">案件</label>
           <Combobox
             options={[{ label: '未設定', value: '' }, ...projectOptions]}
             value={values.project_id ?? ''}
@@ -325,19 +332,19 @@ function MinuteEditForm({
             }}
             onCreateOptionQuick={handleCreateProjectQuick}
             placeholder="案件名で検索..."
-            className="h-11 rounded-xl border border-gray-200 bg-white text-sm font-medium shadow-sm"
+            className="h-11 rounded-xl border border-border bg-background text-foreground text-sm font-medium shadow-sm"
           />
         </div>
 
         <div className="space-y-2 md:col-span-2">
-          <label className="text-xs font-bold text-gray-500">担当者</label>
+          <label className="text-xs font-bold text-muted-foreground">担当者</label>
           <Combobox
             options={ownerOptions}
             value={values.user_id}
             onValueChange={(value) => updateValue('user_id', value)}
             onCreateOptionQuick={handleCreateOwnerQuick}
             placeholder="担当者名で検索..."
-            className="h-11 rounded-xl border border-gray-200 bg-white text-sm font-medium shadow-sm"
+            className="h-11 rounded-xl border border-border bg-background text-foreground text-sm font-medium shadow-sm"
           />
         </div>
       </div>
@@ -370,19 +377,19 @@ function DocumentGenerationForm({
               key={template.title}
               type="button"
               onClick={() => setSelectedTemplate(template.title)}
-              className={`rounded-xl border bg-white p-4 text-left transition-all ${
+              className={`rounded-xl border p-4 text-left transition-all ${
                 selected
-                  ? 'border-blue-500 shadow-sm ring-2 ring-blue-100'
-                  : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/40'
+                  ? 'border-primary bg-primary/5 text-primary shadow-sm ring-2 ring-primary/20'
+                  : 'border-border bg-card text-foreground hover:border-primary/50 hover:bg-primary/5'
               }`}
             >
-              <span className="flex items-center gap-2 text-sm font-bold text-gray-900">
-                <span className={selected ? 'text-blue-600' : 'text-gray-400'}>
+              <span className="flex items-center gap-2 text-sm font-bold text-foreground">
+                <span className={selected ? 'text-primary' : 'text-muted-foreground'}>
                   <DocumentIcon />
                 </span>
                 {template.title}
               </span>
-              <span className="mt-2 block text-xs leading-relaxed text-gray-500">
+              <span className="mt-2 block text-xs leading-relaxed text-muted-foreground">
                 {template.description}
               </span>
             </button>
@@ -404,6 +411,172 @@ function DocumentIcon() {
   )
 }
 
+function CustomAudioPlayer({ src }: { src: string }) {
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [volume, setVolume] = useState(1)
+  const [isMuted, setIsMuted] = useState(false)
+
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    const handleTimeUpdate = () => setCurrentTime(audio.currentTime)
+    const handleDurationChange = () => setDuration(audio.duration)
+    const handleEnded = () => setIsPlaying(false)
+
+    audio.addEventListener('timeupdate', handleTimeUpdate)
+    audio.addEventListener('durationchange', handleDurationChange)
+    audio.addEventListener('ended', handleEnded)
+
+    return () => {
+      audio.removeEventListener('timeupdate', handleTimeUpdate)
+      audio.removeEventListener('durationchange', handleDurationChange)
+      audio.removeEventListener('ended', handleEnded)
+    }
+  }, [])
+
+  const togglePlay = () => {
+    const audio = audioRef.current
+    if (!audio) return
+    if (isPlaying) {
+      audio.pause()
+      setIsPlaying(false)
+    } else {
+      audio.play().catch(() => {})
+      setIsPlaying(true)
+    }
+  }
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const audio = audioRef.current
+    if (!audio) return
+    const time = parseFloat(e.target.value)
+    audio.currentTime = time
+    setCurrentTime(time)
+  }
+
+  const toggleMute = () => {
+    const audio = audioRef.current
+    if (!audio) return
+    audio.muted = !isMuted
+    setIsMuted(!isMuted)
+  }
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const audio = audioRef.current
+    if (!audio) return
+    const vol = parseFloat(e.target.value)
+    audio.volume = vol
+    setVolume(vol)
+    if (vol > 0 && isMuted) {
+      audio.muted = false
+      setIsMuted(false)
+    }
+  }
+
+  const formatAudioTime = (seconds: number) => {
+    if (isNaN(seconds)) return '00:00'
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-4 shadow-none flex flex-col sm:flex-row sm:items-center gap-4 transition-all hover:border-primary/30">
+      <audio ref={audioRef} src={src} />
+      
+      <div className="flex items-center gap-3 shrink-0">
+        <span className="p-2 rounded-lg bg-primary/10 text-primary">
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+          </svg>
+        </span>
+        <div>
+          <p className="text-xs font-bold text-muted-foreground">音声録音</p>
+          <p className="text-sm font-semibold text-foreground">録音データ再生</p>
+        </div>
+      </div>
+
+      <div className="flex-1 flex items-center gap-4 min-w-0">
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon"
+          onClick={togglePlay}
+          className="h-10 w-10 rounded-full shrink-0 bg-primary/10 text-primary hover:bg-primary/20 transition-all active:scale-95 border-none shadow-none"
+        >
+          {isPlaying ? (
+            <Pause className="h-4 w-4 fill-current" />
+          ) : (
+            <Play className="h-4 w-4 fill-current ml-0.5" />
+          )}
+        </Button>
+
+        <div className="flex-1 flex items-center gap-3 min-w-0">
+          <span className="text-xs font-mono text-muted-foreground shrink-0">
+            {formatAudioTime(currentTime)}
+          </span>
+          
+          <input
+            type="range"
+            min={0}
+            max={duration || 100}
+            value={currentTime}
+            onChange={handleSeek}
+            className="flex-1 h-1.5 rounded-lg appearance-none cursor-pointer bg-secondary accent-primary transition-all focus:outline-none"
+            style={{
+              background: `linear-gradient(to right, var(--primary) 0%, var(--primary) ${
+                duration ? (currentTime / duration) * 100 : 0
+              }%, var(--secondary) ${
+                duration ? (currentTime / duration) * 100 : 0
+              }%, var(--secondary) 100%)`
+            }}
+          />
+          
+          <span className="text-xs font-mono text-muted-foreground shrink-0">
+            {formatAudioTime(duration)}
+          </span>
+        </div>
+
+        <div className="hidden sm:flex items-center gap-2 shrink-0">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={toggleMute}
+            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-transparent"
+          >
+            {isMuted || volume === 0 ? (
+              <VolumeX className="h-4 w-4" />
+            ) : (
+              <Volume2 className="h-4 w-4" />
+            )}
+          </Button>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={isMuted ? 0 : volume}
+            onChange={handleVolumeChange}
+            className="w-16 h-1 rounded-lg appearance-none cursor-pointer bg-secondary accent-primary"
+            style={{
+              background: `linear-gradient(to right, var(--primary) 0%, var(--primary) ${
+                (isMuted ? 0 : volume) * 100
+              }%, var(--secondary) ${
+                (isMuted ? 0 : volume) * 100
+              }%, var(--secondary) 100%)`
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function AudioMinuteDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -414,6 +587,8 @@ export default function AudioMinuteDetail() {
   const [transcriptText, setTranscriptText] = useState<string | null>(null)
   const [generatedDocuments, setGeneratedDocuments] = useState<GeneratedDocument[]>([])
   const [minuteEdits, setMinuteEdits] = useState<Partial<MinuteEditValues>>({})
+  const [isCopied, setIsCopied] = useState(false)
+  const [isTranscriptCopied, setIsTranscriptCopied] = useState(false)
 
   const rawMinute = mockAudioMinutes.find(m => m.id === id)
   const rawActivity = !rawMinute ? activities.find(a => a.id === id) : null
@@ -436,8 +611,8 @@ export default function AudioMinuteDetail() {
 
   if (!minute) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
-        <p className="text-gray-400">議事録が見つかりません</p>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-muted-foreground">議事録が見つかりません</p>
       </div>
     )
   }
@@ -512,10 +687,10 @@ export default function AudioMinuteDetail() {
       size: 'xl',
       content: (
         <div className="space-y-4">
-          <div className="flex flex-col gap-3 border-b border-gray-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs font-bold text-gray-400">生成ドキュメント</p>
-              <h2 className="mt-1 text-xl font-bold text-gray-900">
+              <p className="text-xs font-bold text-muted-foreground">生成ドキュメント</p>
+              <h2 className="mt-1 text-xl font-bold text-foreground">
                 {document.templateTitle} {document.generatedDate}
               </h2>
             </div>
@@ -552,8 +727,8 @@ export default function AudioMinuteDetail() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-gray-200 bg-white px-6 py-5 shadow-sm">
-            <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-7 text-gray-700">
+          <div className="rounded-xl border border-border bg-card px-6 py-5 shadow-none">
+            <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-7 text-foreground/90">
               {documentBody}
             </pre>
           </div>
@@ -605,54 +780,62 @@ export default function AudioMinuteDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
-      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4 shadow-sm">
-        <h1 className="max-w-[70%] truncate text-base font-bold text-gray-900">
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-background/95 backdrop-blur-md px-6 py-4">
+        <h1 className="max-w-[70%] truncate text-lg md:text-xl font-bold tracking-tight text-foreground">
           {effectiveTitle || '議事録詳細'}
         </h1>
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => window.close()}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+          className="text-muted-foreground hover:bg-secondary hover:text-foreground rounded-lg"
           title="閉じる"
         >
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
-        </button>
+        </Button>
       </div>
 
       <div className="mx-auto max-w-3xl space-y-6 px-6 py-6">
-        <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-500">
+        <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground items-center">
           <span>
-            <span className="text-xs font-medium text-gray-400">録音時刻: </span>
+            <span className="text-xs font-bold text-muted-foreground/75">録音時刻: </span>
             {formatDateTime(recordingStartDate)} ～ {formatTime(recordingEndDate)}
           </span>
           <span>
-            <span className="text-xs font-medium text-gray-400">録音時間: </span>
+            <span className="text-xs font-bold text-muted-foreground/75">録音時間: </span>
             {recordingDuration}
           </span>
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
             onClick={handleOpenEditDialog}
-            className="ml-auto hidden h-8 rounded-lg border border-gray-200 bg-white px-3 text-xs font-bold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 sm:inline-flex sm:items-center"
+            className="ml-auto hidden sm:inline-flex"
           >
             編集
-          </button>
+          </Button>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-1 text-sm text-gray-700 sm:hidden">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1 text-sm text-foreground/90 sm:hidden bg-card border border-border rounded-xl p-3">
             <p>
-              <span className="font-bold text-gray-500">顧客名：</span>
-              <span className="font-medium">{customer?.name ?? '未紐づけ'}</span>
+              <span className="font-bold text-muted-foreground">企業：</span>
+              <span className={`font-semibold ${!customer ? 'text-destructive' : ''}`}>
+                {customer?.name ?? '未紐づけ'}
+              </span>
             </p>
             <p>
-              <span className="font-bold text-gray-500">案件：</span>
-              <span className="font-medium">{project?.name ?? '未紐づけ'}</span>
+              <span className="font-bold text-muted-foreground">案件：</span>
+              <span className={`font-semibold ${!project ? 'text-destructive' : ''}`}>
+                {project?.name ?? '未紐づけ'}
+              </span>
             </p>
             <p>
-              <span className="font-bold text-gray-500">担当：</span>
-              <span className="font-medium">{owner?.name ?? '未担当'}</span>
+              <span className="font-bold text-muted-foreground">担当：</span>
+              <span className="font-semibold">{owner?.name ?? '未担当'}</span>
             </p>
           </div>
 
@@ -692,39 +875,46 @@ export default function AudioMinuteDetail() {
           </div>
 
           <div className="flex items-center gap-2 sm:hidden">
-            <button
+            <Button
               type="button"
+              variant="secondary"
+              className="flex-1"
               onClick={handleOpenEditDialog}
-              className="h-9 flex-1 rounded-lg border border-gray-200 bg-white px-3 text-xs font-bold text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
             >
               編集
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
+              variant="primary"
+              className="flex-1 font-semibold"
               onClick={handleOpenDocumentDialog}
-              className="h-9 flex-1 rounded-lg bg-blue-600 px-3 text-xs font-bold text-white shadow-sm transition-colors hover:bg-blue-700"
             >
               ドキュメント生成
-            </button>
+            </Button>
           </div>
 
           <div className="ml-auto hidden shrink-0 items-center gap-2 sm:flex">
-            <button
+            <Button
+              variant="primary"
               onClick={handleOpenDocumentDialog}
-              className="h-9 rounded-lg bg-blue-600 px-3 text-xs font-bold text-white shadow-sm transition-colors hover:bg-blue-700"
+              className="font-semibold"
             >
               ドキュメント生成
-            </button>
+            </Button>
           </div>
         </div>
 
-        {minute.checklist.length > 0 && (
-          <div className="rounded-xl border border-gray-200 bg-white p-5">
+        {minute.audio_url && (
+          <CustomAudioPlayer src={minute.audio_url} />
+        )}
+
+        {(minute.checklist.length > 0 || generatedDocuments.length > 0) && (
+          <div className="rounded-xl border border-border bg-card p-5">
             {generatedDocuments.length > 0 && (
-              <div className="mb-5 border-b border-gray-100 pb-4">
+              <div className="mb-5 border-b border-border/50 pb-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-gray-900">生成ドキュメント</span>
-                  <span className="text-xs text-gray-400">{generatedDocuments.length}件</span>
+                  <span className="text-sm font-bold text-foreground">生成ドキュメント</span>
+                  <span className="text-xs text-muted-foreground">{generatedDocuments.length}件</span>
                 </div>
                 <div className="flex flex-wrap gap-3">
                   {generatedDocuments.map(document => (
@@ -732,11 +922,13 @@ export default function AudioMinuteDetail() {
                       key={document.id}
                       type="button"
                       onClick={() => handleOpenGeneratedDocument(document)}
-                      className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-left transition-colors hover:border-blue-300 hover:bg-blue-50"
+                      className="group flex items-center gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2 text-left transition-all hover:border-primary/50 hover:bg-primary/5 text-foreground"
                     >
-                      <span className="text-gray-400"><DocumentIcon /></span>
+                      <span className="text-muted-foreground group-hover:text-primary transition-colors">
+                        <DocumentIcon />
+                      </span>
                       <div>
-                        <p className="max-w-xs truncate text-sm font-medium text-gray-800">
+                        <p className="max-w-xs truncate text-sm font-medium">
                           {document.templateTitle} {document.generatedDate}
                         </p>
                       </div>
@@ -746,87 +938,125 @@ export default function AudioMinuteDetail() {
               </div>
             )}
 
-            <div className="mb-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <svg className="h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path d="M9 11l3 3L22 4" />
-                  <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
-                </svg>
-                <span className="text-sm font-semibold text-gray-900">チェックリスト</span>
-              </div>
-              <span className="text-xs text-gray-500">{doneCount}/{minute.checklist.length} 完了</span>
-            </div>
-            <div className="space-y-2">
-              {minute.checklist.map((item, idx) => (
-                <div key={idx} className="flex items-center gap-3">
-                  <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${item.checked ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
-                    {item.checked ? (
-                      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    ) : (
-                      <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <circle cx="12" cy="12" r="9" />
-                      </svg>
-                    )}
-                  </span>
-                  <span className={`text-sm ${item.checked ? 'text-gray-500 line-through' : 'text-gray-800'}`}>{item.label}</span>
+            {minute.checklist.length > 0 && (
+              <>
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <svg className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path d="M9 11l3 3L22 4" />
+                      <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+                    </svg>
+                    <span className="text-sm font-bold text-foreground">チェックリスト</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{doneCount}/{minute.checklist.length} 完了</span>
                 </div>
-              ))}
-            </div>
+                <div className="space-y-2">
+                  {minute.checklist.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-3 py-0.5">
+                      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition-all ${
+                        item.checked 
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
+                          : 'border border-muted-foreground/30 text-transparent hover:border-primary/50'
+                      }`}>
+                        {item.checked && (
+                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </span>
+                      <span className={`text-sm ${item.checked ? 'text-muted-foreground line-through' : 'text-foreground/90'}`}>{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
 
-        <div className="rounded-xl border border-gray-200 bg-white">
-          <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3">
+        <div className="rounded-xl border border-border bg-card">
+          <div className="flex items-center justify-between border-b border-border/50 px-5 py-3">
             <div className="flex items-center gap-2">
-              <span className="text-amber-500"><DocumentIcon /></span>
-              <span className="text-sm font-semibold text-gray-900">議事録</span>
+              <span className="text-primary"><DocumentIcon /></span>
+              <span className="text-sm font-bold text-foreground">議事録</span>
             </div>
-            <button
-              onClick={() => navigator.clipboard.writeText(minute.summary).catch(() => {})}
-              className="flex items-center gap-1.5 text-xs text-gray-500 transition-colors hover:text-gray-700"
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                navigator.clipboard.writeText(minute.summary).catch(() => {})
+                setIsCopied(true)
+                setTimeout(() => setIsCopied(false), 2000)
+              }}
+              className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-transparent"
             >
-              コピー
-            </button>
+              {isCopied ? (
+                <>
+                  <Check className="h-3.5 w-3.5 text-emerald-500" />
+                  コピーしました
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3.5 w-3.5" />
+                  コピー
+                </>
+              )}
+            </Button>
           </div>
-          <div className="space-y-0.5 px-5 py-4">
+          <div className="space-y-3 px-5 py-4">
             {renderMarkdown(minute.summary)}
           </div>
         </div>
 
-        <div className="rounded-xl border border-gray-200 bg-white">
-          <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3">
+        <div className="rounded-xl border border-border bg-card">
+          <div className="flex items-center justify-between border-b border-border/50 px-5 py-3">
             <button
               onClick={() => setTranscriptOpen(v => !v)}
-              className="flex items-center gap-2 text-sm font-semibold text-gray-900 transition-colors hover:text-blue-600"
+              className="flex items-center gap-2 text-sm font-bold text-foreground transition-colors hover:text-primary"
             >
-              <svg className="h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+              <svg className="h-4 w-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
                 <path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4z" />
                 <path d="M19 10a7 7 0 0 1-14 0M12 19v4M8 23h8" />
               </svg>
               文字起こし
-              <svg className={`h-4 w-4 transition-transform ${transcriptOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className={`h-4 w-4 text-muted-foreground transition-transform ${transcriptOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <polyline points="6 9 12 15 18 9" />
               </svg>
             </button>
             {displayTranscript && (
               <div className="flex items-center gap-2">
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
                     if (!transcriptOpen) setTranscriptOpen(true)
                     setEditingTranscript(v => !v)
                   }}
-                  className="flex items-center gap-1.5 text-xs text-gray-500 transition-colors hover:text-gray-700"
+                  className="h-8 text-xs text-muted-foreground hover:text-foreground hover:bg-transparent"
                 >
                   編集
-                </button>
-                <button
-                  onClick={() => navigator.clipboard.writeText(displayTranscript ?? '').catch(() => {})}
-                  className="flex items-center gap-1.5 text-xs text-gray-500 transition-colors hover:text-gray-700"
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(displayTranscript ?? '').catch(() => {})
+                    setIsTranscriptCopied(true)
+                    setTimeout(() => setIsTranscriptCopied(false), 2000)
+                  }}
+                  className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-transparent"
                 >
-                  コピー
-                </button>
+                  {isTranscriptCopied ? (
+                    <>
+                      <Check className="h-3.5 w-3.5 text-emerald-500" />
+                      コピーしました
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3.5 w-3.5" />
+                      コピー
+                    </>
+                  )}
+                </Button>
               </div>
             )}
           </div>
@@ -838,37 +1068,39 @@ export default function AudioMinuteDetail() {
                   <div className="flex flex-col gap-2">
                     <textarea
                       autoFocus
-                      className="h-48 w-full resize-y rounded-lg border border-gray-200 p-3 font-mono text-sm leading-relaxed text-gray-700 outline-none focus:ring-2 focus:ring-blue-100"
+                      className="h-48 w-full resize-y rounded-lg border border-border bg-background p-3 font-sans text-sm leading-relaxed text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/25"
                       value={displayTranscript}
                       onChange={e => setTranscriptText(e.target.value)}
                     />
                     <div className="flex justify-end gap-2">
-                      <button
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={() => { setTranscriptText(null); setEditingTranscript(false) }}
-                        className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
                       >
                         リセット
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
                         onClick={() => setEditingTranscript(false)}
-                        className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
                       >
                         保存
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ) : (
-                  <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700">{displayTranscript}</p>
+                  <p className="whitespace-pre-line text-sm leading-relaxed text-foreground/90">{displayTranscript}</p>
                 )
               ) : (
-                <p className="py-6 text-center text-sm text-gray-400">文字起こしデータがありません</p>
+                <p className="py-6 text-center text-sm text-muted-foreground">文字起こしデータがありません</p>
               )}
             </div>
           )}
 
           {!transcriptOpen && !displayTranscript && (
             <div className="px-5 py-3">
-              <p className="text-xs text-gray-400">クリックして展開</p>
+              <p className="text-xs text-muted-foreground">クリックして展開</p>
             </div>
           )}
         </div>

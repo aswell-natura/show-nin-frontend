@@ -28,7 +28,7 @@ export function WidgetCard({
   return (
     <Card
       className={cn(
-        "h-[480px] flex flex-col rounded-xl border border-border/50 shadow-none bg-card hover:shadow-md transition-shadow duration-200 overflow-hidden py-0",
+        "md:h-[480px] h-auto flex flex-col rounded-xl border border-border/50 shadow-none bg-card hover:shadow-md transition-shadow duration-200 md:overflow-hidden overflow-visible py-0",
         className,
       )}
     >
@@ -47,7 +47,7 @@ export function WidgetCard({
       </CardHeader>
       <CardContent
         className={cn(
-          "flex-1 p-0 overflow-y-auto flex flex-col min-h-0 scrollbar-thin scrollbar-thumb-border/50 hover:scrollbar-thumb-border",
+          "md:flex-1 p-0 md:overflow-y-auto overflow-visible flex flex-col md:min-h-0 min-h-fit scrollbar-thin scrollbar-thumb-border/50 hover:scrollbar-thumb-border",
           contentClassName,
         )}
       >

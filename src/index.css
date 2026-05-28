@@ -490,3 +490,17 @@ body {
     @apply font-sans;
   }
 }
+
+.custom-horizontal-scrollbar::-webkit-scrollbar {
+  height: 6px;
+}
+.custom-horizontal-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-horizontal-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+.custom-horizontal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}

@@ -34,7 +34,7 @@ export default function ManagerTeamActivity() {
         </Button>
       }
     >
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+      <div className="md:flex-1 md:overflow-y-auto overflow-visible p-4 flex flex-col gap-4">
         {myTeam.map((member) => {
           const memberActivities = activities
             .filter((a) => a.user_id === member.id)

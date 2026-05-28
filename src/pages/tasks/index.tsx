@@ -199,6 +199,15 @@ export default function TaskBoard() {
 
   const [search, setSearch] = useState(() => searchParams.get("q") || "");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [showLeftIndicator, setShowLeftIndicator] = useState(false);
+  const [showRightIndicator, setShowRightIndicator] = useState(true);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const scrollRight = target.scrollWidth - target.scrollLeft - target.clientWidth;
+    setShowLeftIndicator(target.scrollLeft > 5);
+    setShowRightIndicator(scrollRight > 5);
+  };
   const [sortKey, setSortKey] = useState<string>(
     () => searchParams.get("sort") || "due_date",
   );
@@ -449,10 +458,12 @@ export default function TaskBoard() {
     return filtered.slice(start, start + itemsPerPage);
   }, [currentPage, filtered, itemsPerPage]);
 
+
+
   return (
     <AppLayout>
       <div className="flex h-full flex-col overflow-hidden bg-background">
-        <div className="flex-1 overflow-auto bg-muted/5 custom-scrollbar">
+        <div className="flex-1 overflow-auto bg-muted/5 custom-scrollbar pb-28 md:pb-0">
           <div className="bg-background/95 backdrop-blur-md">
             <div className="px-4 pb-4 pt-6 md:px-6">
               <div className="flex flex-col items-stretch justify-between gap-4 md:flex-row md:items-center">
@@ -790,14 +801,32 @@ export default function TaskBoard() {
             </div>
           ) : (
             <div className="mt-4 px-4 pb-6 md:px-6 lg:pb-10">
-              <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
+              <div className="relative overflow-hidden rounded-lg border border-border bg-background dark:border-border/60">
+                {/* Left Scroll Indicator */}
+                <div
+                  className={cn(
+                    "absolute left-0 top-0 bottom-0 w-8 pointer-events-none bg-gradient-to-r from-background to-transparent z-10 transition-opacity duration-300",
+                    showLeftIndicator ? "opacity-100" : "opacity-0"
+                  )}
+                />
+                {/* Right Scroll Indicator */}
+                <div
+                  className={cn(
+                    "absolute right-0 top-0 bottom-0 w-8 pointer-events-none bg-gradient-to-l from-background to-transparent z-10 transition-opacity duration-300",
+                    showRightIndicator ? "opacity-100" : "opacity-0"
+                  )}
+                />
+                <div
+                  className="overflow-x-auto bg-background custom-horizontal-scrollbar"
+                  onScroll={handleScroll}
+                >
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
                   onDragEnd={handleDragEnd}
                 >
-                  <Table className="min-w-[600px] bg-card text-xs text-foreground sm:min-w-[1280px]">
-                    <TableHeader className="bg-muted/40">
+                  <Table className="min-w-[600px] bg-transparent text-xs text-foreground sm:min-w-[1280px]">
+                    <TableHeader className="bg-transparent">
                       <TableRow className="border-b border-border hover:bg-transparent">
                         <SortableContext
                           items={columns.map((column) => column.id)}
@@ -813,7 +842,7 @@ export default function TaskBoard() {
                             />
                           ))}
                         </SortableContext>
-                        <TableHead className="w-12 px-3 py-3" />
+                        <TableHead className="sticky right-0 z-20 w-12 bg-gradient-to-l from-background to-transparent px-3 py-3" />
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -822,16 +851,17 @@ export default function TaskBoard() {
                           key={task.id}
                           onClick={() => navigate(`/tasks/${task.id}`)}
                           className={cn(
-                            "group cursor-pointer border-b border-border/70 bg-card transition-colors duration-200 last:border-b-0 hover:bg-muted/40",
+                            "group cursor-pointer border-b border-border bg-transparent transition-all duration-200 hover:bg-muted",
                             task.isCompleted &&
-                              "bg-muted/30 text-muted-foreground hover:bg-muted/50",
+                              "bg-muted/10 text-muted-foreground/80 hover:bg-muted/25",
                           )}
                         >
                           {columns.map((column) => {
                             switch (column.id) {
+
                               case "status":
                                 return (
-                                  <TableCell key={column.id} className="px-4 py-3.5">
+                                  <TableCell key={column.id} className="px-4 py-4">
                                     <span className={statusTone(task.status)}>
                                       {statusLabel(task.status)}
                                     </span>
@@ -839,14 +869,16 @@ export default function TaskBoard() {
                                 );
                               case "title":
                                 return (
-                                  <TableCell key={column.id} className="px-4 py-3.5">
-                                    <div className="flex flex-col gap-0.5">
-                                      <span className="max-w-[18rem] truncate text-xs font-bold text-foreground transition-colors group-hover:text-primary">
-                                        {task.title}
-                                      </span>
-                                      <span className="text-xs text-muted-foreground">
-                                        {formatDate(task.dueDate)} 期限
-                                      </span>
+                                  <TableCell key={column.id} className="px-4 py-4">
+                                    <div className="flex items-center gap-3">
+                                      <div className="flex flex-col gap-0.5">
+                                        <span className="max-w-[18rem] truncate text-xs font-bold text-foreground">
+                                          {task.title}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {formatDate(task.dueDate)} 期限
+                                        </span>
+                                      </div>
                                     </div>
                                   </TableCell>
                                 );
@@ -854,7 +886,7 @@ export default function TaskBoard() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="px-4 py-3.5 text-xs font-medium text-foreground"
+                                    className="px-4 py-4 text-xs font-medium text-foreground"
                                   >
                                     <span className="block max-w-[14rem] truncate">
                                       {task.customer}
@@ -865,7 +897,7 @@ export default function TaskBoard() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="px-4 py-3.5 text-xs font-medium text-foreground"
+                                    className="px-4 py-4 text-xs font-medium text-foreground"
                                   >
                                     <span className="block max-w-[16rem] truncate">
                                       {task.project}
@@ -876,7 +908,7 @@ export default function TaskBoard() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="px-4 py-3.5"
+                                    className="px-4 py-4"
                                     onClick={(event) => event.stopPropagation()}
                                   >
                                     <Select
@@ -908,7 +940,7 @@ export default function TaskBoard() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="px-4 py-3.5 text-xs font-semibold text-foreground"
+                                    className="px-4 py-4 text-xs font-semibold text-foreground"
                                   >
                                     {task.owner}
                                   </TableCell>
@@ -917,7 +949,7 @@ export default function TaskBoard() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="px-4 py-3.5"
+                                    className="px-4 py-4"
                                     onClick={(event) => event.stopPropagation()}
                                   >
                                     <Select
@@ -943,7 +975,7 @@ export default function TaskBoard() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-foreground"
+                                    className="whitespace-nowrap px-4 py-4 text-xs font-semibold text-foreground"
                                   >
                                     {task.progressUpdatedAt
                                       ? formatDateTimeMinute(task.progressUpdatedAt)
@@ -955,7 +987,7 @@ export default function TaskBoard() {
                                   <TableCell
                                     key={column.id}
                                     className={cn(
-                                      "whitespace-nowrap px-4 py-3.5 text-xs font-bold",
+                                      "whitespace-nowrap px-4 py-4 text-xs font-bold",
                                       task.status === "overdue"
                                         ? "text-destructive"
                                         : "text-foreground",
@@ -968,17 +1000,20 @@ export default function TaskBoard() {
                                 return null;
                             }
                           })}
-                          <TableCell className="px-4 py-3.5 text-right">
-                            <div className="flex items-center justify-end pr-4">
-                              <ChevronRight className="h-4.5 w-4.5 -translate-x-2 text-muted-foreground opacity-0 transition-all duration-300 ease-out group-hover:translate-x-0 group-hover:text-primary group-hover:opacity-100" />
-                            </div>
-                          </TableCell>
+                          <TableCell className="sticky right-0 z-10 bg-gradient-to-l from-background to-transparent group-hover:from-muted group-hover:to-transparent transition-all duration-200 px-3 py-4 text-right">
+                             <div className="flex items-center justify-end pr-4">
+                               <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted/40 backdrop-blur-sm text-muted-foreground border border-border/50 shadow-2xs opacity-0 group-hover:opacity-100 transition-all duration-200">
+                                 <ChevronRight className="h-4 w-4" />
+                               </div>
+                             </div>
+                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
                 </DndContext>
               </div>
+            </div>
 
               <ListPagination
                 currentPage={currentPage}

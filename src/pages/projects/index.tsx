@@ -191,6 +191,15 @@ export default function ProjectList() {
   const { openDialog, closeDialog } = useGlobalDialog();
 
   const [search, setSearch] = useState(() => searchParams.get("q") || "");
+  const [showLeftIndicator, setShowLeftIndicator] = useState(false);
+  const [showRightIndicator, setShowRightIndicator] = useState(true);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const scrollRight = target.scrollWidth - target.scrollLeft - target.clientWidth;
+    setShowLeftIndicator(target.scrollLeft > 5);
+    setShowRightIndicator(scrollRight > 5);
+  };
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>(
     () => (searchParams.get("sort") as SortKey) || "updated_at",
@@ -502,10 +511,12 @@ export default function ProjectList() {
     return filteredProjects.slice(start, start + itemsPerPage);
   }, [currentPage, filteredProjects]);
 
+
+
   return (
     <AppLayout>
       <div className="flex h-full flex-col overflow-hidden bg-background">
-        <div className="custom-scrollbar flex-1 overflow-auto bg-muted/5">
+        <div className="custom-scrollbar flex-1 overflow-auto bg-muted/5 pb-28 md:pb-0">
           <div className="bg-background/95 backdrop-blur-md">
             <div className="px-4 pb-4 pt-6 md:px-6">
               <div className="flex flex-col items-stretch justify-between gap-4 md:flex-row md:items-center">
@@ -740,14 +751,32 @@ export default function ProjectList() {
             </div>
           ) : (
             <div className="mt-4 px-4 pb-6 md:px-6 lg:pb-10">
-              <div className="overflow-x-auto rounded-lg border border-border bg-card shadow-sm">
+              <div className="relative overflow-hidden rounded-lg border border-border bg-background dark:border-border/60">
+                {/* Left Scroll Indicator */}
+                <div
+                  className={cn(
+                    "absolute left-0 top-0 bottom-0 w-8 pointer-events-none bg-gradient-to-r from-background to-transparent z-10 transition-opacity duration-300",
+                    showLeftIndicator ? "opacity-100" : "opacity-0"
+                  )}
+                />
+                {/* Right Scroll Indicator */}
+                <div
+                  className={cn(
+                    "absolute right-0 top-0 bottom-0 w-8 pointer-events-none bg-gradient-to-l from-background to-transparent z-10 transition-opacity duration-300",
+                    showRightIndicator ? "opacity-100" : "opacity-0"
+                  )}
+                />
+                <div
+                  className="overflow-x-auto bg-background custom-horizontal-scrollbar"
+                  onScroll={handleScroll}
+                >
                 <DndContext
                   sensors={sensors}
                   collisionDetection={closestCenter}
                   onDragEnd={handleDragEnd}
                 >
-                  <Table className="min-w-[1480px] bg-card text-xs text-foreground">
-                    <TableHeader className="bg-muted/40">
+                  <Table className="min-w-[1480px] bg-transparent text-xs text-foreground">
+                    <TableHeader className="bg-transparent">
                       <TableRow className="border-b border-border hover:bg-transparent">
                         <SortableContext
                           items={columns.map((column) => column.id)}
@@ -763,7 +792,7 @@ export default function ProjectList() {
                             />
                           ))}
                         </SortableContext>
-                        <TableHead className="w-12 px-3 py-3" />
+                        <TableHead className="sticky right-0 z-20 w-12 bg-gradient-to-l from-background to-transparent px-3 py-3" />
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -783,43 +812,46 @@ export default function ProjectList() {
                           key={project.id}
                           onClick={() => navigate(`/projects/${project.id}`)}
                           className={cn(
-                            "group cursor-pointer border-b border-border/70 bg-card transition-colors duration-200 last:border-b-0 hover:bg-muted/40",
+                            "group cursor-pointer border-b border-border bg-transparent transition-all duration-200 hover:bg-muted",
                             isUnlinked &&
-                              "bg-destructive/[0.035] hover:bg-destructive/6",
+                              "bg-destructive/[0.02] hover:bg-destructive/[0.06]",
                           )}
                         >
                           {columns.map((column) => {
                             switch (column.id) {
-                              case "name":
+
+                              case "name": {
+                                const displayName = project.name || "録音メモ（案件名未設定）";
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="px-4 py-3.5"
+                                    className="px-4 py-4"
                                   >
-                                    <div className="flex min-w-0 flex-col gap-0.5">
-                                      <div className="flex min-w-0 items-center gap-2">
-                                        {isUnlinked && (
-                                          <span className="shrink-0 rounded-md bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
-                                            要紐付け
+                                    <div className="flex items-center gap-3">
+                                      <div className="flex min-w-0 flex-col gap-0.5">
+                                        <div className="flex min-w-0 items-center gap-1.5">
+                                          {isUnlinked && (
+                                            <span className="shrink-0 rounded-md bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
+                                              要紐付け
+                                            </span>
+                                          )}
+                                          <span className="max-w-[18rem] truncate text-xs font-bold text-foreground">
+                                            {displayName}
                                           </span>
-                                        )}
-                                        <span className="max-w-[18rem] truncate text-xs font-bold text-foreground transition-colors group-hover:text-primary">
-                                          {project.name ||
-                                            "録音メモ（案件名未設定）"}
+                                        </div>
+                                        <span className="text-xs text-muted-foreground truncate max-w-[12rem]">
+                                          {project.labels?.join("、") || "ラベルなし"}
                                         </span>
                                       </div>
-                                      <span className="text-xs text-muted-foreground">
-                                        {project.labels?.join("、") ||
-                                          "ラベルなし"}
-                                      </span>
                                     </div>
                                   </TableCell>
                                 );
+                              }
                               case "customer":
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="px-4 py-3.5"
+                                    className="px-4 py-4"
                                   >
                                     {customer ? (
                                       <div className="flex min-w-0 flex-col gap-0.5">
@@ -858,7 +890,7 @@ export default function ProjectList() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="px-4 py-3.5"
+                                    className="px-4 py-4"
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     <Select
@@ -886,7 +918,7 @@ export default function ProjectList() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="px-4 py-3.5"
+                                    className="px-4 py-4"
                                     onClick={(e) => e.stopPropagation()}
                                   >
                                     <Select
@@ -919,7 +951,7 @@ export default function ProjectList() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-foreground"
+                                    className="whitespace-nowrap px-4 py-4 text-xs font-bold text-foreground"
                                   >
                                     {formatAmount(project.amount)}
                                   </TableCell>
@@ -928,7 +960,7 @@ export default function ProjectList() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-foreground"
+                                    className="whitespace-nowrap px-4 py-4 text-xs font-semibold text-foreground"
                                   >
                                     {owner?.name ?? "未担当"}
                                   </TableCell>
@@ -937,7 +969,7 @@ export default function ProjectList() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-foreground"
+                                    className="whitespace-nowrap px-4 py-4 text-xs font-semibold text-foreground"
                                   >
                                     {formatDate(project.next_action_date)}
                                   </TableCell>
@@ -946,31 +978,34 @@ export default function ProjectList() {
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="whitespace-nowrap px-4 py-3.5 text-xs font-semibold text-foreground"
+                                    className="whitespace-nowrap px-4 py-4 text-xs font-semibold text-foreground"
                                   >
                                     {formatDateTime(project.updated_at)}
                                   </TableCell>
                                 );
 
-                              case "note":
+                              case "note": {
                                 const memoText = project.note || project.next_action || "";
                                 return (
                                   <TableCell
                                     key={column.id}
-                                    className="px-4 py-3.5 text-xs font-medium text-foreground"
+                                    className="px-4 py-4 text-xs font-medium text-foreground"
                                   >
                                     <span className="block max-w-[24rem]" title={memoText || undefined}>
                                       {memoText ? truncateMemo(memoText) : "-"}
                                     </span>
                                   </TableCell>
                                 );
+                              }
                               default:
                                 return null;
                             }
                           })}
-                          <TableCell className="px-4 py-3.5 text-right">
+                          <TableCell className="sticky right-0 z-10 bg-gradient-to-l from-background to-transparent group-hover:from-muted group-hover:to-transparent transition-all duration-200 px-3 py-4 text-right">
                             <div className="flex items-center justify-end pr-4">
-                              <ChevronRight className="h-4.5 w-4.5 -translate-x-2 text-muted-foreground opacity-0 transition-all duration-300 ease-out group-hover:translate-x-0 group-hover:text-primary group-hover:opacity-100" />
+                              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted/40 backdrop-blur-sm text-muted-foreground border border-border/50 shadow-2xs opacity-0 group-hover:opacity-100 transition-all duration-200">
+                                <ChevronRight className="h-4 w-4" />
+                              </div>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -980,6 +1015,7 @@ export default function ProjectList() {
                   </Table>
                 </DndContext>
               </div>
+            </div>
 
               <ListPagination
                 currentPage={currentPage}

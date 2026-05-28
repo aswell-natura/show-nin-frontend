@@ -19,6 +19,8 @@ export interface ListTableColumn {
   label: string;
   width: string;
   sortable?: boolean;
+  align?: "left" | "center" | "right";
+  draggable?: boolean;
 }
 
 interface SortableListTableHeadProps {
@@ -34,6 +36,7 @@ export function SortableListTableHead({
   sortOrder,
   onSort,
 }: SortableListTableHeadProps) {
+  const isDraggable = column.draggable ?? true;
   const {
     attributes,
     listeners,
@@ -41,7 +44,7 @@ export function SortableListTableHead({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: column.id });
+  } = useSortable({ id: column.id, disabled: !isDraggable });
 
   const style: CSSProperties = {
     transform: CSS.Translate.toString(transform),
@@ -57,34 +60,40 @@ export function SortableListTableHead({
       style={style}
       className={cn(
         column.width,
-        "relative whitespace-nowrap bg-muted/40 px-4 py-3 text-xs font-bold text-muted-foreground",
-        isDragging && "bg-muted shadow-md",
+        "relative whitespace-nowrap bg-transparent px-4 py-3.5 text-[11px] font-bold text-muted-foreground/75 tracking-wider uppercase border-b border-border",
+        isDragging && "bg-background/90 backdrop-blur-md shadow-lg border-x border-y border-border/60 z-30",
         isSortable && "cursor-pointer transition-colors hover:text-foreground",
       )}
       onClick={() => isSortable && onSort(column.id)}
     >
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          className="-ml-1 flex h-6 w-5 cursor-grab items-center justify-center rounded text-muted-foreground/40 transition-colors hover:bg-background hover:text-muted-foreground active:cursor-grabbing"
-          onClick={(event) => event.stopPropagation()}
-          aria-label={`${column.label}列を並べ替え`}
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="h-3.5 w-3.5" />
-        </button>
+      <div className={cn(
+        "flex items-center gap-1.5",
+        column.align === "center" && "justify-center",
+        column.align === "right" && "justify-end",
+      )}>
+        {isDraggable && (
+          <button
+            type="button"
+            className="-ml-1 flex h-5 w-4 cursor-grab items-center justify-center rounded text-muted-foreground/30 transition-colors hover:bg-muted hover:text-muted-foreground active:cursor-grabbing"
+            onClick={(event) => event.stopPropagation()}
+            aria-label={`${column.label}列を並べ替え`}
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-3 w-3" />
+          </button>
+        )}
         <span>{column.label}</span>
         {isSortable && (
-          <span className="shrink-0">
+          <span className="shrink-0 ml-0.5">
             {sortKey === column.id ? (
               sortOrder === "asc" ? (
-                <ArrowDownAZ className="h-3.5 w-3.5 text-primary" />
+                <ArrowDownAZ className="h-3 w-3 text-primary" />
               ) : (
-                <ArrowUpZA className="h-3.5 w-3.5 text-primary" />
+                <ArrowUpZA className="h-3 w-3 text-primary" />
               )
             ) : (
-              <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/25" />
+              <ArrowUpDown className="h-3 w-3 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors" />
             )}
           </span>
         )}

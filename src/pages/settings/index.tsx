@@ -1048,7 +1048,7 @@ export default function SettingsPage() {
   return (
     <AppLayout>
       <div className="flex h-full flex-col overflow-hidden bg-background">
-        <PageHeader title="基本設定" description="利用環境や機能表示を管理します。" />
+        <PageHeader title="機能設定" description="利用環境や機能表示を管理します。" />
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
           <div className="space-y-8">
             {settingSections.map((section) => (

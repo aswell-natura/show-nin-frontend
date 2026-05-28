@@ -327,10 +327,10 @@ export default function ProjectDialogForm({
           }
         />
 
-        {/* ステータス */}
+        {/* フェーズ */}
         <LinearDialogPill
           icon={<Activity className="size-3.5" />}
-          label="ステータス"
+          label="フェーズ"
           value={statusLabel[values.status]}
           active={true}
           open={openPopover === "status"}
@@ -338,7 +338,7 @@ export default function ProjectDialogForm({
           popoverContent={
             <div className="flex flex-col gap-1">
               <p className="text-xs font-bold text-muted-foreground px-2 py-1">
-                ステータスを選択
+                フェーズを選択
               </p>
               {(["lead", "proposing", "negotiating", "closed"] as ProjectStatus[]).map((s) => (
                 <button

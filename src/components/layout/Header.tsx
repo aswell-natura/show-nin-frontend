@@ -32,7 +32,6 @@ import {
   Bell,
   ToggleLeft,
   Package,
-  Moon,
 } from "lucide-react";
 import logoUrlLight from "../../assets/show-nin.svg";
 import logoUrlDark from "../../assets/show-nin-white.svg";
@@ -89,12 +88,12 @@ export default function Header({ onMenuToggle }: HeaderProps) {
   }
 
   const leftMenuItems = [
-    { label: "ユーザー", icon: User },
+    { label: "ユーザー", icon: User, onClick: () => navigate("/users") },
     { label: "役職", icon: Briefcase },
     { label: "部署", icon: Building },
     { label: "所属グループ", icon: Users },
     { label: "自社情報", icon: Building },
-    { label: "業種マスタ", icon: Database },
+    { label: "業種設定", icon: Database },
   ];
 
   const rightPrimaryItems = [
@@ -115,7 +114,8 @@ export default function Header({ onMenuToggle }: HeaderProps) {
 
   const profileLeftMenuItems = [
     ...leftMenuItems,
-    { label: "フェーズマスタ", icon: Database },
+    { label: "フェーズ設定", icon: Database },
+    { label: "ラベル設定", icon: Database },
   ];
 
   const billingMenuItems = [
@@ -332,6 +332,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
                       <button
                         key={item.label}
                         type="button"
+                        onClick={"onClick" in item ? item.onClick : undefined}
                         className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted"
                       >
                         <Icon className="h-4.5 w-4.5 shrink-0 text-muted-foreground" />

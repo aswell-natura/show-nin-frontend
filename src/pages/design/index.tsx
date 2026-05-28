@@ -116,7 +116,7 @@ const minuteRows = [
 
 const dialogPills = [
   { icon: Building2, label: "顧客", value: "株式会社ネクストウェーブ" },
-  { icon: Activity, label: "ステータス", value: "提案中" },
+  { icon: Activity, label: "フェーズ", value: "提案中" },
   { icon: Tag, label: "ラベル", value: "重点案件" },
   { icon: User, label: "担当者", value: "山田 智" },
 ];

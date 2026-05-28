@@ -38,7 +38,7 @@ export default function ManagerTeamPipeline() {
   return (
     <WidgetCard
       title="チームパイプライン"
-      description="チーム全体の案件ステータス分布"
+      description="チーム全体の案件フェーズ分布"
       action={
         <Button variant="ghost" size="sm" onClick={() => navigate('/projects')} className="font-bold text-muted-foreground hover:text-primary transition-colors">
           詳細

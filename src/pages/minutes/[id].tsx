@@ -438,6 +438,109 @@ function CustomAudioPlayer({ src }: { src: string }) {
     }
   }, [])
 
+  const togglePlayback = () => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    if (audio.paused) {
+      void audio.play()
+      setIsPlaying(true)
+    } else {
+      audio.pause()
+      setIsPlaying(false)
+    }
+  }
+
+  const handleSeek = (value: string) => {
+    const audio = audioRef.current
+    if (!audio) return
+    const nextTime = Number(value)
+    audio.currentTime = nextTime
+    setCurrentTime(nextTime)
+  }
+
+  const handleVolumeChange = (value: string) => {
+    const audio = audioRef.current
+    if (!audio) return
+    const nextVolume = Number(value)
+    audio.volume = nextVolume
+    audio.muted = nextVolume === 0
+    setVolume(nextVolume)
+    setIsMuted(nextVolume === 0)
+  }
+
+  const toggleMute = () => {
+    const audio = audioRef.current
+    if (!audio) return
+    const nextMuted = !isMuted
+    audio.muted = nextMuted
+    setIsMuted(nextMuted)
+  }
+
+  const formatTime = (seconds: number) => {
+    if (!Number.isFinite(seconds)) return "0:00"
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = Math.floor(seconds % 60)
+    return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+      <audio ref={audioRef} src={src} preload="metadata" />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <Button
+          type="button"
+          variant="primary"
+          size="icon"
+          className="h-10 w-10 shrink-0 rounded-full"
+          onClick={togglePlayback}
+          aria-label={isPlaying ? "一時停止" : "再生"}
+        >
+          {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+        </Button>
+
+        <div className="min-w-0 flex-1">
+          <input
+            type="range"
+            min="0"
+            max={duration || 0}
+            step="0.1"
+            value={currentTime}
+            onChange={(event) => handleSeek(event.target.value)}
+            className="w-full accent-primary"
+            aria-label="再生位置"
+          />
+          <div className="mt-1 flex justify-between text-xs text-muted-foreground">
+            <span>{formatTime(currentTime)}</span>
+            <span>{formatTime(duration)}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 sm:w-36">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 shrink-0"
+            onClick={toggleMute}
+            aria-label={isMuted ? "ミュート解除" : "ミュート"}
+          >
+            {isMuted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          </Button>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={isMuted ? 0 : volume}
+            onChange={(event) => handleVolumeChange(event.target.value)}
+            className="min-w-0 flex-1 accent-primary"
+            aria-label="音量"
+          />
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function AudioMinuteDetail() {

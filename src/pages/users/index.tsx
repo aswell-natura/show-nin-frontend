@@ -1,15 +1,12 @@
 import {
   useState,
   type FormEvent,
-  type KeyboardEvent,
-  type ClipboardEvent,
 } from "react";
-import { Plus, Send, UserPlus, X } from "lucide-react";
+import { Send, UserPlus } from "lucide-react";
 
 import AppLayout from "@/components/layout/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Kbd } from "@/components/ui/kbd";
 import {
   Dialog,
   DialogContent,
@@ -37,11 +34,28 @@ interface UserRecord {
   role: UserRole;
   status: UserStatus;
   lastLogin: string;
+  company?: string;
+  group?: string;
 }
 
 const roleOptions: UserRole[] = ["管理者", "一般ユーザー"];
 const statusOptions: UserStatus[] = ["有効", "無効"];
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const companyOptions = [
+  "Natura株式会社",
+  "株式会社アルファテック",
+  "日本製造株式会社",
+  "グローバルフィナンス株式会社",
+  "株式会社ネクストリテール",
+];
+
+const groupOptions = [
+  "営業チーム",
+  "開発チーム",
+  "管理チーム",
+  "プロジェクト推進チーム",
+];
 
 const initialUsers: UserRecord[] = [
   {
@@ -51,6 +65,8 @@ const initialUsers: UserRecord[] = [
     role: "管理者",
     status: "有効",
     lastLogin: "2026-05-28 09:18",
+    company: "Natura株式会社",
+    group: "営業チーム",
   },
   {
     id: "user-002",
@@ -59,6 +75,8 @@ const initialUsers: UserRecord[] = [
     role: "一般ユーザー",
     status: "有効",
     lastLogin: "2026-05-27 18:42",
+    company: "Natura株式会社",
+    group: "営業チーム",
   },
 ];
 
@@ -67,8 +85,15 @@ export default function UsersPage() {
   const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null);
   const [formValues, setFormValues] = useState<UserRecord>(initialUsers[0]);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
-  const [inviteInput, setInviteInput] = useState("");
-  const [inviteEmails, setInviteEmails] = useState<string[]>([]);
+  const [inviteValues, setInviteValues] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "一般ユーザー" as UserRole,
+    status: "有効" as UserStatus,
+    company: "未選択",
+    group: "未選択",
+  });
   const [inviteError, setInviteError] = useState("");
 
   const openDetail = (user: UserRecord) => {
@@ -86,79 +111,62 @@ export default function UsersPage() {
 
   const closeInviteDialog = () => {
     setIsInviteOpen(false);
-    setInviteInput("");
-    setInviteEmails([]);
-    setInviteError("");
-  };
-
-  const addInviteEmails = (rawValue: string) => {
-    const values = rawValue
-      .split(/[,\s]+/)
-      .map((value) => value.trim().toLowerCase())
-      .filter(Boolean);
-
-    if (values.length === 0) return true;
-
-    const invalidEmail = values.find((value) => !isEmail(value));
-
-    if (invalidEmail) {
-      setInviteError(`${invalidEmail} はメールアドレスとして認識できません。`);
-      return false;
-    }
-
-    setInviteEmails((current) => {
-      const existing = new Set(current);
-      return [...current, ...values.filter((value) => !existing.has(value))];
+    setInviteValues({
+      name: "",
+      email: "",
+      password: "",
+      role: "一般ユーザー",
+      status: "有効",
+      company: "未選択",
+      group: "未選択",
     });
-    setInviteInput("");
     setInviteError("");
-    return true;
-  };
-
-  const removeInviteEmail = (email: string) => {
-    setInviteEmails((current) => current.filter((item) => item !== email));
-  };
-
-  const handleInviteKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter" || event.key === "," || event.key === "Tab") {
-      if (inviteInput.trim()) {
-        event.preventDefault();
-        addInviteEmails(inviteInput);
-      }
-    }
-
-    if (
-      event.key === "Backspace" &&
-      inviteInput.length === 0 &&
-      inviteEmails.length > 0
-    ) {
-      removeInviteEmail(inviteEmails[inviteEmails.length - 1]);
-    }
-  };
-
-  const handleInvitePaste = (event: ClipboardEvent<HTMLInputElement>) => {
-    const pastedText = event.clipboardData.getData("text");
-
-    if (pastedText.includes(",")) {
-      event.preventDefault();
-      addInviteEmails(pastedText);
-    }
   };
 
   const handleInviteSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (inviteInput.trim()) {
-      if (!addInviteEmails(inviteInput)) return;
-      closeInviteDialog();
+    const name = inviteValues.name.trim();
+    const email = inviteValues.email.trim();
+    const password = inviteValues.password.trim();
+
+    if (!name) {
+      setInviteError("名前を入力してください。");
       return;
     }
 
-    if (inviteEmails.length === 0) {
-      setInviteError("招待するメールアドレスを入力してください。");
+    if (!email) {
+      setInviteError("メールアドレスを入力してください。");
       return;
     }
 
+    if (!isEmail(email)) {
+      setInviteError("有効なメールアドレスを入力してください。");
+      return;
+    }
+
+    if (!password) {
+      setInviteError("パスワードを入力してください。");
+      return;
+    }
+
+    if (password.length < 8) {
+      setInviteError("パスワードは8文字以上で入力してください。");
+      return;
+    }
+
+    const newUser: UserRecord = {
+      id: `user-${Date.now()}`,
+      displayName: name,
+      email: email,
+      role: inviteValues.role,
+      status: inviteValues.status,
+      lastLogin: "未ログイン",
+      company: inviteValues.company !== "未選択" ? inviteValues.company : undefined,
+      group: inviteValues.group !== "未選択" ? inviteValues.group : undefined,
+    };
+
+    setUsers((current) => [...current, newUser]);
     closeInviteDialog();
   };
 
@@ -203,13 +211,15 @@ export default function UsersPage() {
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
           <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
             <div className="overflow-x-auto">
-              <Table className="min-w-[720px]">
+              <Table className="min-w-[900px]">
                 <TableHeader className="bg-muted/40">
                   <TableRow>
-                    <TableHead className="w-56">表示名</TableHead>
+                    <TableHead className="w-48">表示名</TableHead>
                     <TableHead>メール</TableHead>
                     <TableHead className="w-32">権限</TableHead>
                     <TableHead className="w-28">フェーズ</TableHead>
+                    <TableHead className="w-44">所属企業</TableHead>
+                    <TableHead className="w-44">所属グループ</TableHead>
                     <TableHead className="w-44">最終ログイン</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -229,6 +239,12 @@ export default function UsersPage() {
                       <TableCell>{user.role}</TableCell>
                       <TableCell>
                         <UserStatusBadge status={user.status} />
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {user.company || <span className="text-muted-foreground/50">-</span>}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {user.group || <span className="text-muted-foreground/50">-</span>}
                       </TableCell>
                       <TableCell>{user.lastLogin}</TableCell>
                     </TableRow>
@@ -299,6 +315,31 @@ export default function UsersPage() {
                   />
                 </div>
 
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <SelectField
+                    label="所属企業"
+                    value={formValues.company || "未選択"}
+                    options={["未選択", ...companyOptions]}
+                    onChange={(value) =>
+                      setFormValues((current) => ({
+                        ...current,
+                        company: value !== "未選択" ? value : undefined,
+                      }))
+                    }
+                  />
+                  <SelectField
+                    label="所属グループ"
+                    value={formValues.group || "未選択"}
+                    options={["未選択", ...groupOptions]}
+                    onChange={(value) =>
+                      setFormValues((current) => ({
+                        ...current,
+                        group: value !== "未選択" ? value : undefined,
+                      }))
+                    }
+                  />
+                </div>
+
                 <InputField
                   label="最終ログイン"
                   value={formValues.lastLogin}
@@ -338,73 +379,110 @@ export default function UsersPage() {
             closeInviteDialog();
           }}
         >
-          <DialogContent className="max-w-xl gap-0 overflow-hidden p-0">
+          <DialogContent className="max-w-2xl gap-0 overflow-hidden p-0">
             <form onSubmit={handleInviteSubmit}>
               <DialogHeader className="border-b border-border px-6 py-5">
                 <DialogTitle>ユーザーを招待</DialogTitle>
                 <DialogDescription>
-                  メールアドレスを入力して、複数の招待をまとめて送信できます。
+                  新しいユーザー情報を入力して、招待を送信します。
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="space-y-3 px-6 py-5">
-                <label className="block">
-                  <span className="mb-2 block text-sm font-medium text-foreground">
-                    招待先メール
-                  </span>
-                  <div className="flex min-h-11 flex-wrap items-center gap-2 rounded-lg border border-input bg-background px-3 py-2 transition-all focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20">
-                    {inviteEmails.map((email) => (
-                      <span
-                        key={email}
-                        className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary"
-                      >
-                        <span className="truncate">{email}</span>
-                        <button
-                          type="button"
-                          className="rounded-full p-0.5 text-primary/70 transition-colors hover:bg-primary/10 hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
-                          aria-label={`${email} を削除`}
-                          onClick={() => removeInviteEmail(email)}
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </span>
-                    ))}
-                    <input
-                      type="email"
-                      value={inviteInput}
-                      onChange={(event) => {
-                        setInviteInput(event.target.value);
-                        setInviteError("");
-                      }}
-                      onKeyDown={handleInviteKeyDown}
-                      onPaste={handleInvitePaste}
-                      onBlur={() => addInviteEmails(inviteInput)}
-                      placeholder={
-                        inviteEmails.length === 0
-                          ? "name@example.com, team@example.com"
-                          : "メールを追加"
-                      }
-                      className="min-w-48 flex-1 border-0 bg-transparent p-0 text-sm text-foreground outline-none placeholder:text-muted-foreground"
-                    />
-                    <button
-                      type="button"
-                      className="inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-border bg-secondary px-2 text-xs font-medium text-secondary-foreground shadow-sm transition-colors hover:border-primary/35 hover:bg-secondary/80 focus:outline-none focus:ring-2 focus:ring-ring/30 disabled:pointer-events-none disabled:opacity-50"
-                      disabled={!inviteInput.trim()}
-                      onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => addInviteEmails(inviteInput)}
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      追加
-                    </button>
-                  </div>
-                </label>
+              <div className="space-y-4 px-6 py-5">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <InputField
+                    label="名前"
+                    value={inviteValues.name}
+                    onChange={(value) =>
+                      setInviteValues((current) => ({
+                        ...current,
+                        name: value,
+                      }))
+                    }
+                    required
+                    placeholder="例：山田 太郎"
+                  />
+                  <InputField
+                    label="メールアドレス"
+                    type="email"
+                    value={inviteValues.email}
+                    onChange={(value) =>
+                      setInviteValues((current) => ({
+                        ...current,
+                        email: value,
+                      }))
+                    }
+                    required
+                    placeholder="name@example.com"
+                  />
+                </div>
 
-                <p className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                  <Kbd>Enter</Kbd>
-                  <Kbd>Tab</Kbd>
-                  <Kbd>,</Kbd>
-                  <span>または追加ボタンで入力を確定します。</span>
-                </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <InputField
+                    label="パスワード"
+                    type="password"
+                    value={inviteValues.password}
+                    onChange={(value) =>
+                      setInviteValues((current) => ({
+                        ...current,
+                        password: value,
+                      }))
+                    }
+                    required
+                    placeholder="8文字以上"
+                  />
+                  <SelectField
+                    label="権限"
+                    value={inviteValues.role}
+                    options={roleOptions}
+                    onChange={(value) =>
+                      setInviteValues((current) => ({
+                        ...current,
+                        role: value as UserRole,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <SelectField
+                    label="ステータス"
+                    value={inviteValues.status}
+                    options={statusOptions}
+                    onChange={(value) =>
+                      setInviteValues((current) => ({
+                        ...current,
+                        status: value as UserStatus,
+                      }))
+                    }
+                  />
+                  <SelectField
+                    label="所属企業"
+                    value={inviteValues.company}
+                    options={["未選択", ...companyOptions]}
+                    onChange={(value) =>
+                      setInviteValues((current) => ({
+                        ...current,
+                        company: value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <SelectField
+                    label="所属グループ"
+                    value={inviteValues.group}
+                    options={["未選択", ...groupOptions]}
+                    onChange={(value) =>
+                      setInviteValues((current) => ({
+                        ...current,
+                        group: value,
+                      }))
+                    }
+                  />
+                </div>
+
                 {inviteError ? (
                   <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive">
                     {inviteError}
@@ -423,7 +501,6 @@ export default function UsersPage() {
                 <Button
                   type="submit"
                   variant="primary"
-                  disabled={inviteEmails.length === 0 && !inviteInput.trim()}
                 >
                   <Send className="h-4 w-4" />
                   招待を送信
@@ -442,21 +519,28 @@ function InputField({
   value,
   onChange,
   type = "text",
+  required = false,
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: string;
+  required?: boolean;
+  placeholder?: string;
 }) {
   return (
     <label className="block">
       <span className="mb-2 block text-sm font-medium text-foreground">
         {label}
+        {required && <span className="ml-1 text-destructive">*</span>}
       </span>
       <input
         type={type}
         value={value}
+        required={required}
         onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
         className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20"
       />
     </label>

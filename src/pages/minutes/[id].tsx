@@ -438,138 +438,104 @@ function CustomAudioPlayer({ src }: { src: string }) {
     }
   }, [])
 
-  const togglePlay = () => {
+  const togglePlayback = () => {
     const audio = audioRef.current
     if (!audio) return
-    if (isPlaying) {
+
+    if (audio.paused) {
+      void audio.play()
+      setIsPlaying(true)
+    } else {
       audio.pause()
       setIsPlaying(false)
-    } else {
-      audio.play().catch(() => {})
-      setIsPlaying(true)
     }
   }
 
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSeek = (value: string) => {
     const audio = audioRef.current
     if (!audio) return
-    const time = parseFloat(e.target.value)
-    audio.currentTime = time
-    setCurrentTime(time)
+    const nextTime = Number(value)
+    audio.currentTime = nextTime
+    setCurrentTime(nextTime)
+  }
+
+  const handleVolumeChange = (value: string) => {
+    const audio = audioRef.current
+    if (!audio) return
+    const nextVolume = Number(value)
+    audio.volume = nextVolume
+    audio.muted = nextVolume === 0
+    setVolume(nextVolume)
+    setIsMuted(nextVolume === 0)
   }
 
   const toggleMute = () => {
     const audio = audioRef.current
     if (!audio) return
-    audio.muted = !isMuted
-    setIsMuted(!isMuted)
+    const nextMuted = !isMuted
+    audio.muted = nextMuted
+    setIsMuted(nextMuted)
   }
 
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const audio = audioRef.current
-    if (!audio) return
-    const vol = parseFloat(e.target.value)
-    audio.volume = vol
-    setVolume(vol)
-    if (vol > 0 && isMuted) {
-      audio.muted = false
-      setIsMuted(false)
-    }
-  }
-
-  const formatAudioTime = (seconds: number) => {
-    if (isNaN(seconds)) return '00:00'
-    const mins = Math.floor(seconds / 60)
-    const secs = Math.floor(seconds % 60)
-    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+  const formatTime = (seconds: number) => {
+    if (!Number.isFinite(seconds)) return "0:00"
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = Math.floor(seconds % 60)
+    return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-none flex flex-col sm:flex-row sm:items-center gap-4 transition-all hover:border-primary/30">
-      <audio ref={audioRef} src={src} />
-      
-      <div className="flex items-center gap-3 shrink-0">
-        <span className="p-2 rounded-lg bg-primary/10 text-primary">
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-          </svg>
-        </span>
-        <div>
-          <p className="text-xs font-bold text-muted-foreground">音声録音</p>
-          <p className="text-sm font-semibold text-foreground">録音データ再生</p>
-        </div>
-      </div>
-
-      <div className="flex-1 flex items-center gap-4 min-w-0">
+    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+      <audio ref={audioRef} src={src} preload="metadata" />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <Button
           type="button"
-          variant="secondary"
+          variant="primary"
           size="icon"
-          onClick={togglePlay}
-          className="h-10 w-10 rounded-full shrink-0 bg-primary/10 text-primary hover:bg-primary/20 transition-all active:scale-95 border-none shadow-none"
+          className="h-10 w-10 shrink-0 rounded-full"
+          onClick={togglePlayback}
+          aria-label={isPlaying ? "一時停止" : "再生"}
         >
-          {isPlaying ? (
-            <Pause className="h-4 w-4 fill-current" />
-          ) : (
-            <Play className="h-4 w-4 fill-current ml-0.5" />
-          )}
+          {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
         </Button>
 
-        <div className="flex-1 flex items-center gap-3 min-w-0">
-          <span className="text-xs font-mono text-muted-foreground shrink-0">
-            {formatAudioTime(currentTime)}
-          </span>
-          
+        <div className="min-w-0 flex-1">
           <input
             type="range"
-            min={0}
-            max={duration || 100}
+            min="0"
+            max={duration || 0}
+            step="0.1"
             value={currentTime}
-            onChange={handleSeek}
-            className="flex-1 h-1.5 rounded-lg appearance-none cursor-pointer bg-secondary accent-primary transition-all focus:outline-none"
-            style={{
-              background: `linear-gradient(to right, var(--primary) 0%, var(--primary) ${
-                duration ? (currentTime / duration) * 100 : 0
-              }%, var(--secondary) ${
-                duration ? (currentTime / duration) * 100 : 0
-              }%, var(--secondary) 100%)`
-            }}
+            onChange={(event) => handleSeek(event.target.value)}
+            className="w-full accent-primary"
+            aria-label="再生位置"
           />
-          
-          <span className="text-xs font-mono text-muted-foreground shrink-0">
-            {formatAudioTime(duration)}
-          </span>
+          <div className="mt-1 flex justify-between text-xs text-muted-foreground">
+            <span>{formatTime(currentTime)}</span>
+            <span>{formatTime(duration)}</span>
+          </div>
         </div>
 
-        <div className="hidden sm:flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 sm:w-36">
           <Button
             type="button"
             variant="ghost"
             size="icon"
+            className="h-9 w-9 shrink-0"
             onClick={toggleMute}
-            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-transparent"
+            aria-label={isMuted ? "ミュート解除" : "ミュート"}
           >
-            {isMuted || volume === 0 ? (
-              <VolumeX className="h-4 w-4" />
-            ) : (
-              <Volume2 className="h-4 w-4" />
-            )}
+            {isMuted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
           </Button>
           <input
             type="range"
-            min={0}
-            max={1}
-            step={0.05}
+            min="0"
+            max="1"
+            step="0.05"
             value={isMuted ? 0 : volume}
-            onChange={handleVolumeChange}
-            className="w-16 h-1 rounded-lg appearance-none cursor-pointer bg-secondary accent-primary"
-            style={{
-              background: `linear-gradient(to right, var(--primary) 0%, var(--primary) ${
-                (isMuted ? 0 : volume) * 100
-              }%, var(--secondary) ${
-                (isMuted ? 0 : volume) * 100
-              }%, var(--secondary) 100%)`
-            }}
+            onChange={(event) => handleVolumeChange(event.target.value)}
+            className="min-w-0 flex-1 accent-primary"
+            aria-label="音量"
           />
         </div>
       </div>

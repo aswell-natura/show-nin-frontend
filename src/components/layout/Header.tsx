@@ -105,7 +105,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
       onClick: () => navigate("/usage-status"),
     },
     { label: "機能設定", icon: Settings, onClick: () => navigate("/settings") },
-    { label: "使い方", icon: HelpCircle },
+    // { label: "使い方", icon: HelpCircle },
     {
       label: "パスワード変更",
       icon: Lock,
@@ -454,7 +454,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
                 <DropdownMenuGroup>
                   <DropdownMenuItem>
                     <HelpCircle className="mr-2 h-4 w-4" />
-                    <span>使い方</span>
+                    {/* <span>使い方</span> */}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={resetToDefaults}>
                     <Database className="mr-2 h-4 w-4" />

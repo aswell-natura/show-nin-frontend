@@ -701,13 +701,13 @@ function ToggleSwitch({
       aria-checked={checked}
       aria-label={ariaLabel}
       onClick={onChange}
-      className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${
+      className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full p-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
         checked ? "bg-primary" : "bg-muted-foreground/30"
       }`}
     >
       <span
-        className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
-          checked ? "translate-x-6" : "translate-x-1"
+        className={`block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+          checked ? "translate-x-5" : "translate-x-0"
         }`}
       />
     </button>

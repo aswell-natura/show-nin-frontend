@@ -1,8 +1,10 @@
 import {
+  AlertCircle,
   Bot,
   CalendarDays,
   Check,
   ChevronLeft,
+  ExternalLink,
   FileText,
   ListChecks,
   Pencil,
@@ -15,6 +17,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Dialog,
   DialogContent,
@@ -55,6 +58,7 @@ const settingCards = [
     title: "カレンダー連携",
     description: "外部カレンダーとの連携状態を管理します。",
     icon: CalendarDays,
+    path: "/settings/calendar-integration",
   },
   {
     title: "機能選択",
@@ -706,6 +710,187 @@ function ModalFooter({ onCancel }: { onCancel: () => void }) {
   );
 }
 
+function formatDateValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function GoogleCalendarLogo({ className }: { className?: string }) {
+  return (
+    <svg
+      role="img"
+      height="36"
+      viewBox="0 0 36 36"
+      width="36"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+    >
+      <title>Google Calendar</title>
+      <g fill="none" fillRule="evenodd">
+        <path d="m0 0h36v36h-36z" />
+        <g fillRule="nonzero" transform="translate(3.75 3.75)">
+          <path d="m21.75 6.75-6.75-.75-8.25.75-.75 7.5.75 7.5 7.5.9375 7.5-.9375.75-7.6875z" fill="#fff" />
+          <path d="m9.826875 18.38625c-.560625-.37875-.94875-.931875-1.160625-1.663125l1.30125-.53625c.118125.45.324375.79875.61875 1.04625.2925.2475.64875.369375 1.065.369375.425625 0 .79125-.129375 1.096875-.388125s.459375-.58875.459375-.988125c0-.40875-.16125-.7425-.48375-1.00125s-.7275-.388125-1.21125-.388125h-.751875v-1.288125h.675c.41625 0 .766875-.1125 1.051875-.3375s.4275-.5325.4275-.924375c0-.34875-.1275-.62625-.3825-.834375s-.5775-.313125-.969375-.313125c-.3825 0-.68625.10125-.91125.305625s-.388125.455625-.49125.751875l-1.288125-.53625c.170625-.48375.48375-.91125.943125-1.280625s1.04625-.555 1.75875-.555c.526875 0 1.00125.10125 1.42125.305625s.75.4875.988125.8475c.238125.361875.35625.766875.35625 1.216875 0 .459375-.110625.8475-.331875 1.16625s-.493125.5625-.815625.733125v.076875c.425625.178125.7725.45 1.04625.815625.271875.365625.40875.8025.40875 1.3125s-.129375.965625-.388125 1.365-.616875.714375-1.070625.943125c-.455625.22875-.9675.3450138-1.535625.3450138-.658125.0018612-1.265625-.1875138-1.82625-.5662638z" fill="#1a73e8" />
+          <path d="m17.8125 11.92875-1.42125 1.033125-.714375-1.08375 2.563125-1.84875h.9825v8.720625h-1.41z" fill="#1a73e8" />
+          <path d="m21.75 28.5 6.75-6.75-3.375-1.5-3.375 1.5-1.5 3.375z" fill="#ea4335" />
+          <path d="m5.25 25.125 1.5 3.375h15v-6.75h-15z" fill="#34a853" />
+          <path d="m2.25 0c-1.243125 0-2.25 1.006875-2.25 2.25v19.5l3.375 1.5 3.375-1.5v-15h15l1.5-3.375-1.5-3.375z" fill="#4285f4" />
+          <path d="m0 21.75v4.5c0 1.243125 1.006875 2.25 2.25 2.25h4.5v-6.75z" fill="#188038" />
+          <path d="m21.75 6.75v15h6.75v-15l-3.375-1.5z" fill="#fbbc04" />
+          <path d="m28.5 6.75v-4.5c0-1.243125-1.006875-2.25-2.25-2.25h-4.5v6.75z" fill="#1967d2" />
+        </g>
+      </g>
+    </svg>
+  );
+}
+
+function OutlookCalendarLogo({ className }: { className?: string }) {
+  return (
+    <svg
+      role="img"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+    >
+      <title>Outlook Calendar</title>
+      <path fill="#0078D4" d="M9.5 3.5h12A1.5 1.5 0 0 1 23 5v14a1.5 1.5 0 0 1-1.5 1.5h-12z" />
+      <path fill="#106EBE" d="M9.5 6.5H23v4H9.5z" />
+      <path fill="#28A8EA" d="M9.5 10.5H23v8A1.5 1.5 0 0 1 21.5 20h-12z" />
+      <path fill="#50D9FF" d="M12.5 12h2.75v2.25H12.5zm4 0h2.75v2.25H16.5zm4 0H23v2.25h-2.5zm-8 3.5h2.75v2.25H12.5zm4 0h2.75v2.25H16.5zm4 0H23v2.25h-2.5z" />
+      <path fill="#005A9E" d="M1 6.25 10.75 4.5v15L1 17.75A1.2 1.2 0 0 1 0 16.57V7.43a1.2 1.2 0 0 1 1-1.18z" />
+      <path fill="#FFFFFF" d="M5.35 9.05c1.73 0 2.9 1.28 2.9 3.05 0 1.79-1.18 3.1-2.94 3.1-1.72 0-2.9-1.28-2.9-3.05 0-1.83 1.22-3.1 2.94-3.1zm-.02 1.16c-.91 0-1.47.78-1.47 1.9 0 1.11.57 1.91 1.48 1.91.93 0 1.47-.78 1.47-1.91 0-1.11-.55-1.9-1.48-1.9z" />
+    </svg>
+  );
+}
+
+function CalendarIntegrationPage() {
+  const initialStartDate = formatDateValue(new Date());
+  const initialEndDate = (() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 30);
+    return formatDateValue(date);
+  })();
+  const [startDate, setStartDate] = useState(initialStartDate);
+  const [endDate, setEndDate] = useState(initialEndDate);
+
+  const providers = [
+    {
+      name: "Google Calendar",
+      status: "未設定",
+      actionLabel: "Googleと連携",
+      Logo: GoogleCalendarLogo,
+    },
+    {
+      name: "Outlook Calendar",
+      status: "未設定",
+      actionLabel: "Outlookと連携",
+      Logo: OutlookCalendarLogo,
+    },
+  ];
+
+  return (
+    <div className="flex h-full flex-col overflow-hidden bg-background">
+      <PageHeader
+        title="カレンダー連携"
+        description="外部カレンダーの予定をSHOW-NINへインポートします。"
+        showBackButton
+      />
+
+      <div className="flex-1 overflow-y-auto bg-muted/30 p-4 md:p-6">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+          <section>
+            <h2 className="text-lg font-bold tracking-tight text-foreground">
+              外部カレンダー連携
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Outlook/Googleカレンダーの予定をSHOW-NINにインポート
+            </p>
+          </section>
+
+          <section className="grid gap-4 lg:grid-cols-2">
+            {providers.map((provider) => {
+              const ProviderLogo = provider.Logo;
+
+              return (
+                <div
+                  key={provider.name}
+                  className="rounded-xl border border-border bg-card p-5 shadow-sm"
+                >
+                  <div className="flex items-center gap-4">
+                    <span
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-background ring-1 ring-border"
+                    >
+                      <ProviderLogo className="h-6 w-6" />
+                    </span>
+                    <div className="min-w-0">
+                      <h3 className="truncate text-base font-bold text-foreground">
+                        {provider.name}
+                      </h3>
+                      <p className="mt-0.5 text-sm text-muted-foreground">
+                        {provider.status}
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="mt-5 w-full gap-2"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    {provider.actionLabel}
+                  </Button>
+                </div>
+              );
+            })}
+          </section>
+
+          <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
+            <h2 className="text-sm font-bold text-foreground">取得期間</h2>
+            <div className="mt-5 grid gap-4 sm:grid-cols-[minmax(0,240px)_minmax(0,240px)]">
+              <div className="grid gap-2 sm:grid-cols-[auto_1fr] sm:items-center">
+                <span className="text-sm font-medium text-muted-foreground">開始:</span>
+                <DatePicker
+                  value={startDate}
+                  onChange={setStartDate}
+                  clearable={false}
+                  buttonClassName="rounded-lg"
+                />
+              </div>
+              <div className="grid gap-2 sm:grid-cols-[auto_1fr] sm:items-center">
+                <span className="text-sm font-medium text-muted-foreground">終了:</span>
+                <DatePicker
+                  value={endDate}
+                  onChange={setEndDate}
+                  clearable={false}
+                  buttonClassName="rounded-lg"
+                />
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
+            <div className="flex gap-3 text-amber-700 dark:text-amber-400">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+              <div>
+                <h2 className="text-sm font-bold">外部カレンダー連携について</h2>
+                <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6">
+                  <li>OAuth認証にはGoogle Cloud Console / Azure AD でのアプリ登録が必要です</li>
+                  <li>インポートは単方向（外部-&gt;SHOW-NIN）です</li>
+                  <li>同じイベントを複数回インポートすると重複が発生します</li>
+                  <li>本番環境ではトークンは安全に管理されます</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const navigate = useNavigate();
   const { section } = useParams();
@@ -720,6 +905,10 @@ export default function SettingsPage() {
 
   if (section === "check-templates") {
     return <AppLayout><CheckTemplateTable /></AppLayout>;
+  }
+
+  if (section === "calendar-integration") {
+    return <AppLayout><CalendarIntegrationPage /></AppLayout>;
   }
 
   return (

@@ -257,7 +257,10 @@ export default function UsersPage() {
                   label="表示名"
                   value={formValues.displayName}
                   onChange={(value) =>
-                    setFormValues((current) => ({ ...current, displayName: value }))
+                    setFormValues((current) => ({
+                      ...current,
+                      displayName: value,
+                    }))
                   }
                 />
                 <InputField
@@ -298,7 +301,10 @@ export default function UsersPage() {
                   label="最終ログイン"
                   value={formValues.lastLogin}
                   onChange={(value) =>
-                    setFormValues((current) => ({ ...current, lastLogin: value }))
+                    setFormValues((current) => ({
+                      ...current,
+                      lastLogin: value,
+                    }))
                   }
                 />
               </div>
@@ -405,7 +411,11 @@ export default function UsersPage() {
               </div>
 
               <DialogFooter>
-                <Button type="button" variant="secondary" onClick={closeInviteDialog}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={closeInviteDialog}
+                >
                   キャンセル
                 </Button>
                 <Button
@@ -422,24 +432,6 @@ export default function UsersPage() {
         </Dialog>
       </div>
     </AppLayout>
-  );
-}
-
-function isEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
-function UserStatusBadge({ status }: { status: UserStatus }) {
-  return (
-    <span
-      className={
-        status === "有効"
-          ? "inline-flex shrink-0 rounded-md bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700"
-          : "inline-flex shrink-0 rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground"
-      }
-    >
-      {status}
-    </span>
   );
 }
 

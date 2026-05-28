@@ -87,11 +87,6 @@ export default function Header({ onMenuToggle }: HeaderProps) {
     { label: "部署", icon: Building, onClick: () => navigate("/departments") },
     { label: "所属グループ", icon: Users, onClick: () => navigate("/groups") },
     { label: "自社情報", icon: Building, onClick: () => navigate("/company") },
-    {
-      label: "登録項目の設定",
-      icon: Database,
-      onClick: () => navigate("/registration-items"),
-    },
   ];
 
   const rightPrimaryItems = [

@@ -4,6 +4,14 @@ import { Plus, Trash2 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -11,24 +19,33 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { mockProfiles } from "@/data/mock";
 
 interface PositionRecord {
   id: string;
   name: string;
-  memberCount: number;
+  userIds: string[];
 }
 
+const users = mockProfiles.map((profile) => ({
+  id: profile.id,
+  name: profile.name,
+  email: profile.email,
+}));
+
 const initialPositions: PositionRecord[] = [
-  { id: "position-001", name: "代表取締役", memberCount: 1 },
-  { id: "position-002", name: "営業部長", memberCount: 2 },
-  { id: "position-003", name: "マネージャー", memberCount: 4 },
-  { id: "position-004", name: "メンバー", memberCount: 12 },
+  { id: "position-001", name: "代表取締役", userIds: ["user-004"] },
+  { id: "position-002", name: "営業部長", userIds: ["user-001", "user-003"] },
+  { id: "position-003", name: "マネージャー", userIds: ["user-002", "user-003"] },
+  { id: "position-004", name: "メンバー", userIds: ["user-001", "user-002"] },
 ];
 
 export default function PositionsPage() {
   const [positions, setPositions] = useState(initialPositions);
   const [positionName, setPositionName] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [selectedPosition, setSelectedPosition] = useState<PositionRecord | null>(null);
+  const [formValues, setFormValues] = useState<PositionRecord | null>(null);
 
   const handleAddPosition = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -49,11 +66,48 @@ export default function PositionsPage() {
       {
         id: `position-${Date.now()}`,
         name,
-        memberCount: 0,
+        userIds: [],
       },
     ]);
     setPositionName("");
     setErrorMessage("");
+  };
+
+  const openDetail = (position: PositionRecord) => {
+    setSelectedPosition(position);
+    setFormValues({ ...position, userIds: [...position.userIds] });
+  };
+
+  const closeDetail = () => {
+    setSelectedPosition(null);
+    setFormValues(null);
+  };
+
+  const toggleUser = (userId: string) => {
+    setFormValues((current) => {
+      if (!current) return current;
+      const belongs = current.userIds.includes(userId);
+      return {
+        ...current,
+        userIds: belongs
+          ? current.userIds.filter((id) => id !== userId)
+          : [...current.userIds, userId],
+      };
+    });
+  };
+
+  const handleSave = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!formValues) return;
+
+    setPositions((current) =>
+      current.map((position) =>
+        position.id === formValues.id
+          ? { ...formValues, name: formValues.name.trim() || position.name }
+          : position,
+      ),
+    );
+    closeDetail();
   };
 
   const handleDeletePosition = (positionId: string) => {
@@ -66,17 +120,13 @@ export default function PositionsPage() {
     <AppLayout>
       <div className="flex h-full flex-col overflow-hidden bg-background">
         <div className="shrink-0 border-b border-border bg-card px-4 py-5 md:px-6">
-          <div className="flex flex-col items-stretch justify-between gap-4 md:flex-row md:items-center">
-            <div>
-              <div className="flex w-full items-center gap-2 md:w-auto">
-                <h1 className="text-xl font-bold tracking-tight text-foreground">
-                  役職設定
-                </h1>
-              </div>
-              <p className="mt-1 text-sm text-muted-foreground">
-                利用ユーザーに割り当てる役職を追加・削除できます。
-              </p>
-            </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
+              役職設定
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              利用ユーザーに割り当てる役職を追加・編集できます。
+            </p>
           </div>
         </div>
 
@@ -109,11 +159,7 @@ export default function PositionsPage() {
                   {errorMessage}
                 </p>
               ) : null}
-              <Button
-                type="submit"
-                variant="primary"
-                className="mt-4 w-full gap-2"
-              >
+              <Button type="submit" variant="primary" className="mt-4 w-full gap-2">
                 <Plus className="h-4 w-4" />
                 追加
               </Button>
@@ -130,12 +176,16 @@ export default function PositionsPage() {
                 </TableHeader>
                 <TableBody>
                   {positions.map((position) => (
-                    <TableRow key={position.id}>
+                    <TableRow
+                      key={position.id}
+                      className="cursor-pointer"
+                      onClick={() => openDetail(position)}
+                    >
                       <TableCell className="font-medium text-foreground">
                         {position.name}
                       </TableCell>
                       <TableCell className="text-right text-muted-foreground">
-                        {position.memberCount}人
+                        {position.userIds.length}人
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
@@ -143,7 +193,10 @@ export default function PositionsPage() {
                           variant="destructive"
                           size="sm"
                           className="gap-1.5"
-                          onClick={() => handleDeletePosition(position.id)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleDeletePosition(position.id);
+                          }}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                           削除
@@ -157,6 +210,71 @@ export default function PositionsPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={selectedPosition !== null} onOpenChange={(open) => !open && closeDetail()}>
+        <DialogContent className="max-w-2xl p-6">
+          {formValues ? (
+            <form onSubmit={handleSave}>
+              <DialogHeader>
+                <DialogTitle>役職詳細</DialogTitle>
+                <DialogDescription>
+                  役職名と、この役職に属するユーザーを編集できます。
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-5 py-5">
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-foreground">
+                    役職名
+                  </span>
+                  <input
+                    value={formValues.name}
+                    onChange={(event) =>
+                      setFormValues((current) =>
+                        current ? { ...current, name: event.target.value } : current,
+                      )
+                    }
+                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20"
+                  />
+                </label>
+
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">所属ユーザー</h3>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {users.map((user) => {
+                      const active = formValues.userIds.includes(user.id);
+                      return (
+                        <button
+                          key={user.id}
+                          type="button"
+                          onClick={() => toggleUser(user.id)}
+                          className={`rounded-lg border px-3 py-2 text-left transition-colors ${
+                            active
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border bg-muted/30 text-muted-foreground hover:bg-muted"
+                          }`}
+                        >
+                          <span className="block text-sm font-bold">{user.name}</span>
+                          <span className="mt-0.5 block truncate text-xs opacity-80">
+                            {user.email}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="secondary" onClick={closeDetail}>
+                  キャンセル
+                </Button>
+                <Button type="submit" variant="primary">
+                  保存
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

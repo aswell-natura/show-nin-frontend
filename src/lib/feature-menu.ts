@@ -1,9 +1,14 @@
 export type OptionalFeatureId =
+  | "minutes"
+  | "schedule"
   | "ai-ocr"
-  | "ai-chat"
-  | "business-cards"
+  | "tasks"
+  | "estimates"
+  | "customers"
   | "expense"
-  | "knowledge";
+  | "ai-chat"
+  | "projects"
+  | "business-cards";
 
 export interface OptionalFeature {
   id: OptionalFeatureId;
@@ -13,11 +18,15 @@ export interface OptionalFeature {
 }
 
 export const optionalFeatures: OptionalFeature[] = [
-  { id: "ai-ocr", label: "AI-OCR", icon: "scan-text", path: "/settings/features#ai-ocr" },
-  { id: "ai-chat", label: "AIチャット", icon: "message-circle", path: "/settings/features#ai-chat" },
-  { id: "business-cards", label: "名刺管理", icon: "id-card", path: "/settings/features#business-cards" },
-  { id: "expense", label: "経費精算管理", icon: "receipt", path: "/settings/features#expense" },
-  { id: "knowledge", label: "社内ナレッジ", icon: "book-open", path: "/settings/features#knowledge" },
+  { id: "minutes", label: "音声議事録", icon: "mic", path: "/minutes" },
+  // { id: "ai-ocr", label: "AI-OCR", icon: "scan-text", path: "/settings/features#ai-ocr" },
+  { id: "tasks", label: "タスク管理", icon: "check", path: "/tasks" },
+  // { id: "estimates", label: "見積書管理", icon: "file-text", path: "/settings/features#estimates" },
+  { id: "customers", label: "企業管理", icon: "building", path: "/customers" },
+  // { id: "expense", label: "経費精算", icon: "receipt", path: "/settings/features#expense" },
+  // { id: "ai-chat", label: "AIチャット", icon: "message-circle", path: "/settings/features#ai-chat" },
+  { id: "projects", label: "案件管理", icon: "folder", path: "/projects" },
+  // { id: "business-cards", label: "名刺管理", icon: "id-card", path: "/settings/features#business-cards" },
 ];
 
 export type OptionalFeatureFlags = Record<OptionalFeatureId, boolean>;

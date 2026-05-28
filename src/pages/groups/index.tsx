@@ -4,6 +4,14 @@ import { Plus, Trash2 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -11,24 +19,33 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { mockProfiles } from "@/data/mock";
 
 interface GroupRecord {
   id: string;
   name: string;
-  memberCount: number;
+  userIds: string[];
 }
 
+const users = mockProfiles.map((profile) => ({
+  id: profile.id,
+  name: profile.name,
+  email: profile.email,
+}));
+
 const initialGroups: GroupRecord[] = [
-  { id: "group-001", name: "営業チーム", memberCount: 6 },
-  { id: "group-002", name: "開発チーム", memberCount: 9 },
-  { id: "group-003", name: "管理チーム", memberCount: 4 },
-  { id: "group-004", name: "プロジェクト推進チーム", memberCount: 5 },
+  { id: "group-001", name: "営業チーム", userIds: ["user-001", "user-002"] },
+  { id: "group-002", name: "開発チーム", userIds: ["user-003", "user-004"] },
+  { id: "group-003", name: "管理チーム", userIds: ["user-003"] },
+  { id: "group-004", name: "プロジェクト推進チーム", userIds: ["user-001", "user-004"] },
 ];
 
 export default function GroupsPage() {
   const [groups, setGroups] = useState(initialGroups);
   const [groupName, setGroupName] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [selectedGroup, setSelectedGroup] = useState<GroupRecord | null>(null);
+  const [formValues, setFormValues] = useState<GroupRecord | null>(null);
 
   const handleAddGroup = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -49,11 +66,48 @@ export default function GroupsPage() {
       {
         id: `group-${Date.now()}`,
         name,
-        memberCount: 0,
+        userIds: [],
       },
     ]);
     setGroupName("");
     setErrorMessage("");
+  };
+
+  const openDetail = (group: GroupRecord) => {
+    setSelectedGroup(group);
+    setFormValues({ ...group, userIds: [...group.userIds] });
+  };
+
+  const closeDetail = () => {
+    setSelectedGroup(null);
+    setFormValues(null);
+  };
+
+  const toggleUser = (userId: string) => {
+    setFormValues((current) => {
+      if (!current) return current;
+      const belongs = current.userIds.includes(userId);
+      return {
+        ...current,
+        userIds: belongs
+          ? current.userIds.filter((id) => id !== userId)
+          : [...current.userIds, userId],
+      };
+    });
+  };
+
+  const handleSave = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!formValues) return;
+
+    setGroups((current) =>
+      current.map((group) =>
+        group.id === formValues.id
+          ? { ...formValues, name: formValues.name.trim() || group.name }
+          : group,
+      ),
+    );
+    closeDetail();
   };
 
   const handleDeleteGroup = (groupId: string) => {
@@ -64,17 +118,13 @@ export default function GroupsPage() {
     <AppLayout>
       <div className="flex h-full flex-col overflow-hidden bg-background">
         <div className="shrink-0 border-b border-border bg-card px-4 py-5 md:px-6">
-          <div className="flex flex-col items-stretch justify-between gap-4 md:flex-row md:items-center">
-            <div>
-              <div className="flex w-full items-center gap-2 md:w-auto">
-                <h1 className="text-xl font-bold tracking-tight text-foreground">
-                  所属グループ設定
-                </h1>
-              </div>
-              <p className="mt-1 text-sm text-muted-foreground">
-                利用ユーザーに割り当てる所属グループを追加・削除できます。
-              </p>
-            </div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
+              所属グループ設定
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              利用ユーザーに割り当てる所属グループを追加・編集できます。
+            </p>
           </div>
         </div>
 
@@ -109,11 +159,7 @@ export default function GroupsPage() {
                   {errorMessage}
                 </p>
               ) : null}
-              <Button
-                type="submit"
-                variant="primary"
-                className="mt-4 w-full gap-2"
-              >
+              <Button type="submit" variant="primary" className="mt-4 w-full gap-2">
                 <Plus className="h-4 w-4" />
                 追加
               </Button>
@@ -130,12 +176,16 @@ export default function GroupsPage() {
                 </TableHeader>
                 <TableBody>
                   {groups.map((group) => (
-                    <TableRow key={group.id}>
+                    <TableRow
+                      key={group.id}
+                      className="cursor-pointer"
+                      onClick={() => openDetail(group)}
+                    >
                       <TableCell className="font-medium text-foreground">
                         {group.name}
                       </TableCell>
                       <TableCell className="text-right text-muted-foreground">
-                        {group.memberCount}人
+                        {group.userIds.length}人
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
@@ -143,7 +193,10 @@ export default function GroupsPage() {
                           variant="destructive"
                           size="sm"
                           className="gap-1.5"
-                          onClick={() => handleDeleteGroup(group.id)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleDeleteGroup(group.id);
+                          }}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                           削除
@@ -157,6 +210,71 @@ export default function GroupsPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={selectedGroup !== null} onOpenChange={(open) => !open && closeDetail()}>
+        <DialogContent className="max-w-2xl p-6">
+          {formValues ? (
+            <form onSubmit={handleSave}>
+              <DialogHeader>
+                <DialogTitle>所属グループ詳細</DialogTitle>
+                <DialogDescription>
+                  所属グループ名と、このグループに属するユーザーを編集できます。
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-5 py-5">
+                <label className="block">
+                  <span className="mb-2 block text-sm font-medium text-foreground">
+                    所属グループ名
+                  </span>
+                  <input
+                    value={formValues.name}
+                    onChange={(event) =>
+                      setFormValues((current) =>
+                        current ? { ...current, name: event.target.value } : current,
+                      )
+                    }
+                    className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20"
+                  />
+                </label>
+
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">所属ユーザー</h3>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {users.map((user) => {
+                      const active = formValues.userIds.includes(user.id);
+                      return (
+                        <button
+                          key={user.id}
+                          type="button"
+                          onClick={() => toggleUser(user.id)}
+                          className={`rounded-lg border px-3 py-2 text-left transition-colors ${
+                            active
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border bg-muted/30 text-muted-foreground hover:bg-muted"
+                          }`}
+                        >
+                          <span className="block text-sm font-bold">{user.name}</span>
+                          <span className="mt-0.5 block truncate text-xs opacity-80">
+                            {user.email}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="secondary" onClick={closeDetail}>
+                  キャンセル
+                </Button>
+                <Button type="submit" variant="primary">
+                  保存
+                </Button>
+              </DialogFooter>
+            </form>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

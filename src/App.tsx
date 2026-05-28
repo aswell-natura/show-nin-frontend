@@ -23,6 +23,11 @@ import PaymentHistoryPage from './pages/payment-history'
 import UsageStatusPage from './pages/usage-status'
 import PasswordChangePage from './pages/password-change'
 import UsersPage from './pages/users'
+import PositionsPage from './pages/positions'
+import DepartmentsPage from './pages/departments'
+import GroupsPage from './pages/groups'
+import CompanyPage from './pages/company'
+import RegistrationItemsPage from './pages/registration-items'
 import PlayerBudget from './pages/my-budget'
 import ManagerReviews from './pages/reviews'
 import ManagerRisks from './pages/risks'
@@ -59,6 +64,11 @@ function AppRoutes() {
       <Route path="/usage-status" element={<ProtectedRoute><UsageStatusPage /></ProtectedRoute>} />
       <Route path="/password-change" element={<ProtectedRoute><PasswordChangePage /></ProtectedRoute>} />
       <Route path="/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
+      <Route path="/positions" element={<ProtectedRoute><PositionsPage /></ProtectedRoute>} />
+      <Route path="/departments" element={<ProtectedRoute><DepartmentsPage /></ProtectedRoute>} />
+      <Route path="/groups" element={<ProtectedRoute><GroupsPage /></ProtectedRoute>} />
+      <Route path="/company" element={<ProtectedRoute><CompanyPage /></ProtectedRoute>} />
+      <Route path="/registration-items" element={<ProtectedRoute><RegistrationItemsPage /></ProtectedRoute>} />
       <Route path="/my-budget" element={<ProtectedRoute><PlayerBudget /></ProtectedRoute>} />
       <Route path="/reviews" element={<ProtectedRoute><ManagerReviews /></ProtectedRoute>} />
       <Route path="/risks" element={<ProtectedRoute><ManagerRisks /></ProtectedRoute>} />

@@ -83,11 +83,15 @@ export default function Header({ onMenuToggle }: HeaderProps) {
 
   const leftMenuItems = [
     { label: "ユーザー", icon: User, onClick: () => navigate("/users") },
-    { label: "役職", icon: Briefcase },
-    { label: "部署", icon: Building },
-    { label: "所属グループ", icon: Users },
-    { label: "自社情報", icon: Building },
-    { label: "業種設定", icon: Database },
+    { label: "役職", icon: Briefcase, onClick: () => navigate("/positions") },
+    { label: "部署", icon: Building, onClick: () => navigate("/departments") },
+    { label: "所属グループ", icon: Users, onClick: () => navigate("/groups") },
+    { label: "自社情報", icon: Building, onClick: () => navigate("/company") },
+    {
+      label: "登録項目の設定",
+      icon: Database,
+      onClick: () => navigate("/registration-items"),
+    },
   ];
 
   const rightPrimaryItems = [
@@ -114,11 +118,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
     },
   ];
 
-  const profileLeftMenuItems = [
-    ...leftMenuItems,
-    { label: "フェーズ設定", icon: Database },
-    { label: "ラベル設定", icon: Database },
-  ];
+  const profileLeftMenuItems = leftMenuItems;
 
   const billingMenuItems = [
     { ...rightPrimaryItems[1], onClick: () => navigate("/billing") },

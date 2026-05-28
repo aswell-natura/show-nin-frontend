@@ -688,7 +688,7 @@ export default function TaskDetail() {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <DetailRow
                   icon={<Flag className="h-4 w-4" />}
-                  label="ステータス"
+                  label="フェーズ"
                   value={
                     <Badge
                       variant="outline"

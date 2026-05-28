@@ -122,6 +122,8 @@ function todayString() {
   return new Date().toISOString().slice(0, 10);
 }
 
+const TASK_FILTER_FIELDS = ["status", "date", "progress", "priority", "owner"];
+
 function formatDate(date?: string) {
   if (!date) return "-";
   return new Date(`${date}T00:00:00`).toLocaleDateString("ja-JP", {
@@ -208,31 +210,20 @@ export default function TaskBoard() {
     return page ? parseInt(page, 10) : 1;
   });
   const [filters, setFilters] = useState<FilterRule[]>(() => {
-    const initialFilters: FilterRule[] = [];
-    ["status", "priority", "customer", "project", "owner", "progress", "date"].forEach(
-      (field) => {
-        searchParams.getAll(field).forEach((value) => {
-          if (value) {
-            initialFilters.push({
-              id: Math.random().toString(36).slice(2, 11),
-              field,
-              operator: "contains",
-              value,
-            });
-          }
-        });
-      },
-    );
-    return initialFilters;
+    return TASK_FILTER_FIELDS.map((field) => ({
+      id: Math.random().toString(36).slice(2, 11),
+      field,
+      operator: "contains",
+      value: searchParams.get(field) ?? "",
+    }));
   });
   const [isFilterOpen, setIsFilterOpen] = useState(() =>
-    ["status", "priority", "customer", "project", "owner", "progress", "date"].some(
-      (field) => searchParams.has(field),
-    ),
+    TASK_FILTER_FIELDS.some((field) => searchParams.has(field)),
   );
   const [showCompletedTasks, setShowCompletedTasks] = useState(false);
   const [columns, setColumns] = useState<ListTableColumn[]>(DEFAULT_COLUMNS);
   const itemsPerPage = 8;
+  const activeFilterCount = filters.filter((filter) => filter.value).length;
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -253,22 +244,6 @@ export default function TaskBoard() {
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
-  );
-
-  const customerOptions = useMemo(
-    () =>
-      customers
-        .map((customer) => ({ label: customer.name, value: customer.id }))
-        .sort((a, b) => a.label.localeCompare(b.label, "ja")),
-    [customers],
-  );
-
-  const projectOptions = useMemo(
-    () =>
-      projects
-        .map((project) => ({ label: project.name, value: project.id }))
-        .sort((a, b) => a.label.localeCompare(b.label, "ja")),
-    [projects],
   );
 
   const ownerOptions = useMemo(
@@ -345,25 +320,6 @@ export default function TaskBoard() {
     });
   };
 
-  const addFilter = () => {
-    setFilters((current) => [
-      ...current,
-      {
-        id: Math.random().toString(36).slice(2, 11),
-        field: "status",
-        operator: "contains",
-        value: "",
-      },
-    ]);
-    setCurrentPage(1);
-    setIsFilterOpen(true);
-  };
-
-  const removeFilter = (id: string) => {
-    setFilters((current) => current.filter((filter) => filter.id !== id));
-    setCurrentPage(1);
-  };
-
   const updateFilter = (id: string, updates: Partial<FilterRule>) => {
     setFilters((current) =>
       current.map((filter) =>
@@ -436,10 +392,6 @@ export default function TaskBoard() {
             return task.status === value;
           case "priority":
             return task.priority === value;
-          case "customer":
-            return task.customerId === value;
-          case "project":
-            return task.projectId === value;
           case "owner":
             return task.ownerId === value;
           case "progress": {
@@ -568,7 +520,7 @@ export default function TaskBoard() {
                               variant={
                                 isFilterOpen
                                   ? "ghost"
-                                  : filters.length > 0
+                                  : activeFilterCount > 0
                                     ? "secondary"
                                     : "ghost"
                               }
@@ -576,21 +528,21 @@ export default function TaskBoard() {
                               onClick={() => setIsFilterOpen(!isFilterOpen)}
                               className={cn(
                                 "h-10 flex-1 justify-center border border-border/50 shadow-sm transition-all sm:flex-initial",
-                                filters.length === 0
+                                activeFilterCount === 0
                                   ? "gap-2 px-3 md:w-10 md:px-0 md:gap-0"
                                   : "gap-2 px-3 md:gap-1.5 md:px-2.5",
                                 isFilterOpen
                                   ? "border-primary bg-primary/10 text-primary"
-                                  : filters.length > 0
+                                  : activeFilterCount > 0
                                     ? "border-border bg-secondary text-foreground"
                                     : "bg-card",
                               )}
                             >
                               <Filter className="h-4 w-4" />
                               <span className="text-sm md:hidden">フィルター</span>
-                              {filters.length > 0 && (
+                              {activeFilterCount > 0 && (
                                 <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                                  {filters.length}
+                                  {activeFilterCount}
                                 </span>
                               )}
                             </Button>
@@ -601,7 +553,7 @@ export default function TaskBoard() {
                           >
                             <p>
                               フィルター
-                              {filters.length > 0 ? ` (${filters.length})` : ""}
+                              {activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
                             </p>
                           </TooltipContent>
                         </Tooltip>
@@ -663,12 +615,10 @@ export default function TaskBoard() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="status">フェーズ</SelectItem>
-                            <SelectItem value="priority">確度</SelectItem>
-                            <SelectItem value="customer">企業</SelectItem>
-                            <SelectItem value="project">案件</SelectItem>
-                            <SelectItem value="owner">担当者</SelectItem>
-                            <SelectItem value="progress">進捗率</SelectItem>
                             <SelectItem value="date">期限</SelectItem>
+                            <SelectItem value="progress">進捗</SelectItem>
+                            <SelectItem value="priority">確度</SelectItem>
+                            <SelectItem value="owner">担当者</SelectItem>
                           </SelectContent>
                         </Select>
 
@@ -693,26 +643,6 @@ export default function TaskBoard() {
                             }
                             placeholder="確度を選択"
                             className="order-4 h-8 w-full min-w-0 text-xs font-medium sm:order-3 sm:w-48"
-                          />
-                        ) : filter.field === "customer" ? (
-                          <Combobox
-                            options={customerOptions}
-                            value={filter.value}
-                            onValueChange={(value) =>
-                              updateFilter(filter.id, { value })
-                            }
-                            placeholder="企業を選択"
-                            className="order-4 h-8 w-full min-w-0 text-xs font-medium sm:order-3 sm:w-56"
-                          />
-                        ) : filter.field === "project" ? (
-                          <Combobox
-                            options={projectOptions}
-                            value={filter.value}
-                            onValueChange={(value) =>
-                              updateFilter(filter.id, { value })
-                            }
-                            placeholder="案件を選択"
-                            className="order-4 h-8 w-full min-w-0 text-xs font-medium sm:order-3 sm:w-56"
                           />
                         ) : filter.field === "owner" ? (
                           <Combobox
@@ -793,7 +723,7 @@ export default function TaskBoard() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => removeFilter(filter.id)}
+                          onClick={() => updateFilter(filter.id, { value: "" })}
                           className="order-2 ml-auto h-8 w-8 shrink-0 rounded-lg text-muted-foreground/30 hover:bg-destructive/5 hover:text-destructive sm:order-4 sm:ml-1"
                         >
                           <X className="h-4 w-4" />
@@ -801,24 +731,25 @@ export default function TaskBoard() {
                       </div>
                     ))}
 
-                    <div className="col-span-2 flex w-full min-w-0 items-center justify-between gap-3 pt-1">
+                    <div className="col-span-2 flex w-full min-w-0 items-center justify-end gap-3 pt-1">
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={addFilter}
-                        className="h-9 shrink-0 rounded-md border border-dashed border-border px-3 text-xs font-bold text-muted-foreground transition-all hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
+                          onClick={() => undefined}
+                          className="hidden"
                       >
                         <Plus className="mr-1.5 h-4 w-4" />
                         条件追加
                       </Button>
 
-                      {filters.length > 0 && (
+                      {activeFilterCount > 0 && (
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => {
-                            setFilters([]);
-                            setIsFilterOpen(false);
+                            setFilters((current) =>
+                              current.map((filter) => ({ ...filter, value: "" })),
+                            );
                             setCurrentPage(1);
                           }}
                           className="h-9 shrink-0 gap-1.5 px-3 text-xs font-medium text-muted-foreground transition-colors hover:text-destructive"
@@ -848,7 +779,9 @@ export default function TaskBoard() {
                 size="sm"
                 onClick={() => {
                   setSearch("");
-                  setFilters([]);
+                  setFilters((current) =>
+                    current.map((filter) => ({ ...filter, value: "" })),
+                  );
                   setCurrentPage(1);
                 }}
               >

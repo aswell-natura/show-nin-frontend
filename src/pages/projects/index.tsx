@@ -134,6 +134,14 @@ const priorityOptions = [
 
 
 
+const PROJECT_FILTER_FIELDS = [
+  "status",
+  "priority",
+  "amount",
+  "owner",
+  "next_action_date",
+];
+
 function normalizeSearch(value: string) {
   return value.toLowerCase().replace(/\s+/g, "");
 }
@@ -199,43 +207,14 @@ export default function ProjectList() {
     () => (searchParams.get("order") as ListSortOrder) || "desc",
   );
   const [isFilterOpen, setIsFilterOpen] = useState(() => {
-    const filterFields = [
-      "customer",
-      "status",
-      "priority",
-      "amount",
-      "owner",
-      "next_action_date",
-      "updated_at",
-    ];
-    return filterFields.some((field) => searchParams.has(field));
+    return PROJECT_FILTER_FIELDS.some((field) => searchParams.has(field));
   });
   const [filters, setFilters] = useState<FilterRule[]>(() => {
-    const initialFilters: FilterRule[] = [];
-    const filterFields = [
-      "customer",
-      "status",
-      "priority",
-      "amount",
-      "owner",
-      "next_action_date",
-      "updated_at",
-    ];
-
-    filterFields.forEach((field) => {
-      const values = searchParams.getAll(field);
-      values.forEach((value) => {
-        if (value) {
-          initialFilters.push({
-            id: Math.random().toString(36).substr(2, 9),
-            field,
-            value,
-          });
-        }
-      });
-    });
-
-    return initialFilters;
+    return PROJECT_FILTER_FIELDS.map((field) => ({
+      id: Math.random().toString(36).substr(2, 9),
+      field,
+      value: searchParams.get(field) ?? "",
+    }));
   });
   const [columns, setColumns] = useState<ListTableColumn[]>(DEFAULT_COLUMNS);
   const [currentPage, setCurrentPage] = useState(() => {
@@ -243,6 +222,7 @@ export default function ProjectList() {
     return page ? parseInt(page, 10) : 1;
   });
   const itemsPerPage = 8;
+  const activeFilterCount = filters.filter((filter) => filter.value).length;
 
   // URLSearchParams の同期
   useEffect(() => {
@@ -352,30 +332,12 @@ export default function ProjectList() {
     });
   };
 
-  const addFilter = () => {
-    setFilters((current) => [
-      ...current,
-      {
-        id: Math.random().toString(36).slice(2, 11),
-        field: "customer",
-        value: "",
-      },
-    ]);
-    setCurrentPage(1);
-    setIsFilterOpen(true);
-  };
-
   const updateFilter = (id: string, updates: Partial<FilterRule>) => {
     setFilters((current) =>
       current.map((filter) =>
         filter.id === id ? { ...filter, ...updates } : filter,
       ),
     );
-    setCurrentPage(1);
-  };
-
-  const removeFilter = (id: string) => {
-    setFilters((current) => current.filter((filter) => filter.id !== id));
     setCurrentPage(1);
   };
 
@@ -572,7 +534,7 @@ export default function ProjectList() {
                             variant={
                               isFilterOpen
                                 ? "ghost"
-                                : filters.length > 0
+                                : activeFilterCount > 0
                                   ? "secondary"
                                   : "ghost"
                             }
@@ -582,12 +544,12 @@ export default function ProjectList() {
                             }
                             className={cn(
                               "h-10 justify-center border border-border/50 shadow-sm transition-all sm:flex-initial",
-                              filters.length === 0
+                              activeFilterCount === 0
                                 ? "px-3 md:w-10 md:px-0"
                                 : "gap-2 px-3 md:px-2.5",
                               isFilterOpen
                                 ? "border-primary bg-primary/10 text-primary"
-                                : filters.length > 0
+                                : activeFilterCount > 0
                                   ? "border-border bg-secondary text-foreground"
                                   : "bg-card",
                             )}
@@ -596,9 +558,9 @@ export default function ProjectList() {
                             <span className="text-sm md:hidden">
                               フィルター
                             </span>
-                            {filters.length > 0 && (
+                            {activeFilterCount > 0 && (
                               <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                                {filters.length}
+                                {activeFilterCount}
                               </span>
                             )}
                           </Button>
@@ -609,7 +571,7 @@ export default function ProjectList() {
                         >
                           <p>
                             フィルター
-                            {filters.length > 0 ? ` (${filters.length})` : ""}
+                            {activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
                           </p>
                         </TooltipContent>
                       </Tooltip>
@@ -637,7 +599,7 @@ export default function ProjectList() {
                         key={filter.id}
                         className={cn(
                           "flex flex-wrap sm:flex-nowrap items-center gap-2 p-2 sm:p-1.5 bg-background border border-border/60 rounded-xl shadow-sm animate-in zoom-in-95 duration-200 w-full sm:w-auto min-w-0 overflow-hidden",
-                          filter.field === "amount" || filter.field === "date"
+                          filter.field === "amount" || filter.field === "next_action_date"
                             ? "col-span-2"
                             : "col-span-1",
                         )}
@@ -652,13 +614,11 @@ export default function ProjectList() {
                             <SelectValue placeholder="項目" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="customer">顧客名</SelectItem>
                             <SelectItem value="status">フェーズ</SelectItem>
                             <SelectItem value="priority">確度</SelectItem>
                             <SelectItem value="amount">金額</SelectItem>
                             <SelectItem value="owner">担当者</SelectItem>
                             <SelectItem value="next_action_date">次回アクション</SelectItem>
-                            <SelectItem value="updated_at">最終更新</SelectItem>
                           </SelectContent>
                         </Select>
 
@@ -676,7 +636,7 @@ export default function ProjectList() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => removeFilter(filter.id)}
+                          onClick={() => updateFilter(filter.id, { value: "" })}
                           className="order-2 sm:order-4 w-8 h-8 text-muted-foreground/30 hover:text-destructive hover:bg-destructive/5 rounded-lg ml-auto sm:ml-1 shrink-0"
                         >
                           <X className="h-4 w-4" />
@@ -684,24 +644,25 @@ export default function ProjectList() {
                       </div>
                     ))}
 
-                    <div className="col-span-2 flex items-center justify-between gap-3 pt-1 w-full min-w-0">
+                    <div className="col-span-2 flex items-center justify-end gap-3 pt-1 w-full min-w-0">
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={addFilter}
-                        className="h-9 px-3 border border-dashed border-border text-muted-foreground hover:text-primary hover:border-primary/30 hover:bg-primary/5 rounded-md text-xs font-bold transition-all shrink-0"
+                        onClick={() => undefined}
+                        className="hidden"
                       >
                         <Plus className="w-4 h-4 mr-1.5" />
                         条件追加
                       </Button>
 
-                      {filters.length > 0 && (
+                      {activeFilterCount > 0 && (
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => {
-                            setFilters([]);
-                            setIsFilterOpen(false);
+                            setFilters((current) =>
+                              current.map((filter) => ({ ...filter, value: "" })),
+                            );
                             setCurrentPage(1);
                           }}
                           className="h-9 px-3 text-muted-foreground hover:text-destructive gap-1.5 rounded-md text-xs font-bold transition-all shrink-0 ml-auto"
@@ -731,7 +692,9 @@ export default function ProjectList() {
                 size="sm"
                 onClick={() => {
                   setSearch("");
-                  setFilters([]);
+                  setFilters((current) =>
+                    current.map((filter) => ({ ...filter, value: "" })),
+                  );
                   setCurrentPage(1);
                 }}
               >

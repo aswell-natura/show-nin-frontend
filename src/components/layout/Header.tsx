@@ -19,6 +19,8 @@ import {
   User,
   Lock,
   Building,
+  Briefcase,
+  Users,
   CreditCard,
   CircleDollarSign,
   History,
@@ -27,6 +29,8 @@ import {
   Database,
   LogOut,
   Bell,
+  ToggleLeft,
+  Package,
   Search,
 } from "lucide-react";
 import logoUrlLight from "../../assets/show-nin.svg";
@@ -76,6 +80,65 @@ export default function Header({ onMenuToggle }: HeaderProps) {
     logout();
     navigate("/login");
   }
+
+  const leftMenuItems = [
+    { label: "ユーザー", icon: User, onClick: () => navigate("/users") },
+    { label: "役職", icon: Briefcase },
+    { label: "部署", icon: Building },
+    { label: "所属グループ", icon: Users },
+    { label: "自社情報", icon: Building },
+    { label: "業種設定", icon: Database },
+  ];
+
+  const rightPrimaryItems = [
+    { label: "機能選択", icon: ToggleLeft, onClick: openSettingsPanel },
+    { label: "課金プラン", icon: Package },
+    { label: "カード情報変更", icon: CreditCard },
+    { label: "AIパケット追加", icon: CircleDollarSign },
+    { label: "決済履歴", icon: History },
+    { label: "AIパケット履歴", icon: History },
+  ];
+
+  const rightSecondaryItems = [
+    {
+      label: "利用状況",
+      icon: BarChart,
+      onClick: () => navigate("/usage-status"),
+    },
+    { label: "詳細設定", icon: Settings, onClick: () => navigate("/settings") },
+    { label: "使い方", icon: HelpCircle },
+    {
+      label: "パスワード変更",
+      icon: Lock,
+      onClick: () => navigate("/password-change"),
+    },
+  ];
+
+  const profileLeftMenuItems = [
+    ...leftMenuItems,
+    { label: "フェーズ設定", icon: Database },
+    { label: "ラベル設定", icon: Database },
+  ];
+
+  const billingMenuItems = [
+    { ...rightPrimaryItems[1], onClick: () => navigate("/billing") },
+    { ...rightPrimaryItems[2], onClick: () => navigate("/payment-card") },
+    {
+      label: "AIパケット追加",
+      icon: CircleDollarSign,
+      onClick: () => navigate("/ai-packets"),
+    },
+    {
+      label: "決済履歴",
+      icon: History,
+      onClick: () => navigate("/payment-history"),
+    },
+    {
+      label: "AIパケット履歴",
+      icon: History,
+      onClick: () => navigate("/ai-packet-history"),
+    },
+  ];
 
   return (
     <header
@@ -224,101 +287,193 @@ export default function Header({ onMenuToggle }: HeaderProps) {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              className="w-64 max-h-[80vh] overflow-y-auto"
+              className="w-[calc(100vw-2rem)] max-w-[680px] overflow-hidden p-0"
               align="end"
               sideOffset={10}
             >
-              <div className="px-2 py-2 mb-1">
-                <p className="text-sm font-semibold text-foreground truncate">
-                  {currentUser.name}
-                </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {currentUser.email}
-                </p>
+              <div className="border-b border-border px-4 py-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Avatar className="size-12 shrink-0">
+                      <AvatarFallback className="bg-primary text-primary-foreground text-base font-bold">
+                        {currentUser.avatar}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="truncate text-base font-semibold leading-6 text-foreground">
+                        {currentUser.name}
+                      </p>
+                      <p className="truncate text-sm text-muted-foreground">
+                        権限：ユーザー
+                      </p>
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <span className="inline-flex rounded-md bg-primary/10 px-2.5 py-1 text-sm font-medium text-primary">
+                      CEO
+                    </span>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      システム開発部
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <DropdownMenuSeparator />
+              <div className="grid max-h-[560px] grid-cols-1 overflow-y-auto sm:grid-cols-2 sm:overflow-hidden">
+                <div className="space-y-1 p-4 sm:max-h-[560px] sm:overflow-y-auto">
+                  {profileLeftMenuItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={"onClick" in item ? item.onClick : undefined}
+                        className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                      >
+                        <Icon className="h-4.5 w-4.5 shrink-0 text-muted-foreground" />
+                        <span className="truncate">{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
 
-              <DropdownMenuGroup>
-                <DropdownMenuLabel>アカウント</DropdownMenuLabel>
-                <DropdownMenuItem>
-                  <User className="mr-2 h-4 w-4" />
-                  <span>プロフィール編集</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Lock className="mr-2 h-4 w-4" />
-                  <span>パスワード変更</span>
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
+                <div className="space-y-1 border-t border-border p-4 sm:max-h-[560px] sm:overflow-y-auto sm:border-l sm:border-t-0">
+                  {billingMenuItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={"onClick" in item ? item.onClick : undefined}
+                        className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                      >
+                        <Icon className="h-4.5 w-4.5 shrink-0 text-muted-foreground" />
+                        <span className="truncate">{item.label}</span>
+                      </button>
+                    );
+                  })}
 
-              <DropdownMenuSeparator />
+                  <div className="my-3 border-t border-border" />
 
-              <DropdownMenuGroup>
-                <DropdownMenuLabel>設定</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => navigate("/settings")}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>基本設定</span>
-                </DropdownMenuItem>
-                {effectiveMode === "manager" && (
+                  {rightSecondaryItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={item.onClick}
+                        className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                      >
+                        <Icon className="h-4.5 w-4.5 shrink-0 text-muted-foreground" />
+                        <span className="truncate">{item.label}</span>
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
+                  >
+                    <LogOut className="h-4.5 w-4.5 shrink-0" />
+                    <span className="truncate">ログアウト</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="hidden">
+                <div className="px-2 py-2 mb-1">
+                  <p className="text-sm font-semibold text-foreground truncate">
+                    {currentUser.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {currentUser.email}
+                  </p>
+                </div>
+
+                <DropdownMenuSeparator />
+
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>アカウント</DropdownMenuLabel>
                   <DropdownMenuItem>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>詳細設定</span>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>プロフィール編集</span>
                   </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Lock className="mr-2 h-4 w-4" />
+                    <span>パスワード変更</span>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+
+                <DropdownMenuSeparator />
+
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>設定</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => navigate("/settings")}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>基本設定</span>
+                  </DropdownMenuItem>
+                  {effectiveMode === "manager" && (
+                    <DropdownMenuItem>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>詳細設定</span>
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuGroup>
+
+                {effectiveMode === "manager" && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                      <DropdownMenuLabel>支払い・利用状況</DropdownMenuLabel>
+                      <DropdownMenuItem>
+                        <Building className="mr-2 h-4 w-4" />
+                        <span>課金プラン</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <CreditCard className="mr-2 h-4 w-4" />
+                        <span>カード情報変更</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="text-primary font-medium">
+                        <CircleDollarSign className="mr-2 h-4 w-4" />
+                        <span>AIパケット追加</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <History className="mr-2 h-4 w-4" />
+                        <span>決済履歴</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="text-primary font-medium">
+                        <History className="mr-2 h-4 w-4" />
+                        <span>AIパケット履歴</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <BarChart className="mr-2 h-4 w-4" />
+                        <span>利用状況</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                  </>
                 )}
-              </DropdownMenuGroup>
 
-              {effectiveMode === "manager" && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuGroup>
-                    <DropdownMenuLabel>支払い・利用状況</DropdownMenuLabel>
-                    <DropdownMenuItem>
-                      <Building className="mr-2 h-4 w-4" />
-                      <span>課金プラン</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      <span>カード情報変更</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="text-primary font-medium">
-                      <CircleDollarSign className="mr-2 h-4 w-4" />
-                      <span>AIパケット追加</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <History className="mr-2 h-4 w-4" />
-                      <span>決済履歴</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="text-primary font-medium">
-                      <History className="mr-2 h-4 w-4" />
-                      <span>AIパケット履歴</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <BarChart className="mr-2 h-4 w-4" />
-                      <span>利用状況</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                </>
-              )}
+                <DropdownMenuSeparator />
 
-              <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem>
+                    <HelpCircle className="mr-2 h-4 w-4" />
+                    <span>使い方</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={resetToDefaults}>
+                    <Database className="mr-2 h-4 w-4" />
+                    <span>データをリセット</span>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
 
-              <DropdownMenuGroup>
-                <DropdownMenuItem>
-                  <HelpCircle className="mr-2 h-4 w-4" />
-                  <span>使い方</span>
+                <DropdownMenuSeparator />
+
+                <DropdownMenuItem onClick={handleLogout} variant="destructive">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>ログアウト</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={resetToDefaults}>
-                  <Database className="mr-2 h-4 w-4" />
-                  <span>データをリセット</span>
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-
-              <DropdownMenuSeparator />
-
-              <DropdownMenuItem onClick={handleLogout} variant="destructive">
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>ログアウト</span>
-              </DropdownMenuItem>
+              </div>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

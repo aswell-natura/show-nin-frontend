@@ -41,8 +41,8 @@ export function StandardWidget<T>({
     <WidgetCard title={title} description={description} action={action} className={className}>
       {children}
 
-      <div className="flex-1 relative min-h-0 overflow-hidden">
-        <div className={cn("h-full overflow-y-auto divide-y divide-border scrollbar-thin scrollbar-thumb-border/50 hover:scrollbar-thumb-border", listClassName)}>
+      <div className="md:flex-1 md:relative md:min-h-0 md:overflow-hidden flex flex-col">
+        <div className={cn("md:h-full md:overflow-y-auto overflow-visible divide-y divide-border scrollbar-thin scrollbar-thumb-border/50 hover:scrollbar-thumb-border", listClassName)}>
           {items.length === 0 ? (
             <div className="flex items-center justify-center h-32 text-[10px] font-bold text-muted-foreground uppercase tracking-widest italic bg-muted/5">
               {emptyMessage}
@@ -71,7 +71,7 @@ export function StandardWidget<T>({
           )}
         </div>
         {/* Scroll shadow fade */}
-        <div className="absolute bottom-0 left-0 right-0 h-12 bg-linear-to-t from-card to-transparent pointer-events-none opacity-60" />
+        <div className="hidden md:block absolute bottom-0 left-0 right-0 h-12 bg-linear-to-t from-card to-transparent pointer-events-none opacity-60" />
       </div>
     </WidgetCard>
   )

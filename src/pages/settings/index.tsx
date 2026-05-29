@@ -266,12 +266,24 @@ const initialCheckTemplates: CheckTemplate[] = [
 function AiAssistantTable() {
   const [assistants, setAssistants] = useState(initialAiAssistants);
   const [selectedAssistant, setSelectedAssistant] = useState<AiAssistant | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formValues, setFormValues] = useState({
     name: "",
     isDefault: false,
     summary: "",
     prompt: "",
   });
+
+  const openCreate = () => {
+    setSelectedAssistant(null);
+    setFormValues({
+      name: "",
+      isDefault: false,
+      summary: "",
+      prompt: "",
+    });
+    setIsDialogOpen(true);
+  };
 
   const openDetail = (assistant: AiAssistant) => {
     setSelectedAssistant(assistant);
@@ -281,28 +293,53 @@ function AiAssistantTable() {
       summary: assistant.summary,
       prompt: assistant.prompt,
     });
+    setIsDialogOpen(true);
+  };
+
+  const closeAssistantDialog = () => {
+    setSelectedAssistant(null);
+    setIsDialogOpen(false);
   };
 
   const handleSave = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!selectedAssistant) return;
 
     setAssistants((current) =>
-      current.map((assistant) =>
-        assistant.id === selectedAssistant.id
-          ? { ...assistant, ...formValues }
-          : formValues.isDefault
-            ? { ...assistant, isDefault: false }
-            : assistant,
-      ),
+      selectedAssistant
+        ? current.map((assistant) =>
+            assistant.id === selectedAssistant.id
+              ? { ...assistant, ...formValues }
+              : formValues.isDefault
+                ? { ...assistant, isDefault: false }
+                : assistant,
+          )
+        : [
+            ...current.map((assistant) =>
+              formValues.isDefault ? { ...assistant, isDefault: false } : assistant,
+            ),
+            {
+              id: `assistant-${Date.now()}`,
+              name: formValues.name,
+              summary: formValues.summary,
+              intervalSeconds: 60,
+              isDefault: formValues.isDefault,
+              prompt: formValues.prompt,
+            },
+          ],
     );
-    setSelectedAssistant(null);
+    closeAssistantDialog();
   };
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
       <PageHeader title="AIアシスタント設定" description="作成済みのAIアシスタントを一覧で確認できます。" showBackButton />
       <div className="flex-1 overflow-y-auto p-4 md:p-6">
+        <div className="mb-4 flex justify-end">
+          <Button type="button" variant="primary" className="gap-2" onClick={openCreate}>
+            <Plus className="h-4 w-4" />
+            新規作成
+          </Button>
+        </div>
         <DataTable>
           <TableHeader className="bg-muted/40">
             <TableRow>
@@ -331,11 +368,11 @@ function AiAssistantTable() {
         </DataTable>
       </div>
 
-      <Dialog open={selectedAssistant !== null} onOpenChange={(open) => !open && setSelectedAssistant(null)}>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => !open && closeAssistantDialog()}>
         <DialogContent className="max-h-[calc(100vh-2rem)] max-w-2xl gap-0 overflow-hidden p-0">
           <form onSubmit={handleSave} className="flex max-h-[calc(100vh-2rem)] flex-col">
             <DialogHeader className="border-b border-border px-6 py-5">
-              <DialogTitle>AIアシスタント詳細</DialogTitle>
+              <DialogTitle>{selectedAssistant ? "AIアシスタント詳細" : "AIアシスタント新規作成"}</DialogTitle>
               <DialogDescription>AIアシスタントのカラム情報を編集できます。</DialogDescription>
             </DialogHeader>
             <div className="custom-scrollbar flex-1 space-y-5 overflow-y-auto px-6 py-5">
@@ -364,7 +401,7 @@ function AiAssistantTable() {
               <TextAreaField label="説明" value={formValues.summary} rows={3} onChange={(value) => setFormValues((current) => ({ ...current, summary: value }))} />
               <TextAreaField label="プロンプト" value={formValues.prompt} rows={6} onChange={(value) => setFormValues((current) => ({ ...current, prompt: value }))} />
             </div>
-            <ModalFooter onCancel={() => setSelectedAssistant(null)} />
+            <ModalFooter onCancel={closeAssistantDialog} />
           </form>
         </DialogContent>
       </Dialog>
@@ -375,12 +412,24 @@ function AiAssistantTable() {
 function DocumentTemplateTable() {
   const [templates, setTemplates] = useState(initialDocumentTemplates);
   const [selectedTemplate, setSelectedTemplate] = useState<DocumentTemplate | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formValues, setFormValues] = useState({
     title: "",
     type: templateTypeOptions[0],
     description: "",
     promptStructure: "",
   });
+
+  const openCreate = () => {
+    setSelectedTemplate(null);
+    setFormValues({
+      title: "",
+      type: templateTypeOptions[0],
+      description: "",
+      promptStructure: "",
+    });
+    setIsDialogOpen(true);
+  };
 
   const openDetail = (template: DocumentTemplate) => {
     setSelectedTemplate(template);
@@ -390,23 +439,42 @@ function DocumentTemplateTable() {
       description: template.description,
       promptStructure: template.promptStructure,
     });
+    setIsDialogOpen(true);
+  };
+
+  const closeTemplateDialog = () => {
+    setSelectedTemplate(null);
+    setIsDialogOpen(false);
   };
 
   const handleSave = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!selectedTemplate) return;
     setTemplates((current) =>
-      current.map((template) =>
-        template.id === selectedTemplate.id ? { ...template, ...formValues } : template,
-      ),
+      selectedTemplate
+        ? current.map((template) =>
+            template.id === selectedTemplate.id ? { ...template, ...formValues } : template,
+          )
+        : [
+            ...current,
+            {
+              id: `document-template-${Date.now()}`,
+              ...formValues,
+            },
+          ],
     );
-    setSelectedTemplate(null);
+    closeTemplateDialog();
   };
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
       <PageHeader title="ドキュメントテンプレート設定" description="作成済みのドキュメントテンプレートを一覧で確認できます。" showBackButton />
       <div className="flex-1 overflow-y-auto p-4 md:p-6">
+        <div className="mb-4 flex justify-end">
+          <Button type="button" variant="primary" className="gap-2" onClick={openCreate}>
+            <Plus className="h-4 w-4" />
+            新規作成
+          </Button>
+        </div>
         <DataTable>
           <TableHeader className="bg-muted/40">
             <TableRow>
@@ -429,11 +497,11 @@ function DocumentTemplateTable() {
         </DataTable>
       </div>
 
-      <Dialog open={selectedTemplate !== null} onOpenChange={(open) => !open && setSelectedTemplate(null)}>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => !open && closeTemplateDialog()}>
         <DialogContent className="max-h-[calc(100vh-2rem)] max-w-2xl gap-0 overflow-hidden p-0">
           <form onSubmit={handleSave} className="flex max-h-[calc(100vh-2rem)] flex-col">
             <DialogHeader className="border-b border-border px-6 py-5">
-              <DialogTitle>ドキュメントテンプレート詳細</DialogTitle>
+              <DialogTitle>{selectedTemplate ? "ドキュメントテンプレート詳細" : "ドキュメントテンプレート新規作成"}</DialogTitle>
               <DialogDescription>テンプレートの内容と生成時の構成を編集できます。</DialogDescription>
             </DialogHeader>
             <div className="custom-scrollbar flex-1 space-y-5 overflow-y-auto px-6 py-5">
@@ -442,7 +510,7 @@ function DocumentTemplateTable() {
               <TextAreaField label="説明" value={formValues.description} rows={3} onChange={(value) => setFormValues((current) => ({ ...current, description: value }))} />
               <TextAreaField label="プロンプト / 構成" value={formValues.promptStructure} rows={7} onChange={(value) => setFormValues((current) => ({ ...current, promptStructure: value }))} />
             </div>
-            <ModalFooter onCancel={() => setSelectedTemplate(null)} />
+            <ModalFooter onCancel={closeTemplateDialog} />
           </form>
         </DialogContent>
       </Dialog>
@@ -453,6 +521,7 @@ function DocumentTemplateTable() {
 function CheckTemplateTable() {
   const [templates, setTemplates] = useState(initialCheckTemplates);
   const [selectedTemplate, setSelectedTemplate] = useState<CheckTemplate | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formValues, setFormValues] = useState({
     title: "",
     intervalSeconds: 60,
@@ -461,39 +530,70 @@ function CheckTemplateTable() {
     prompt: "",
   });
 
+  const openCreate = () => {
+    setSelectedTemplate(null);
+    setFormValues({
+      title: "",
+      intervalSeconds: 60,
+      applyByDefault: false,
+      checkItems: [],
+      prompt: "",
+    });
+    setIsDialogOpen(true);
+  };
+
   const openDetail = (template: CheckTemplate) => {
     setSelectedTemplate(template);
     setFormValues({
       title: template.title,
       intervalSeconds: template.intervalSeconds,
       applyByDefault: template.applyByDefault,
-      checkItems: template.checkItems,
+      checkItems: [...template.checkItems],
       prompt: template.prompt,
     });
+    setIsDialogOpen(true);
+  };
+
+  const closeTemplateDialog = () => {
+    setSelectedTemplate(null);
+    setIsDialogOpen(false);
   };
 
   const handleSave = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!selectedTemplate) return;
     const checkItems = formValues.checkItems
       .map((item) => item.trim())
       .filter(Boolean);
     setTemplates((current) =>
-      current.map((template) =>
-        template.id === selectedTemplate.id
-          ? {
-              ...template,
+      selectedTemplate
+        ? current.map((template) =>
+            template.id === selectedTemplate.id
+              ? {
+                  ...template,
+                  title: formValues.title,
+                  intervalSeconds: formValues.intervalSeconds,
+                  applyByDefault: formValues.applyByDefault,
+                  checkItems,
+                  itemCount: checkItems.length,
+                  prompt: formValues.prompt,
+                }
+              : template,
+          )
+        : [
+            ...current,
+            {
+              id: `check-template-${Date.now()}`,
               title: formValues.title,
+              description: formValues.prompt,
+              itemCount: checkItems.length,
               intervalSeconds: formValues.intervalSeconds,
               applyByDefault: formValues.applyByDefault,
               checkItems,
-              itemCount: checkItems.length,
               prompt: formValues.prompt,
-            }
-          : template,
-      ),
+            },
+          ],
     );
-    setSelectedTemplate(null);
+    closeTemplateDialog();
   };
 
   const addCheckItem = () => {
@@ -523,6 +623,12 @@ function CheckTemplateTable() {
     <div className="flex h-full flex-col overflow-hidden bg-background">
       <PageHeader title="チェックテンプレート設定" description="作成済みのチェックテンプレートを一覧で確認できます。" showBackButton />
       <div className="flex-1 overflow-y-auto p-4 md:p-6">
+        <div className="mb-4 flex justify-end">
+          <Button type="button" variant="primary" className="gap-2" onClick={openCreate}>
+            <Plus className="h-4 w-4" />
+            新規作成
+          </Button>
+        </div>
         <DataTable>
           <TableHeader className="bg-muted/40">
             <TableRow>
@@ -549,11 +655,11 @@ function CheckTemplateTable() {
         </DataTable>
       </div>
 
-      <Dialog open={selectedTemplate !== null} onOpenChange={(open) => !open && setSelectedTemplate(null)}>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => !open && closeTemplateDialog()}>
         <DialogContent className="max-h-[calc(100vh-2rem)] max-w-2xl gap-0 overflow-hidden p-0">
           <form onSubmit={handleSave} className="flex max-h-[calc(100vh-2rem)] flex-col">
             <DialogHeader className="border-b border-border px-6 py-5">
-              <DialogTitle>チェックテンプレート詳細</DialogTitle>
+              <DialogTitle>{selectedTemplate ? "チェックテンプレート詳細" : "チェックテンプレート新規作成"}</DialogTitle>
               <DialogDescription>チェックテンプレートの実行条件とプロンプトを編集できます。</DialogDescription>
             </DialogHeader>
             <div className="custom-scrollbar flex-1 space-y-5 overflow-y-auto px-6 py-5">
@@ -636,7 +742,7 @@ function CheckTemplateTable() {
                 </p>
               </div>
             </div>
-            <ModalFooter onCancel={() => setSelectedTemplate(null)} />
+            <ModalFooter onCancel={closeTemplateDialog} />
           </form>
         </DialogContent>
       </Dialog>

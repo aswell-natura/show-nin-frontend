@@ -9,11 +9,9 @@ import { mockAudioMinutes } from '../../data/mock'
 import { Play, Pause, Volume2, VolumeX, Copy, Check } from 'lucide-react'
 
 const documentTemplates = [
-  { title: '見積書', description: '商談内容から金額や条件を整理して作成' },
-  { title: '請求書', description: '請求先と明細をもとに作成' },
-  { title: '契約書', description: '合意事項や契約条件を文書化' },
-  { title: '提案書', description: '課題、提案内容、次のアクションを整理' },
-  { title: '発注書', description: '発注内容と納期を明確にして作成' },
+  { title: '商談議事録テンプレート', description: '商談内容から金額や条件を整理して作成' },
+  { title: '業務委託契約書テンプレート', description: '請求先と明細をもとに作成' },
+  { title: '標準見積書テンプレート', description: '合意事項や契約条件を文書化' },
 ]
 
 interface GeneratedDocument {

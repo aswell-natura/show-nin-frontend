@@ -26,17 +26,11 @@ import AppLayout from "../../components/layout/AppLayout";
 import { useDataStore } from "../../context/DataStoreContext";
 import { useGlobalDialog } from "../../context/GlobalDialogContext";
 import TaskDialogForm from "@/components/tasks/TaskDialogForm";
+import { ProgressPercentPicker } from "@/components/tasks/ProgressPercentPicker";
 import type { Task } from "../../types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
@@ -67,8 +61,6 @@ interface TaskDetailView {
   progressPercent: number;
   progressUpdatedAt?: string;
 }
-
-const progressOptions = Array.from({ length: 11 }, (_, index) => index * 10);
 
 const mobileTabs: { id: MobileTab; label: string }[] = [
   { id: "related", label: "関連" },
@@ -651,27 +643,15 @@ export default function TaskDetail() {
                 <div>
                   <p className="text-xs font-bold text-foreground">進捗</p>
                   <p className="mt-0.5 text-[11px] font-medium text-muted-foreground">
-                    達成率を10%単位で更新
+                    達成率を5%単位で更新
                   </p>
                 </div>
-                <Select
-                  value={String(taskView.progressPercent)}
-                  onValueChange={(value) => handleProgressChange(Number(value))}
-                >
-                  <SelectTrigger
-                    aria-label="進捗率を変更"
-                    className="h-9 w-24 rounded-full border-border bg-background px-3 text-sm font-bold shadow-2xs"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent align="end">
-                    {progressOptions.map((value) => (
-                      <SelectItem key={value} value={String(value)}>
-                        {value}%
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ProgressPercentPicker
+                  value={taskView.progressPercent}
+                  onChange={handleProgressChange}
+                  ariaLabel="進捗率を変更"
+                  className="h-9 text-sm font-bold"
+                />
               </div>
               <div className="h-2.5 overflow-hidden rounded-full bg-muted">
                 <div

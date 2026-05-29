@@ -10,6 +10,7 @@ import {
 import CustomerDialogForm from "@/components/customers/CustomerDialogForm";
 import MemberDialogForm from "@/components/members/MemberDialogForm";
 import ProjectDialogForm from "@/components/projects/ProjectDialogForm";
+import { ProgressPercentPicker } from "@/components/tasks/ProgressPercentPicker";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -19,13 +20,6 @@ import {
   LinearDialogPill,
   LinearDialogTextarea,
 } from "@/components/ui/linear-dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useDataStore } from "@/context/DataStoreContext";
 import { useGlobalDialog } from "@/context/GlobalDialogContext";
 import type { Task } from "@/types";
@@ -48,8 +42,6 @@ export interface TaskDialogFormProps {
   initialValues?: Partial<TaskDialogValues>;
   onSubmit: (values: Omit<Task, "id">) => void;
 }
-
-const progressOptions = Array.from({ length: 11 }, (_, index) => index * 10);
 
 function todayString() {
   return new Date().toISOString().slice(0, 10);
@@ -456,26 +448,14 @@ export default function TaskDialogForm({
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between gap-3">
               <p className="text-[11px] font-medium text-muted-foreground">
-                達成率を10%単位で設定
+                達成率を5%単位で設定
               </p>
-              <Select
-                value={String(values.progress_percent)}
-                onValueChange={(value) => updateValue("progress_percent", Number(value))}
-              >
-                <SelectTrigger
-                  aria-label="進捗率を設定"
-                  className="h-9 w-24 rounded-full border-border bg-background px-3 text-sm font-bold shadow-2xs"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent align="end">
-                {progressOptions.map((progress) => (
-                  <SelectItem key={progress} value={String(progress)}>
-                    {progress}%
-                  </SelectItem>
-                ))}
-                </SelectContent>
-              </Select>
+              <ProgressPercentPicker
+                value={values.progress_percent}
+                onChange={(value) => updateValue("progress_percent", value)}
+                ariaLabel="進捗率を設定"
+                className="h-9 text-sm font-bold"
+              />
             </div>
             <div className="h-2.5 overflow-hidden rounded-full bg-muted">
               <div

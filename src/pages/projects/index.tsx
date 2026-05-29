@@ -123,10 +123,16 @@ const priorityLabel: Record<Project["priority"], string> = {
   3: "低",
 };
 
-const priorityColor: Record<Project["priority"], string> = {
-  1: "bg-destructive/10 text-destructive",
-  2: "bg-yellow-500/10 text-yellow-600",
-  3: "bg-muted text-muted-foreground",
+const priorityPillColor: Record<Project["priority"], string> = {
+  1: "border-orange-800/25 bg-orange-50 text-orange-900 hover:bg-orange-100 dark:border-orange-500/30 dark:bg-orange-950/30 dark:text-orange-300 dark:hover:bg-orange-950/45",
+  2: "border-yellow-500/25 bg-yellow-50 text-yellow-800 hover:bg-yellow-100 dark:border-yellow-400/30 dark:bg-yellow-950/30 dark:text-yellow-300 dark:hover:bg-yellow-950/45",
+  3: "border-slate-500/20 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-slate-400/25 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800",
+};
+
+const priorityDotColor: Record<Project["priority"], string> = {
+  1: "bg-orange-800 dark:bg-orange-400",
+  2: "bg-yellow-500 dark:bg-yellow-300",
+  3: "bg-slate-700 dark:bg-slate-300",
 };
 
 const statusOptions = [
@@ -141,6 +147,21 @@ const priorityOptions = [
   { label: "中", value: "2" },
   { label: "低", value: "3" },
 ];
+
+function renderPriorityOption(priority: Project["priority"]) {
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span
+        className={cn(
+          "size-2 rounded-full",
+          priorityDotColor[priority],
+        )}
+        aria-hidden="true"
+      />
+      <span>{priorityLabel[priority]}</span>
+    </span>
+  );
+}
 
 
 
@@ -891,16 +912,18 @@ export default function ProjectList() {
                                     >
                                       <SelectTrigger
                                         className={cn(
-                                          "h-8 w-20 rounded-full border border-border/80 bg-muted/30 px-3 text-xs font-semibold text-foreground shadow-2xs transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50",
-                                          priorityColor[project.priority],
+                                          "h-8 w-24 rounded-full border px-3 text-xs font-semibold shadow-2xs transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 [&>svg]:size-3.5 [&>svg]:text-current [&>svg]:opacity-70",
+                                          priorityPillColor[project.priority],
                                         )}
                                       >
-                                        <SelectValue />
+                                        {renderPriorityOption(project.priority)}
                                       </SelectTrigger>
-                                      <SelectContent>
+                                      <SelectContent className="min-w-28">
                                         {priorityOptions.map((option) => (
                                           <SelectItem key={option.value} value={option.value}>
-                                            {option.label}
+                                            {renderPriorityOption(
+                                              Number(option.value) as Project["priority"],
+                                            )}
                                           </SelectItem>
                                         ))}
                                       </SelectContent>

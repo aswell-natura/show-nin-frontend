@@ -1,6 +1,7 @@
 import {
   AlertCircle,
   Bot,
+  Building,
   CalendarDays,
   Check,
   ChevronLeft,
@@ -10,6 +11,7 @@ import {
   Pencil,
   Plus,
   SlidersHorizontal,
+  User,
   X,
 } from "lucide-react";
 import { useState, type FormEvent } from "react";
@@ -44,6 +46,23 @@ import {
 } from "@/lib/feature-menu";
 
 const settingSections = [
+  {
+    title: "ユーザー情報",
+    cards: [
+      {
+        title: "ユーザー",
+        description: "利用ユーザーの権限やステータスを管理します。",
+        icon: User,
+        path: "/users",
+      },
+      {
+        title: "自社情報",
+        description: "自社の基本情報を管理します。",
+        icon: Building,
+        path: "/company",
+      },
+    ],
+  },
   {
     title: "AI機能",
     cards: [

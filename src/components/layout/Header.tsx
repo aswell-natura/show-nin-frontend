@@ -19,8 +19,6 @@ import {
   User,
   Lock,
   Building,
-  Briefcase,
-  Users,
   CreditCard,
   CircleDollarSign,
   History,
@@ -81,14 +79,6 @@ export default function Header({ onMenuToggle }: HeaderProps) {
     navigate("/login");
   }
 
-  const leftMenuItems = [
-    { label: "ユーザー", icon: User, onClick: () => navigate("/users") },
-    { label: "役職", icon: Briefcase, onClick: () => navigate("/positions") },
-    { label: "部署", icon: Building, onClick: () => navigate("/departments") },
-    { label: "所属グループ", icon: Users, onClick: () => navigate("/groups") },
-    { label: "自社情報", icon: Building, onClick: () => navigate("/company") },
-  ];
-
   const rightPrimaryItems = [
     { label: "機能選択", icon: ToggleLeft, onClick: openSettingsPanel },
     { label: "課金プラン", icon: Package },
@@ -112,8 +102,6 @@ export default function Header({ onMenuToggle }: HeaderProps) {
       onClick: () => navigate("/password-change"),
     },
   ];
-
-  const profileLeftMenuItems = leftMenuItems;
 
   const billingMenuItems = [
     { ...rightPrimaryItems[1], onClick: () => navigate("/billing") },
@@ -314,25 +302,8 @@ export default function Header({ onMenuToggle }: HeaderProps) {
                 </div>
               </div>
 
-              <div className="grid max-h-[560px] grid-cols-1 overflow-y-auto sm:grid-cols-2 sm:overflow-hidden">
-                <div className="space-y-1 p-4 sm:max-h-[560px] sm:overflow-y-auto">
-                  {profileLeftMenuItems.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <button
-                        key={item.label}
-                        type="button"
-                        onClick={"onClick" in item ? item.onClick : undefined}
-                        className="flex w-full items-center gap-3 rounded-md px-2 py-2 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted"
-                      >
-                        <Icon className="h-4.5 w-4.5 shrink-0 text-muted-foreground" />
-                        <span className="truncate">{item.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="space-y-1 border-t border-border p-4 sm:max-h-[560px] sm:overflow-y-auto sm:border-l sm:border-t-0">
+              <div className="max-h-[560px] overflow-y-auto">
+                <div className="space-y-1 p-4">
                   {billingMenuItems.map((item) => {
                     const Icon = item.icon;
                     return (

@@ -22,7 +22,6 @@ import {
   CreditCard,
   CircleDollarSign,
   History,
-  BarChart,
   HelpCircle,
   Database,
   LogOut,
@@ -89,11 +88,6 @@ export default function Header({ onMenuToggle }: HeaderProps) {
   ];
 
   const rightSecondaryItems = [
-    {
-      label: "利用状況",
-      icon: BarChart,
-      onClick: () => navigate("/usage-status"),
-    },
     { label: "機能設定", icon: Settings, onClick: () => navigate("/settings") },
     // { label: "使い方", icon: HelpCircle },
     {
@@ -270,12 +264,12 @@ export default function Header({ onMenuToggle }: HeaderProps) {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              className="w-[calc(100vw-2rem)] max-w-[680px] overflow-hidden p-0"
+              className="w-[calc(100vw-2rem)] max-w-[240px] overflow-hidden p-0"
               align="end"
               sideOffset={10}
             >
               <div className="border-b border-border px-4 py-3">
-                <div className="flex items-start justify-between gap-4">
+                <div className="space-y-3">
                   <div className="flex min-w-0 items-center gap-3">
                     <Avatar className="size-12 shrink-0">
                       <AvatarFallback className="bg-primary text-primary-foreground text-base font-bold">
@@ -290,14 +284,6 @@ export default function Header({ onMenuToggle }: HeaderProps) {
                         権限：ユーザー
                       </p>
                     </div>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <span className="inline-flex rounded-md bg-primary/10 px-2.5 py-1 text-sm font-medium text-primary">
-                      CEO
-                    </span>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      システム開発部
-                    </p>
                   </div>
                 </div>
               </div>
@@ -411,10 +397,6 @@ export default function Header({ onMenuToggle }: HeaderProps) {
                       <DropdownMenuItem className="text-primary font-medium">
                         <History className="mr-2 h-4 w-4" />
                         <span>AIパケット履歴</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <BarChart className="mr-2 h-4 w-4" />
-                        <span>利用状況</span>
                       </DropdownMenuItem>
                     </DropdownMenuGroup>
                   </>

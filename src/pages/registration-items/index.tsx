@@ -337,7 +337,7 @@ function RecordTable({
   onDelete: (tab: RegistrationTab, recordId: string) => void;
 }) {
   return (
-    <Table>
+    <Table className="table-fixed">
       <TableHeader className="bg-muted/40">
         <TableRow>
           {isDraggable ? (
@@ -346,11 +346,13 @@ function RecordTable({
               <TableHead className="w-20 px-3">順番</TableHead>
             </>
           ) : null}
-          <TableHead className="px-3">{category.columnLabel}</TableHead>
-          <TableHead className="w-32 px-3 text-right">
+          <TableHead className={cn("px-3", isDraggable ? "w-[46%]" : "w-[62%]")}>
+            {category.columnLabel}
+          </TableHead>
+          <TableHead className="w-28 px-3 text-right">
             {category.countLabel}
           </TableHead>
-          <TableHead className="w-24 px-3 text-right">操作</TableHead>
+          <TableHead className="w-28 px-3 text-right">操作</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -461,7 +463,7 @@ function RecordRow({
           </TableCell>
         </>
       ) : null}
-      <TableCell className="px-3 py-3 font-medium text-foreground">
+      <TableCell className="truncate px-3 py-3 font-medium text-foreground">
         {record.name}
       </TableCell>
       <TableCell className="px-3 py-3 text-right text-muted-foreground">

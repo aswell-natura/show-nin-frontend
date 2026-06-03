@@ -66,6 +66,7 @@ import {
 } from "@/components/ui/motion-tabs";
 import { cn } from "@/lib/utils";
 import { mockAudioMinutes } from "../../data/mock";
+import type { CustomerContact } from "@/types";
 
 type Tab = "projects" | "details" | "profile";
 
@@ -91,6 +92,28 @@ const sourceColor: Record<string, string> = {
   recording: "bg-primary/10 text-primary",
   manual: "bg-emerald-500/10 text-emerald-600",
 };
+
+const defaultCustomerContactPersons: CustomerContact[] = [
+  {
+    name: "山田 智",
+    department: "DX推進室 室長",
+    email: "yamada@example.com",
+  },
+  {
+    name: "佐々木 誠",
+    department: "情報システム部",
+    email: "sasaki@example.com",
+  },
+];
+
+function getCustomerContactPersons(customer?: { contact_persons?: CustomerContact[] } | null) {
+  const contactPersons =
+    customer?.contact_persons?.filter(
+      (contact) => contact.name || contact.department || contact.email,
+    ) ?? [];
+
+  return contactPersons.length > 0 ? contactPersons : defaultCustomerContactPersons;
+}
 
 function formatDate(iso: string) {
   try {
@@ -195,6 +218,7 @@ export default function CustomerDetail() {
   >("incomplete");
 
   const customer = customers.find((c) => c.id === id);
+  const customerContactPersons = getCustomerContactPersons(customer);
 
   useEffect(() => {
     return () => {
@@ -234,6 +258,7 @@ export default function CustomerDetail() {
             labels: customer.labels,
             acquisition_source: customer.acquisition_source,
             note: customer.note,
+            contact_persons: customerContactPersons,
           }}
           onSubmit={(values) => {
             updateCustomer(customer.id, values);
@@ -628,29 +653,22 @@ export default function CustomerDetail() {
               名刺情報
             </h5>
             <div className="flex flex-col gap-3">
-              {[
-                {
-                  name: "山田 智",
-                  dept: "DX推進室 室長",
-                  email: "yamada@example.com",
-                },
-                {
-                  name: "佐々木 誠",
-                  dept: "情報システム部",
-                  email: "sasaki@example.com",
-                },
-              ].map((card, i) => (
+              {customerContactPersons.map((card, i) => (
                 <Card
                   key={i}
                   className="p-3.5 bg-muted/20 dark:bg-muted/10 border border-border/50 rounded-xl text-xs hover:bg-muted/30 dark:hover:bg-muted/20 transition-all cursor-pointer shadow-3xs flex flex-col gap-1"
                 >
                   <p className="font-bold text-foreground text-sm">{card.name}</p>
-                  <p className="text-muted-foreground text-[11px] font-semibold">
-                    {card.dept}
-                  </p>
-                  <p className="text-primary font-bold text-[11px] mt-1 flex items-center gap-1.5">
-                    <Mail className="w-3.5 h-3.5 text-primary shrink-0" /> {card.email}
-                  </p>
+                  {card.department && (
+                    <p className="text-muted-foreground text-[11px] font-semibold">
+                      {card.department}
+                    </p>
+                  )}
+                  {card.email && (
+                    <p className="text-primary font-bold text-[11px] mt-1 flex items-center gap-1.5">
+                      <Mail className="w-3.5 h-3.5 text-primary shrink-0" /> {card.email}
+                    </p>
+                  )}
                 </Card>
               ))}
             </div>

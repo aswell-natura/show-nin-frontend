@@ -44,6 +44,13 @@ export interface Customer {
   labels?: string[]
   acquisition_source?: string
   note?: string
+  contact_persons?: CustomerContact[]
+}
+
+export interface CustomerContact {
+  name: string
+  department?: string
+  email?: string
 }
 
 export interface Project {

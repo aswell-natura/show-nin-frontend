@@ -1,0 +1,1124 @@
+import { useMemo, useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import {
+  DndContext,
+  KeyboardSensor,
+  MouseSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import type { DragEndEvent } from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  horizontalListSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import {
+  Filter,
+  Info,
+  Plus,
+  RotateCcw,
+  Search,
+  ChevronRight,
+} from "lucide-react";
+
+import AppLayout from "../../components/layout/AppLayout";
+import { useAuth } from "../../context/AuthContext";
+import { useDataStore } from "../../context/DataStoreContext";
+import { useGlobalDialog } from "../../context/GlobalDialogContext";
+import ProjectDialogForm from "@/components/projects/ProjectDialogForm";
+import type { Project, ProjectStatus } from "../../types";
+import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
+import {
+  activeFilterComboboxClassName,
+  filterComboboxClassName,
+  filterDateButtonClassName,
+  FilterPill,
+  filterPriceInputClassName,
+  FilterRangeSeparator,
+  formatPriceInputValue,
+  parsePriceInputValue,
+} from "@/components/ui/filter-pill";
+import {
+  ListPagination,
+  ListTableSurface,
+  SortableListTableHead,
+  type ListSortOrder,
+  type ListTableColumn,
+} from "@/components/ui/list-table";
+import { SearchBar } from "@/components/ui/search-bar";
+import { DatePicker } from "@/components/ui/date-picker";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+
+type SortKey =
+  | "updated_at"
+  | "name"
+  | "customer"
+  | "status"
+  | "priority"
+  | "amount"
+  | "owner"
+  | "next_action_date"
+  | "source"
+  | "note";
+
+interface FilterRule {
+  id: string;
+  field: string;
+  value: string;
+}
+
+const DEFAULT_COLUMNS: ListTableColumn[] = [
+  { id: "name", label: "案件名", width: "w-80" },
+  { id: "customer", label: "顧客名", width: "w-72" },
+  { id: "status", label: "フェーズ", width: "w-36" },
+  { id: "priority", label: "確度", width: "w-28" },
+  { id: "amount", label: "金額", width: "w-36" },
+  { id: "owner", label: "担当者", width: "w-36" },
+  { id: "next_action_date", label: "次回アクション", width: "w-40" },
+  { id: "note", label: "メモ", width: "w-96" },
+  { id: "updated_at", label: "最終更新", width: "w-32" },
+];
+
+const statusLabel: Record<ProjectStatus, string> = {
+  lead: "リード",
+  proposing: "提案中",
+  negotiating: "交渉中",
+  closed: "成約",
+};
+
+const sourceLabel: Record<"recording" | "manual", string> = {
+  recording: "音声録音",
+  manual: "手動登録",
+};
+
+const priorityLabel: Record<Project["priority"], string> = {
+  1: "高",
+  2: "中",
+  3: "低",
+};
+
+const priorityPillColor: Record<Project["priority"], string> = {
+  1: "border-orange-800/25 bg-orange-50 text-orange-900 hover:bg-orange-100 dark:border-orange-500/30 dark:bg-orange-950/30 dark:text-orange-300 dark:hover:bg-orange-950/45",
+  2: "border-yellow-500/25 bg-yellow-50 text-yellow-800 hover:bg-yellow-100 dark:border-yellow-400/30 dark:bg-yellow-950/30 dark:text-yellow-300 dark:hover:bg-yellow-950/45",
+  3: "border-slate-500/20 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:border-slate-400/25 dark:bg-slate-800/60 dark:text-slate-200 dark:hover:bg-slate-800",
+};
+
+const priorityDotColor: Record<Project["priority"], string> = {
+  1: "bg-orange-800 dark:bg-orange-400",
+  2: "bg-yellow-500 dark:bg-yellow-300",
+  3: "bg-slate-700 dark:bg-slate-300",
+};
+
+const statusOptions = [
+  { label: "リード", value: "lead" },
+  { label: "提案中", value: "proposing" },
+  { label: "交渉中", value: "negotiating" },
+  { label: "成約", value: "closed" },
+];
+
+const priorityOptions = [
+  { label: "高", value: "1" },
+  { label: "中", value: "2" },
+  { label: "低", value: "3" },
+];
+
+function renderPriorityOption(priority: Project["priority"]) {
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span
+        className={cn(
+          "size-2 rounded-full",
+          priorityDotColor[priority],
+        )}
+        aria-hidden="true"
+      />
+      <span>{priorityLabel[priority]}</span>
+    </span>
+  );
+}
+
+
+
+const PROJECT_FILTER_FIELDS = [
+  "status",
+  "priority",
+  "amount",
+  "owner",
+  "next_action_date",
+];
+
+function normalizeSearch(value: string) {
+  return value.toLowerCase().replace(/\s+/g, "");
+}
+
+function truncateMemo(value: string, maxLength = 20) {
+  return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
+}
+
+function formatDate(value?: string) {
+  if (!value) return "-";
+  const date = new Date(
+    value.includes("T") ? value : `${value}T00:00:00`,
+  );
+  if (isNaN(date.getTime())) return "-";
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}/${mm}/${dd}`;
+}
+
+function formatDateTime(value?: string) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (isNaN(date.getTime())) return "-";
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+  return `${yyyy}/${mm}/${dd} ${hh}:${min}`;
+}
+
+function formatAmount(value: number) {
+  if (!value) return "未設定";
+  return `${(value / 10000).toLocaleString()}万円`;
+}
+
+function compareValue(
+  a: string | number | undefined,
+  b: string | number | undefined,
+) {
+  const left = a ?? "";
+  const right = b ?? "";
+  if (typeof left === "number" && typeof right === "number")
+    return left - right;
+  return String(left).localeCompare(String(right), "ja");
+}
+
+export default function ProjectList() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  const { projects, customers, profiles, addProject, updateProject } =
+    useDataStore();
+  const { openDialog, closeDialog } = useGlobalDialog();
+
+  const [search, setSearch] = useState(() => searchParams.get("q") || "");
+  const [showLeftIndicator, setShowLeftIndicator] = useState(false);
+  const [showRightIndicator, setShowRightIndicator] = useState(true);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const scrollRight = target.scrollWidth - target.scrollLeft - target.clientWidth;
+    setShowLeftIndicator(target.scrollLeft > 5);
+    setShowRightIndicator(scrollRight > 5);
+  };
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>(
+    () => (searchParams.get("sort") as SortKey) || "updated_at",
+  );
+  const [sortOrder, setSortOrder] = useState<ListSortOrder>(
+    () => (searchParams.get("order") as ListSortOrder) || "desc",
+  );
+  const [isFilterOpen, setIsFilterOpen] = useState(() => {
+    return PROJECT_FILTER_FIELDS.some((field) => searchParams.has(field));
+  });
+  const [filters, setFilters] = useState<FilterRule[]>(() => {
+    return PROJECT_FILTER_FIELDS.map((field) => ({
+      id: Math.random().toString(36).substr(2, 9),
+      field,
+      value: searchParams.get(field) ?? "",
+    }));
+  });
+  const [columns, setColumns] = useState<ListTableColumn[]>(DEFAULT_COLUMNS);
+  const [currentPage, setCurrentPage] = useState(() => {
+    const page = searchParams.get("page");
+    return page ? parseInt(page, 10) : 1;
+  });
+  const itemsPerPage = 8;
+  const activeFilterCount = filters.filter((filter) => filter.value).length;
+
+  // URLSearchParams の同期
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search.trim()) params.set("q", search.trim());
+    if (sortKey !== "updated_at") params.set("sort", sortKey);
+    if (sortOrder !== "desc") params.set("order", sortOrder);
+    if (currentPage > 1) params.set("page", currentPage.toString());
+
+    filters.forEach((filter) => {
+      if (filter.value) {
+        params.append(filter.field, filter.value);
+      }
+    });
+
+    setSearchParams(params, { replace: true });
+  }, [search, sortKey, sortOrder, currentPage, filters, setSearchParams]);
+
+  const handleOpenAddProjectDialog = () => {
+    const formId = "add-project-form";
+    openDialog({
+      mode: "add",
+      eyebrow: "案件",
+      breadcrumbs: ["新規作成"],
+      title: "案件を追加",
+      hideHeaderTitle: true,
+      size: "xl",
+      content: (
+        <ProjectDialogForm
+          formId={formId}
+          submitLabel="案件を追加"
+          initialValues={{
+            user_id: currentUser?.id ?? "user-001",
+            source: "manual",
+          }}
+          onSubmit={(values) => {
+            addProject(values);
+            closeDialog();
+          }}
+        />
+      ),
+      footer: (
+        <>
+          <Button type="button" variant="secondary" onClick={closeDialog}>
+            キャンセル
+          </Button>
+          <Button type="submit" form={formId} variant="primary">
+            案件を追加
+          </Button>
+        </>
+      ),
+    });
+  };
+
+  const sensors = useSensors(
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 10,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const customerOptions = useMemo(
+    () =>
+      customers
+        .map((customer) => ({ label: customer.name, value: customer.id }))
+        .sort((a, b) => a.label.localeCompare(b.label, "ja")),
+    [customers],
+  );
+
+  const ownerOptions = useMemo(
+    () =>
+      profiles
+        .map((profile) => ({ label: profile.name, value: profile.id }))
+        .sort((a, b) => a.label.localeCompare(b.label, "ja")),
+    [profiles],
+  );
+
+  const handleSort = (key: string) => {
+    const typedKey = key as SortKey;
+    if (sortKey === typedKey) {
+      setSortOrder((current) => (current === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortKey(typedKey);
+    setSortOrder(typedKey === "name" ? "asc" : "desc");
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    setColumns((current) => {
+      const oldIndex = current.findIndex((column) => column.id === active.id);
+      const newIndex = current.findIndex((column) => column.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return current;
+      return arrayMove(current, oldIndex, newIndex);
+    });
+  };
+
+  const updateFilter = (id: string, updates: Partial<FilterRule>) => {
+    setFilters((current) =>
+      current.map((filter) =>
+        filter.id === id ? { ...filter, ...updates } : filter,
+      ),
+    );
+    setCurrentPage(1);
+  };
+
+  const filteredProjects = useMemo(() => {
+    const query = normalizeSearch(search);
+    const list = projects.filter((project) => {
+      if (
+        !project.customer_id &&
+        (project.source ?? "manual") === "recording"
+      ) {
+        return false;
+      }
+
+      const customer = project.customer_id
+        ? customers.find((item) => item.id === project.customer_id)
+        : null;
+      const owner = profiles.find((profile) => profile.id === project.user_id);
+      const source = project.source ?? "manual";
+
+      const searchable = normalizeSearch(
+        [
+          project.name,
+          customer?.name ?? "未紐付け",
+          customer?.industry?.join("、") ?? "",
+          project.labels?.join(" ") ?? "",
+          project.note ?? "",
+          project.next_action ?? "",
+          statusLabel[project.status],
+          priorityLabel[project.priority],
+          sourceLabel[source],
+          owner?.name ?? "",
+          String(project.amount),
+        ].join(" "),
+      );
+
+      if (query && !searchable.includes(query)) return false;
+
+      return filters.every((filter) => {
+        if (!filter.value) return true;
+        if (filter.field === "customer")
+          return project.customer_id === filter.value;
+        if (filter.field === "status") return project.status === filter.value;
+        if (filter.field === "priority")
+          return String(project.priority) === filter.value;
+        if (filter.field === "amount") {
+          if (!filter.value || filter.value === ",") return true;
+          const parts = filter.value.split(",");
+          const fromStr = parts[0] || "";
+          const untilStr = parts[1] || "";
+          const fromVal = fromStr.trim() ? Number(fromStr) : 0;
+          const untilVal = untilStr.trim() ? Number(untilStr) : Infinity;
+          return project.amount >= fromVal && project.amount <= untilVal;
+        }
+        if (filter.field === "owner") return project.user_id === filter.value;
+        if (filter.field === "next_action_date") {
+          if (!filter.value || filter.value === ",") return true;
+          if (!project.next_action_date) return false;
+          const dateTime = new Date(
+            project.next_action_date.includes("T")
+              ? project.next_action_date
+              : `${project.next_action_date}T00:00:00`,
+          ).getTime();
+          const parts = filter.value.split(",");
+          const fromStr = parts[0] || "";
+          const untilStr = parts[1] || "";
+          const fromTime = fromStr ? new Date(fromStr.replace(/\//g, "-")).getTime() : 0;
+          const untilTime = untilStr
+            ? new Date(untilStr.replace(/\//g, "-")).getTime() + 24 * 60 * 60 * 1000 - 1
+            : Infinity;
+          return dateTime >= fromTime && dateTime <= untilTime;
+        }
+        if (filter.field === "updated_at") {
+          if (!filter.value || filter.value === ",") return true;
+          const dateTime = new Date(project.updated_at).getTime();
+          const parts = filter.value.split(",");
+          const fromStr = parts[0] || "";
+          const untilStr = parts[1] || "";
+          const fromTime = fromStr ? new Date(fromStr.replace(/\//g, "-")).getTime() : 0;
+          const untilTime = untilStr
+            ? new Date(untilStr.replace(/\//g, "-")).getTime() + 24 * 60 * 60 * 1000 - 1
+            : Infinity;
+          return dateTime >= fromTime && dateTime <= untilTime;
+        }
+        return true;
+      });
+    });
+
+    list.sort((a, b) => {
+      const customerA = a.customer_id
+        ? customers.find((item) => item.id === a.customer_id)?.name
+        : "未紐付け";
+      const customerB = b.customer_id
+        ? customers.find((item) => item.id === b.customer_id)?.name
+        : "未紐付け";
+      const ownerA = profiles.find((profile) => profile.id === a.user_id)?.name;
+      const ownerB = profiles.find((profile) => profile.id === b.user_id)?.name;
+      const sourceA = a.source ?? "manual";
+      const sourceB = b.source ?? "manual";
+      const values: Record<
+        SortKey,
+        [string | number | undefined, string | number | undefined]
+      > = {
+        updated_at: [a.updated_at, b.updated_at],
+        name: [a.name, b.name],
+        customer: [customerA, customerB],
+        status: [statusLabel[a.status], statusLabel[b.status]],
+        priority: [a.priority, b.priority],
+        amount: [a.amount, b.amount],
+        owner: [ownerA, ownerB],
+        next_action_date: [a.next_action_date, b.next_action_date],
+        source: [sourceLabel[sourceA], sourceLabel[sourceB]],
+        note: [a.note || a.next_action, b.note || b.next_action],
+      };
+      const comparison = compareValue(...values[sortKey]);
+      return sortOrder === "desc" ? -comparison : comparison;
+    });
+
+    return list;
+  }, [customers, filters, profiles, projects, search, sortKey, sortOrder]);
+
+  const totalPages = Math.ceil(filteredProjects.length / itemsPerPage);
+  const paginatedProjects = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredProjects.slice(start, start + itemsPerPage);
+  }, [currentPage, filteredProjects]);
+
+
+
+  return (
+    <AppLayout>
+      <div className="flex h-full flex-col overflow-hidden bg-background">
+        <div className="custom-scrollbar flex-1 overflow-auto bg-muted/5 pb-28 md:pb-0">
+          <div className="bg-background/95 backdrop-blur-md">
+            <div className="px-4 pb-4 pt-6 md:px-6">
+              <div className="flex flex-col items-stretch justify-between gap-4 md:flex-row md:items-center">
+                <div className="flex w-full shrink-0 items-center gap-2 py-1 md:w-auto">
+                  <h1 className="text-lg font-bold tracking-tight text-foreground md:text-xl">
+                    案件一覧
+                  </h1>
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="cursor-help text-muted-foreground outline-none transition-colors hover:text-foreground"
+                        >
+                          <Info className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="bottom"
+                        className="border border-border bg-popover text-popover-foreground shadow-md"
+                      >
+                        <p>企業ごとの案件状況と次回アクションを管理します</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <Button
+                    variant="primary"
+                    size="icon"
+                    onClick={handleOpenAddProjectDialog}
+                    className="ml-auto h-9 w-9 shrink-0 rounded-full shadow-md md:hidden"
+                    aria-label="案件を登録"
+                  >
+                    <Plus className="h-4.5 w-4.5" />
+                  </Button>
+                </div>
+
+                <div className="flex flex-1 flex-col items-stretch gap-3 sm:flex-row sm:items-center md:flex-initial md:justify-end">
+                  <div className="flex flex-1 flex-row items-center justify-end gap-2 md:flex-initial">
+                    <div
+                      className={cn(
+                        "min-w-0 flex-1 transition-all duration-300 ease-in-out sm:flex-initial sm:shrink-0",
+                        isSearchFocused || search.trim() !== ""
+                          ? "sm:w-72 md:w-80"
+                          : "sm:w-44 md:w-48",
+                      )}
+                    >
+                      <SearchBar
+                        placeholder="案件名・企業名で検索"
+                        value={search}
+                        onSearchChange={(value) => {
+                          setSearch(value);
+                          setCurrentPage(1);
+                        }}
+                        onFocus={() => setIsSearchFocused(true)}
+                        onBlur={() => setIsSearchFocused(false)}
+                        showKbd={false}
+                      />
+                    </div>
+
+                    <TooltipProvider delayDuration={200}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant={
+                              isFilterOpen
+                                ? "ghost"
+                                : activeFilterCount > 0
+                                  ? "secondary"
+                                  : "ghost"
+                            }
+                            size="md"
+                            onClick={() =>
+                              setIsFilterOpen((current) => !current)
+                            }
+                            className={cn(
+                              "relative h-10 w-10 justify-center border border-border/50 p-0 shadow-sm transition-all",
+                              isFilterOpen
+                                ? "border-primary bg-primary/10 text-primary"
+                                : activeFilterCount > 0
+                                  ? "border-border bg-secondary text-foreground"
+                                  : "bg-card",
+                            )}
+                          >
+                            <Filter className="h-4 w-4" />
+                            {activeFilterCount > 0 && (
+                              <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                                {activeFilterCount}
+                              </span>
+                            )}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent
+                          side="bottom"
+                          className="hidden border border-border bg-popover text-popover-foreground shadow-md md:block"
+                        >
+                          <p>
+                            フィルター
+                            {activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={handleOpenAddProjectDialog}
+                    className="hidden h-10 w-full shrink-0 justify-center gap-2 px-4 shadow-md sm:w-auto md:inline-flex"
+                  >
+                    <Plus className="h-4.5 w-4.5" />
+                    <span className="text-sm font-bold">案件を登録</span>
+                  </Button>
+                </div>
+              </div>
+
+              {isFilterOpen && (
+                <div className="mt-3 rounded-xl border border-border bg-card p-3 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="grid gap-2 sm:flex sm:flex-wrap sm:items-center">
+                    {filters.map((filter) => {
+                      const labelMap: Record<string, string> = {
+                        status: "フェーズ",
+                        priority: "確度",
+                        amount: "金額",
+                        owner: "担当者",
+                        next_action_date: "次回アクション",
+                        updated_at: "最終更新",
+                      };
+
+                      const hasValue = !!filter.value;
+                      const isRange = filter.field === "amount" || filter.field === "updated_at" || filter.field === "next_action_date";
+
+                      return (
+                        <div key={filter.id} className="flex min-w-0">
+                          {isRange ? (
+                            <FilterPill
+                              label={labelMap[filter.field]}
+                              active={hasValue}
+                              className={cn(
+                                filter.field === "amount"
+                                  ? "sm:min-w-[320px]"
+                                  : "sm:min-w-[300px]",
+                              )}
+                              onClear={
+                                hasValue
+                                  ? () => updateFilter(filter.id, { value: "" })
+                                  : undefined
+                              }
+                            >
+                              <FilterValueControl
+                                filter={filter}
+                                customerOptions={customerOptions}
+                                ownerOptions={ownerOptions}
+                                onChange={(value) =>
+                                  updateFilter(filter.id, { value })
+                                }
+                              />
+                            </FilterPill>
+                          ) : (
+                            <FilterValueControl
+                              filter={filter}
+                              customerOptions={customerOptions}
+                              ownerOptions={ownerOptions}
+                              onChange={(value) =>
+                                updateFilter(filter.id, { value })
+                              }
+                              labelPrefix={labelMap[filter.field]}
+                              hasValue={hasValue}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {activeFilterCount > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setFilters((current) =>
+                            current.map((filter) => ({ ...filter, value: "" })),
+                          );
+                          setCurrentPage(1);
+                        }}
+                        className="ml-auto h-7 px-2 gap-1 text-xs text-muted-foreground hover:text-destructive font-medium transition-colors shrink-0"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        すべてクリア
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+            </div>
+          </div>
+
+          {filteredProjects.length === 0 ? (
+            <div className="m-4 flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/50 bg-card py-20 text-muted-foreground md:m-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                <Search className="h-6 w-6 opacity-20" />
+              </div>
+              <p className="text-sm font-medium">
+                条件に一致する案件がありません
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSearch("");
+                  setFilters((current) =>
+                    current.map((filter) => ({ ...filter, value: "" })),
+                  );
+                  setCurrentPage(1);
+                }}
+              >
+                すべてのフィルターをクリア
+              </Button>
+            </div>
+          ) : (
+            <>
+            <div className="mt-4 px-4 pb-6 md:px-6 lg:pb-10">
+              <ListTableSurface>
+                {/* Left Scroll Indicator */}
+                <div
+                  className={cn(
+                    "absolute left-0 top-0 bottom-0 w-8 pointer-events-none bg-gradient-to-r from-background to-transparent z-10 transition-opacity duration-300",
+                    showLeftIndicator ? "opacity-100" : "opacity-0"
+                  )}
+                />
+                {/* Right Scroll Indicator */}
+                <div
+                  className={cn(
+                    "absolute right-0 top-0 bottom-0 w-8 pointer-events-none bg-gradient-to-l from-background to-transparent z-10 transition-opacity duration-300",
+                    showRightIndicator ? "opacity-100" : "opacity-0"
+                  )}
+                />
+                <div
+                  className="overflow-x-auto bg-background custom-horizontal-scrollbar"
+                  onScroll={handleScroll}
+                >
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <Table className="min-w-[1480px] bg-transparent text-xs text-foreground">
+                    <TableHeader className="bg-transparent">
+                      <TableRow className="border-b border-border/50 hover:bg-transparent">
+                        <SortableContext
+                          items={columns.map((column) => column.id)}
+                          strategy={horizontalListSortingStrategy}
+                        >
+                          {columns.map((column) => (
+                            <SortableListTableHead
+                              key={column.id}
+                              column={column}
+                              sortKey={sortKey}
+                              sortOrder={sortOrder}
+                              onSort={handleSort}
+                            />
+                          ))}
+                        </SortableContext>
+                        <TableHead className="sticky right-0 z-20 w-12 bg-gradient-to-l from-background to-transparent px-3 py-3" />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                    {paginatedProjects.map((project) => {
+                      const customer = project.customer_id
+                        ? customers.find(
+                            (item) => item.id === project.customer_id,
+                          )
+                        : null;
+                      const owner = profiles.find(
+                        (profile) => profile.id === project.user_id,
+                      );
+                      const isUnlinked = !project.customer_id;
+
+                      return (
+                        <TableRow
+                          key={project.id}
+                          onClick={() => navigate(`/projects/${project.id}`)}
+                          className={cn(
+                            "group cursor-pointer border-b border-border/50 bg-transparent transition-all duration-200 hover:bg-muted",
+                            isUnlinked &&
+                              "bg-destructive/[0.02] hover:bg-destructive/[0.06]",
+                          )}
+                        >
+                          {columns.map((column) => {
+                            switch (column.id) {
+
+                              case "name": {
+                                const displayName = project.name || "録音メモ（案件名未設定）";
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className="px-4 py-4"
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <div className="flex min-w-0 flex-col gap-0.5">
+                                        <div className="flex min-w-0 items-center gap-1.5">
+                                          {isUnlinked && (
+                                            <span className="shrink-0 rounded-md bg-destructive/10 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
+                                              要紐付け
+                                            </span>
+                                          )}
+                                          <span className="max-w-[18rem] truncate text-xs font-bold text-foreground">
+                                            {displayName}
+                                          </span>
+                                        </div>
+                                        <span className="text-xs text-muted-foreground truncate max-w-[12rem]">
+                                          {project.labels?.join("、") || "ラベルなし"}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                );
+                              }
+                              case "customer":
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className="px-4 py-4"
+                                  >
+                                    {customer ? (
+                                      <div className="flex min-w-0 flex-col gap-0.5">
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                          <span className="truncate text-xs font-bold text-foreground">
+                                            {customer.name}
+                                          </span>
+                                        </div>
+                                        <span className="text-xs text-muted-foreground truncate">
+                                          {customer.industry?.join("、")}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <div onClick={(event) => event.stopPropagation()}>
+                                        <Select
+                                          onValueChange={(value) =>
+                                            updateProject(project.id, { customer_id: value })
+                                          }
+                                        >
+                                          <SelectTrigger className="h-8 w-52 rounded-full border border-destructive/30 bg-destructive/5 px-3 text-xs font-medium text-destructive shadow-2xs transition-colors hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-ring/50">
+                                            <SelectValue placeholder="企業を紐づけ" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {customerOptions.map((option) => (
+                                              <SelectItem key={option.value} value={option.value}>
+                                                {option.label}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                    )}
+                                  </TableCell>
+                                );
+                              case "status":
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className="px-4 py-4"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Select
+                                      value={project.status}
+                                      onValueChange={(value) =>
+                                        updateProject(project.id, {
+                                          status: value as ProjectStatus,
+                                        })
+                                      }
+                                    >
+                                      <SelectTrigger className="h-8 w-28 rounded-full border border-border/80 bg-muted/30 px-3 text-xs font-semibold text-foreground shadow-2xs transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {statusOptions.map((option) => (
+                                          <SelectItem key={option.value} value={option.value}>
+                                            {option.label}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </TableCell>
+                                );
+                              case "priority":
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className="px-4 py-4"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Select
+                                      value={String(project.priority)}
+                                      onValueChange={(value) =>
+                                        updateProject(project.id, {
+                                          priority: Number(value) as Project["priority"],
+                                        })
+                                      }
+                                    >
+                                      <SelectTrigger
+                                        className={cn(
+                                          "h-8 w-24 rounded-full border px-3 text-xs font-semibold shadow-2xs transition-colors focus-visible:ring-2 focus-visible:ring-ring/50 [&>svg]:size-3.5 [&>svg]:text-current [&>svg]:opacity-70",
+                                          priorityPillColor[project.priority],
+                                        )}
+                                      >
+                                        {renderPriorityOption(project.priority)}
+                                      </SelectTrigger>
+                                      <SelectContent className="min-w-28">
+                                        {priorityOptions.map((option) => (
+                                          <SelectItem key={option.value} value={option.value}>
+                                            {renderPriorityOption(
+                                              Number(option.value) as Project["priority"],
+                                            )}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </TableCell>
+                                );
+                              case "amount":
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className="whitespace-nowrap px-4 py-4 text-xs font-bold text-foreground"
+                                  >
+                                    {formatAmount(project.amount)}
+                                  </TableCell>
+                                );
+                              case "owner":
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className="whitespace-nowrap px-4 py-4 text-xs font-semibold text-foreground"
+                                  >
+                                    {owner?.name ?? "未担当"}
+                                  </TableCell>
+                                );
+                              case "next_action_date":
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className="whitespace-nowrap px-4 py-4 text-xs font-semibold text-foreground"
+                                  >
+                                    {formatDate(project.next_action_date)}
+                                  </TableCell>
+                                );
+                              case "updated_at":
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className="whitespace-nowrap px-4 py-4 text-xs font-semibold text-foreground"
+                                  >
+                                    {formatDateTime(project.updated_at)}
+                                  </TableCell>
+                                );
+
+                              case "note": {
+                                const memoText = project.note || project.next_action || "";
+                                return (
+                                  <TableCell
+                                    key={column.id}
+                                    className="px-4 py-4 text-xs font-medium text-foreground"
+                                  >
+                                    <span className="block max-w-[24rem]" title={memoText || undefined}>
+                                      {memoText ? truncateMemo(memoText) : "-"}
+                                    </span>
+                                  </TableCell>
+                                );
+                              }
+                              default:
+                                return null;
+                            }
+                          })}
+                          <TableCell className="sticky right-0 z-10 bg-gradient-to-l from-background to-transparent group-hover:from-muted group-hover:to-transparent transition-all duration-200 px-3 py-4 text-right">
+                            <div className="flex items-center justify-end pr-4">
+                              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted/40 backdrop-blur-sm text-muted-foreground border border-border/50 shadow-2xs opacity-0 group-hover:opacity-100 transition-all duration-200">
+                                <ChevronRight className="h-4 w-4" />
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                    </TableBody>
+                  </Table>
+                </DndContext>
+                </div>
+              </ListTableSurface>
+            </div>
+
+              <ListPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={filteredProjects.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
+            </>
+          )}
+        </div>
+      </div>
+    </AppLayout>
+  );
+}
+
+interface FilterValueControlProps {
+  filter: FilterRule;
+  customerOptions: { label: string; value: string }[];
+  ownerOptions: { label: string; value: string }[];
+  onChange: (value: string) => void;
+  labelPrefix?: string;
+  hasValue?: boolean;
+}
+
+function FilterValueControl({
+  filter,
+  customerOptions,
+  ownerOptions,
+  onChange,
+  labelPrefix,
+  hasValue,
+}: FilterValueControlProps) {
+  const optionMap: Record<string, { label: string; value: string }[]> = {
+    status: statusOptions,
+    priority: priorityOptions,
+    customer: customerOptions,
+    owner: ownerOptions,
+  };
+
+  if (filter.field === "updated_at" || filter.field === "next_action_date") {
+    return (
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+        <DatePicker
+          value={(filter.value.split(",")[0] || "").replace(/\//g, "-")}
+          onChange={(value) => {
+            const parts = filter.value.split(",");
+            const dateVal = value ? value.replace(/-/g, "/") : "";
+            onChange(`${dateVal},${parts[1] || ""}`);
+          }}
+          size="sm"
+          className="w-full sm:w-24"
+          buttonClassName={filterDateButtonClassName}
+          clearable={false}
+          placeholder="開始"
+        />
+        <FilterRangeSeparator />
+        <DatePicker
+          value={(filter.value.split(",")[1] || "").replace(/\//g, "-")}
+          onChange={(value) => {
+            const parts = filter.value.split(",");
+            const dateVal = value ? value.replace(/-/g, "/") : "";
+            onChange(`${parts[0] || ""},${dateVal}`);
+          }}
+          size="sm"
+          className="w-full sm:w-24"
+          buttonClassName={filterDateButtonClassName}
+          clearable={false}
+          placeholder="終了"
+        />
+      </div>
+    );
+  }
+
+  if (filter.field === "amount") {
+    return (
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+        <input
+          type="text"
+          inputMode="numeric"
+          value={formatPriceInputValue(filter.value.split(",")[0] || "")}
+          onChange={(e) => {
+            const parts = filter.value.split(",");
+            const nextMin = parsePriceInputValue(e.target.value);
+            const nextMax = parts[1] || "";
+            onChange(nextMin || nextMax ? `${nextMin},${nextMax}` : "");
+          }}
+          placeholder="下限"
+          className={filterPriceInputClassName}
+        />
+        <FilterRangeSeparator />
+        <input
+          type="text"
+          inputMode="numeric"
+          value={formatPriceInputValue(filter.value.split(",")[1] || "")}
+          onChange={(e) => {
+            const parts = filter.value.split(",");
+            const nextMin = parts[0] || "";
+            const nextMax = parsePriceInputValue(e.target.value);
+            onChange(nextMin || nextMax ? `${nextMin},${nextMax}` : "");
+          }}
+          placeholder="上限"
+          className={filterPriceInputClassName}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <Combobox
+      options={optionMap[filter.field] ?? []}
+      value={filter.value}
+      onValueChange={onChange}
+      placeholder="選択"
+      labelPrefix={labelPrefix}
+      className={cn(
+        filterComboboxClassName,
+        hasValue && activeFilterComboboxClassName,
+      )}
+    />
+  );
+}

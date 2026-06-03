@@ -1,22 +1,42 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { DataStoreProvider } from './context/DataStoreContext'
+import { GlobalDialogProvider } from './context/GlobalDialogContext'
 import { LayoutConfigProvider } from './context/LayoutConfigContext'
-import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import CustomerDetail from './pages/CustomerDetail'
-import CustomerList from './pages/CustomerList'
-import ReportView from './pages/ReportView'
-import RecordingWindow from './pages/RecordingWindow'
-import TaskBoard from './pages/TaskBoard'
-import ProjectList from './pages/ProjectList'
-import ManagerMembers from './pages/ManagerMembers'
-import BudgetPlanning from './pages/BudgetPlanning'
-import PlayerBudget from './pages/PlayerBudget'
-import ManagerReviews from './pages/ManagerReviews'
-import ManagerRisks from './pages/ManagerRisks'
-import AudioMinuteList from './pages/AudioMinuteList'
-import AudioMinuteDetail from './pages/AudioMinuteDetail'
+import Login from './pages/login'
+import Dashboard from './pages/dashboard'
+import CustomerDetail from './pages/customers/[id]'
+import CustomerList from './pages/customers'
+import ReportView from './pages/reports/[id]'
+import RecordingWindow from './pages/recording'
+import TaskBoard from './pages/tasks'
+import TaskDetail from './pages/tasks/[id]'
+import ProjectList from './pages/projects'
+import ProjectDetail from './pages/projects/[id]'
+import ManagerMembers from './pages/members'
+import BudgetPlanning from './pages/budget'
+import BillingPage from './pages/billing'
+import PaymentCardPage from './pages/payment-card'
+import AiPacketsPage from './pages/ai-packets'
+import AiPacketHistoryPage from './pages/ai-packet-history'
+import PaymentHistoryPage from './pages/payment-history'
+import UsageStatusPage from './pages/usage-status'
+import PasswordChangePage from './pages/password-change'
+import UsersPage from './pages/users'
+import PositionsPage from './pages/positions'
+import DepartmentsPage from './pages/departments'
+import GroupsPage from './pages/groups'
+import CompanyPage from './pages/company'
+import RegistrationItemsPage from './pages/registration-items'
+import PlayerBudget from './pages/my-budget'
+import ManagerReviews from './pages/reviews'
+import ManagerRisks from './pages/risks'
+import AudioMinuteList from './pages/minutes'
+import AudioMinuteDetail from './pages/minutes/[id]'
+import MinuteDocumentEdit from './pages/minutes/document-edit'
+import NotificationsPage from './pages/notifications'
+import SettingsPage from './pages/settings'
+import DesignShowcase from './pages/design'
 import type { ReactNode } from 'react'
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -33,16 +53,36 @@ function AppRoutes() {
       <Route path="/customers" element={<ProtectedRoute><CustomerList /></ProtectedRoute>} />
       <Route path="/customers/:id" element={<ProtectedRoute><CustomerDetail /></ProtectedRoute>} />
       <Route path="/projects" element={<ProtectedRoute><ProjectList /></ProtectedRoute>} />
+      <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetail /></ProtectedRoute>} />
       <Route path="/members" element={<ProtectedRoute><ManagerMembers /></ProtectedRoute>} />
       <Route path="/budget" element={<ProtectedRoute><BudgetPlanning /></ProtectedRoute>} />
+      <Route path="/billing" element={<ProtectedRoute><BillingPage /></ProtectedRoute>} />
+      <Route path="/payment-card" element={<ProtectedRoute><PaymentCardPage /></ProtectedRoute>} />
+      <Route path="/ai-packets" element={<ProtectedRoute><AiPacketsPage /></ProtectedRoute>} />
+      <Route path="/ai-packet-history" element={<ProtectedRoute><AiPacketHistoryPage /></ProtectedRoute>} />
+      <Route path="/payment-history" element={<ProtectedRoute><PaymentHistoryPage /></ProtectedRoute>} />
+      <Route path="/usage-status" element={<ProtectedRoute><UsageStatusPage /></ProtectedRoute>} />
+      <Route path="/password-change" element={<ProtectedRoute><PasswordChangePage /></ProtectedRoute>} />
+      <Route path="/users" element={<ProtectedRoute><UsersPage /></ProtectedRoute>} />
+      <Route path="/positions" element={<ProtectedRoute><PositionsPage /></ProtectedRoute>} />
+      <Route path="/departments" element={<ProtectedRoute><DepartmentsPage /></ProtectedRoute>} />
+      <Route path="/groups" element={<ProtectedRoute><GroupsPage /></ProtectedRoute>} />
+      <Route path="/company" element={<ProtectedRoute><CompanyPage /></ProtectedRoute>} />
+      <Route path="/registration-items" element={<ProtectedRoute><RegistrationItemsPage /></ProtectedRoute>} />
       <Route path="/my-budget" element={<ProtectedRoute><PlayerBudget /></ProtectedRoute>} />
       <Route path="/reviews" element={<ProtectedRoute><ManagerReviews /></ProtectedRoute>} />
       <Route path="/risks" element={<ProtectedRoute><ManagerRisks /></ProtectedRoute>} />
       <Route path="/reports/:id" element={<ProtectedRoute><ReportView /></ProtectedRoute>} />
       <Route path="/tasks" element={<ProtectedRoute><TaskBoard /></ProtectedRoute>} />
+      <Route path="/tasks/:id" element={<ProtectedRoute><TaskDetail /></ProtectedRoute>} />
       <Route path="/recording" element={<RecordingWindow />} />
       <Route path="/minutes" element={<ProtectedRoute><AudioMinuteList /></ProtectedRoute>} />
       <Route path="/minutes/:id" element={<AudioMinuteDetail />} />
+      <Route path="/minutes/:id/documents/:documentId/edit" element={<ProtectedRoute><MinuteDocumentEdit /></ProtectedRoute>} />
+      <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+      <Route path="/settings/:section" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+      <Route path="/design" element={<DesignShowcase />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   )
@@ -54,7 +94,9 @@ export default function App() {
       <AuthProvider>
         <DataStoreProvider>
           <LayoutConfigProvider>
-            <AppRoutes />
+            <GlobalDialogProvider>
+              <AppRoutes />
+            </GlobalDialogProvider>
           </LayoutConfigProvider>
         </DataStoreProvider>
       </AuthProvider>

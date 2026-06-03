@@ -1,61 +1,73 @@
-import { useAuth } from '../../../context/AuthContext'
-import { useDataStore } from '../../../context/DataStoreContext'
+import { useAuth } from "../../../context/AuthContext";
+import { useDataStore } from "../../../context/DataStoreContext";
+import { StandardWidget } from "../shared/StandardWidget";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
+import { CalendarDays, ChevronRight } from "lucide-react";
 
-const todayEvents = [
-  { time: '10:00', label: 'アルファテック 最終確認MTG', color: 'bg-blue-500' },
-  { time: '13:30', label: '日本製造 技術検証レビュー', color: 'bg-gray-400' },
-  { time: '15:00', label: 'チームミーティング', color: 'bg-green-500' },
-]
+function formatDeadline(date?: string) {
+  if (!date) return "期限未設定";
+  return new Date(`${date}T00:00:00`).toLocaleDateString("ja-JP", {
+    month: "numeric",
+    day: "numeric",
+  });
+}
 
 export default function PlayerNextActions() {
-  const { currentUser } = useAuth()
-  const { tasks, customers } = useDataStore()
+  const { currentUser } = useAuth();
+  const navigate = useNavigate();
+  const { projects } = useDataStore();
 
-  const myTasks = tasks
-    .filter((t) => t.user_id === currentUser!.id && !t.is_completed)
-    .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+  const nextActionProjects = projects
+    .filter(
+      (project) =>
+        project.user_id === currentUser!.id && project.next_action?.trim(),
+    )
+    .sort((a, b) => {
+      if (!a.next_action_date) return 1;
+      if (!b.next_action_date) return -1;
+      return a.next_action_date.localeCompare(b.next_action_date);
+    });
 
   return (
-    <div className="h-full overflow-y-auto px-4 py-5">
-      <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">Next Action</p>
-      <div className="flex flex-col gap-2">
-        {myTasks.map((task) => {
-          const customer = customers.find((c) => c.id === task.customer_id)
-          const isOverdue = new Date(task.due_date) < new Date()
-          const isToday = task.due_date === new Date().toISOString().slice(0, 10)
-          return (
-            <div key={task.id} className="p-3 bg-white rounded-xl border border-gray-200">
-              <div className="flex items-start gap-2">
-                <div className={`mt-1 w-2 h-2 rounded-full shrink-0 ${
-                  isOverdue ? 'bg-red-500' : isToday ? 'bg-yellow-400' : 'bg-gray-300'
-                }`} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-400 truncate">{customer?.name}</p>
-                  <p className="text-sm text-gray-800 mt-0.5 leading-snug">{task.title}</p>
-                  <p className={`text-xs mt-1 font-medium ${
-                    isOverdue ? 'text-red-500' : isToday ? 'text-yellow-600' : 'text-gray-400'
-                  }`}>
-                    {isOverdue ? '期限切れ · ' : isToday ? '今日 · ' : ''}{task.due_date}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3 mt-6">今日の予定</p>
-      <div className="flex flex-col gap-2">
-        {todayEvents.map((ev, i) => (
-          <div key={i} className="flex items-center gap-2.5 p-2.5 bg-white rounded-lg border border-gray-200">
-            <div className={`w-1.5 self-stretch rounded-full shrink-0 ${ev.color}`} />
-            <div>
-              <p className="text-xs text-gray-400">{ev.time}</p>
-              <p className="text-sm text-gray-800">{ev.label}</p>
-            </div>
+    <StandardWidget
+      title="ネクストアクション"
+      description="案件ごとのネクストアクションと期限"
+      action={
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate("/projects")}
+          className="font-bold text-muted-foreground hover:text-primary transition-colors"
+        >
+          詳細
+          <ChevronRight className="ml-1 h-3.5 w-3.5" />
+        </Button>
+      }
+      items={nextActionProjects}
+      keyExtractor={(project) => project.id}
+      maxItems={10}
+      onSeeMore={() => navigate("/projects")}
+      emptyMessage="ネクストアクションが登録されていません"
+      renderItem={(project) => (
+        <button
+          onClick={() => navigate(`/projects/${project.id}`)}
+          className="w-full px-4 py-3 text-left hover:bg-muted/50 transition-colors group"
+        >
+          <p className="text-sm font-bold text-foreground leading-snug line-clamp-2 group-hover:text-primary transition-colors">
+            {project.next_action}
+          </p>
+          <div className="mt-2 flex items-center justify-between gap-3 text-[10px] font-bold text-muted-foreground">
+            <span className="truncate uppercase tracking-tight">
+              {project.name}
+            </span>
+            <span className="flex shrink-0 items-center gap-1">
+              <CalendarDays className="h-3 w-3" />
+              期限: {formatDeadline(project.next_action_date)}
+            </span>
           </div>
-        ))}
-      </div>
-    </div>
-  )
+        </button>
+      )}
+    />
+  );
 }

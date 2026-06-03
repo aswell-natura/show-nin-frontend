@@ -1,9 +1,10 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import {
   mockProfiles, mockCustomers, mockProjects, mockActivities,
-  mockTasks, mockTargets, mockNotifications,
+  mockTasks, mockTargets, mockNotifications, mockProjectDocuments,
 } from '../data/mock'
-import type { Profile, Customer, Project, Activity, Task, Target, Notification } from '../types'
+import type { Profile, Customer, Project, Activity, Task, Target, Notification, ProjectDocument, ProjectMemo } from '../types'
 
 // ─── ユーティリティ ──────────────────────────────────────────────────────────
 
@@ -19,48 +20,79 @@ function load<T>(key: string, seed: T[]): T[] {
   try {
     const stored = localStorage.getItem(key)
     if (stored) return JSON.parse(stored) as T[]
-  } catch {}
+  } catch {
+    // ignore
+  }
   return seed
 }
 
+function loadWithNewSeeds<T extends { id: string }>(key: string, mockSeeds: T[]): T[] {
+  const loaded = load(key, mockSeeds)
+  const existingIds = new Set(loaded.map((item) => item.id))
+  const newSeeds = mockSeeds.filter((item) => !existingIds.has(item.id))
+  return [...loaded, ...newSeeds]
+}
+
 function loadProjects() {
-  const loaded = load(KEYS.projects, mockProjects)
+  const loaded = loadWithNewSeeds(KEYS.projects, mockProjects)
   const seedById = new Map(mockProjects.map((project) => [project.id, project]))
-  const hydrated = loaded.map((project) => {
+  return loaded.map((project) => {
     const seed = seedById.get(project.id)
     if (!seed) return project
     return {
       ...project,
       labels: project.labels ?? seed.labels,
       next_action_date: project.next_action_date ?? seed.next_action_date,
+      next_action: project.next_action ?? seed.next_action,
     }
   })
-  const ids = new Set(hydrated.map((project) => project.id))
-  const newUnlinkedSeeds = mockProjects.filter((project) => project.customer_id === null && !ids.has(project.id))
-  return [...hydrated, ...newUnlinkedSeeds]
 }
 
+const DEFAULT_ACQUISITION_SOURCE = '手動登録'
+
 function loadCustomers() {
-  const loaded = load(KEYS.customers, mockCustomers)
+  const loaded = loadWithNewSeeds(KEYS.customers, mockCustomers)
   const seedById = new Map(mockCustomers.map((customer) => [customer.id, customer]))
   return loaded.map((customer) => {
     const seed = seedById.get(customer.id)
-    if (!seed) return customer
+    const acquisitionSource = customer.acquisition_source?.trim() || seed?.acquisition_source || DEFAULT_ACQUISITION_SOURCE
+    
+    let normalizedIndustry: string[] = []
+    if (Array.isArray(customer.industry)) {
+      normalizedIndustry = customer.industry
+    } else if (typeof customer.industry === 'string') {
+      normalizedIndustry = [customer.industry]
+    } else if (seed?.industry) {
+      normalizedIndustry = seed.industry
+    }
+
+    if (!seed) {
+      return {
+        ...customer,
+        industry: normalizedIndustry,
+        acquisition_source: acquisitionSource,
+      }
+    }
     return {
       ...customer,
+      industry: normalizedIndustry,
+      company_code: customer.company_code ?? seed.company_code,
+      email: customer.email ?? seed.email,
+      status: customer.status ?? seed.status,
       labels: customer.labels ?? seed.labels,
-      acquisition_source: customer.acquisition_source ?? seed.acquisition_source,
+      acquisition_source: acquisitionSource,
     }
   })
 }
 
 function loadTasks() {
-  const loaded = load(KEYS.tasks, mockTasks)
+  const loaded = loadWithNewSeeds(KEYS.tasks, mockTasks)
   const seedById = new Map(mockTasks.map((task) => [task.id, task]))
   return loaded.map((task) => {
     const seed = seedById.get(task.id)
     return {
       ...task,
+      project_id: task.project_id ?? seed?.project_id,
       progress_percent: task.progress_percent ?? seed?.progress_percent ?? (task.is_completed ? 100 : 0),
       progress_updated_at: task.progress_updated_at ?? seed?.progress_updated_at,
     }
@@ -68,13 +100,17 @@ function loadTasks() {
 }
 
 const KEYS = {
+  profiles:      'show-nin-profiles',
   customers:     'show-nin-customers',
   projects:      'show-nin-projects',
   activities:    'show-nin-activities',
   tasks:         'show-nin-tasks',
   targets:       'show-nin-targets',
   notifications: 'show-nin-notifications',
+  documents:     'show-nin-documents',
+  memos:         'show-nin-memos',
 }
+
 
 // ─── 型定義 ──────────────────────────────────────────────────────────────────
 
@@ -86,6 +122,16 @@ interface DataStoreContextValue {
   tasks:         Task[]
   targets:       Target[]
   notifications: Notification[]
+  documents:     ProjectDocument[]
+  memos:         ProjectMemo[]
+
+  // ProjectMemo CRUD
+  addProjectMemo:    (projectId: string, content: string, useForAi?: boolean) => ProjectMemo
+  updateProjectMemo: (id: string, data: Partial<ProjectMemo>) => void
+  deleteProjectMemo: (id: string) => void
+
+  // Profile CRUD
+  addProfile:    (data: Omit<Profile, 'id' | 'sidebar_settings' | 'dashboard_layout'>) => Profile
 
   // Customer CRUD
   addCustomer:    (data: Omit<Customer, 'id' | 'last_accessed_at'>) => Customer
@@ -117,34 +163,88 @@ interface DataStoreContextValue {
   markNotificationRead:       (id: string) => void
   markAllNotificationsRead:   (userId: string) => void
 
+  // Document Operations
+  addProjectDocument:         (data: Omit<ProjectDocument, 'id' | 'uploaded_at'>) => ProjectDocument
+  updateProjectDocument:      (id: string, data: Partial<ProjectDocument>) => void
+  deleteProjectDocument:      (id: string) => void
+
   // デフォルトデータにリセット
   resetToDefaults: () => void
 }
+
 
 // ─── Context ─────────────────────────────────────────────────────────────────
 
 const DataStoreContext = createContext<DataStoreContextValue | null>(null)
 
 export function DataStoreProvider({ children }: { children: ReactNode }) {
+  const [profiles,      setProfiles]      = useState<Profile[]>     (() => loadWithNewSeeds(KEYS.profiles, mockProfiles))
   const [customers,     setCustomers]     = useState<Customer[]>    (() => loadCustomers())
   const [projects,      setProjects]      = useState<Project[]>     (() => loadProjects())
-  const [activities,    setActivities]    = useState<Activity[]>    (() => load(KEYS.activities,    mockActivities))
+  const [activities,    setActivities]    = useState<Activity[]>    (() => loadWithNewSeeds(KEYS.activities,    mockActivities))
   const [tasks,         setTasks]         = useState<Task[]>        (() => loadTasks())
-  const [targets,       setTargets]       = useState<Target[]>      (() => load(KEYS.targets,       mockTargets))
-  const [notifications, setNotifications] = useState<Notification[]>(() => load(KEYS.notifications, mockNotifications))
+  const [targets,       setTargets]       = useState<Target[]>      (() => loadWithNewSeeds(KEYS.targets,       mockTargets))
+  const [notifications, setNotifications] = useState<Notification[]>(() => loadWithNewSeeds(KEYS.notifications, mockNotifications))
+  const [documents,     setDocuments]     = useState<ProjectDocument[]>(() => loadWithNewSeeds(KEYS.documents, mockProjectDocuments))
+  const [memos,         setMemos]         = useState<ProjectMemo[]>(() => {
+    const loaded = load(KEYS.memos, [] as ProjectMemo[])
+    if (loaded.length > 0) return loaded
+    const seeds: ProjectMemo[] = mockProjects
+      .filter((p) => p.note)
+      .map((p) => ({
+        id: `memo-seed-${p.id}`,
+        project_id: p.id,
+        content: p.note || '',
+        created_at: p.updated_at || now(),
+        created_by: p.user_id,
+        use_for_ai: p.note_use_for_ai || false,
+      }))
+    return seeds
+  })
 
   // localStorage への自動保存
+  useEffect(() => { localStorage.setItem(KEYS.profiles,      JSON.stringify(profiles)) },      [profiles])
   useEffect(() => { localStorage.setItem(KEYS.customers,     JSON.stringify(customers)) },     [customers])
   useEffect(() => { localStorage.setItem(KEYS.projects,      JSON.stringify(projects)) },      [projects])
   useEffect(() => { localStorage.setItem(KEYS.activities,    JSON.stringify(activities)) },    [activities])
   useEffect(() => { localStorage.setItem(KEYS.tasks,         JSON.stringify(tasks)) },         [tasks])
   useEffect(() => { localStorage.setItem(KEYS.targets,       JSON.stringify(targets)) },       [targets])
   useEffect(() => { localStorage.setItem(KEYS.notifications, JSON.stringify(notifications)) }, [notifications])
+  useEffect(() => { localStorage.setItem(KEYS.documents,     JSON.stringify(documents)) },     [documents])
+  useEffect(() => { localStorage.setItem(KEYS.memos,         JSON.stringify(memos)) },         [memos])
+
 
   // ─── Customer CRUD ──────────────────────────────────────────────────────
 
+  function addProfile(data: Omit<Profile, 'id' | 'sidebar_settings' | 'dashboard_layout'>): Profile {
+    const record: Profile = {
+      ...data,
+      id: genId(),
+      sidebar_settings: {
+        order: [
+          "home",
+          "customers",
+          "projects",
+          "minutes",
+          "tasks",
+          "budget",
+          "reports",
+        ],
+        is_fixed: true,
+      },
+      dashboard_layout: { card_order: [1, 2, 3, 4, 5] },
+    }
+    setProfiles((prev) => [...prev, record])
+    return record
+  }
+
   function addCustomer(data: Omit<Customer, 'id' | 'last_accessed_at'>): Customer {
-    const record: Customer = { ...data, id: genId(), last_accessed_at: now() }
+    const record: Customer = {
+      ...data,
+      id: genId(),
+      acquisition_source: data.acquisition_source?.trim() || DEFAULT_ACQUISITION_SOURCE,
+      last_accessed_at: now(),
+    }
     setCustomers((prev) => [...prev, record])
     return record
   }
@@ -252,33 +352,88 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
     setNotifications((prev) => prev.map((n) => n.user_id === userId ? { ...n, is_read: true } : n))
   }
 
+  // ─── Document Operations ─────────────────────────────────────────────────
+
+  function addProjectDocument(data: Omit<ProjectDocument, 'id' | 'uploaded_at'>): ProjectDocument {
+    const record: ProjectDocument = { ...data, id: genId(), uploaded_at: now() }
+    setDocuments((prev) => [...prev, record])
+    return record
+  }
+
+  function updateProjectDocument(id: string, data: Partial<ProjectDocument>) {
+    setDocuments((prev) => prev.map((d) => d.id === id ? { ...d, ...data } : d))
+  }
+
+  function deleteProjectDocument(id: string) {
+    setDocuments((prev) => prev.filter((d) => d.id !== id))
+  }
+
+  function addProjectMemo(projectId: string, content: string, useForAi = false): ProjectMemo {
+    const record: ProjectMemo = {
+      id: genId(),
+      project_id: projectId,
+      content,
+      created_at: now(),
+      created_by: 'user-001',
+      use_for_ai: useForAi,
+    }
+    setMemos((prev) => [...prev, record])
+    return record
+  }
+
+  function updateProjectMemo(id: string, data: Partial<ProjectMemo>) {
+    setMemos((prev) => prev.map((m) => m.id === id ? { ...m, ...data } : m))
+  }
+
+  function deleteProjectMemo(id: string) {
+    setMemos((prev) => prev.filter((m) => m.id !== id))
+  }
+
   // ─── デフォルトにリセット ────────────────────────────────────────────────
 
   function resetToDefaults() {
+    setProfiles(mockProfiles)
     setCustomers(mockCustomers)
     setProjects(mockProjects)
     setActivities(mockActivities)
     setTasks(mockTasks)
     setTargets(mockTargets)
     setNotifications(mockNotifications)
+    setDocuments(mockProjectDocuments)
+    setMemos(mockProjects
+      .filter((p) => p.note)
+      .map((p) => ({
+        id: `memo-seed-${p.id}`,
+        project_id: p.id,
+        content: p.note || '',
+        created_at: p.updated_at || now(),
+        created_by: p.user_id,
+        use_for_ai: p.note_use_for_ai || false,
+      }))
+    )
     Object.values(KEYS).forEach((key) => localStorage.removeItem(key))
   }
 
+
   return (
     <DataStoreContext.Provider value={{
-      profiles: mockProfiles,
-      customers, projects, activities, tasks, targets, notifications,
+      profiles,
+      customers, projects, activities, tasks, targets, notifications, documents, memos,
+      addProfile,
       addCustomer, updateCustomer, deleteCustomer,
       addProject, updateProject, deleteProject,
       addActivity, updateActivity, deleteActivity,
       addTask, updateTask, deleteTask,
       addTarget, updateTarget, deleteTarget,
       addNotification, markNotificationRead, markAllNotificationsRead,
+      addProjectDocument, updateProjectDocument, deleteProjectDocument,
+      addProjectMemo, updateProjectMemo, deleteProjectMemo,
       resetToDefaults,
     }}>
       {children}
     </DataStoreContext.Provider>
   )
+
 }
 
 export function useDataStore() {

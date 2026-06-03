@@ -1,6 +1,9 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../context/AuthContext'
 import { useDataStore } from '../../../context/DataStoreContext'
+import { StandardWidget } from '../shared/StandardWidget'
+import { Button } from '@/components/ui/button'
+import { ChevronRight } from 'lucide-react'
 
 function formatAmount(amount: number) {
   return `${(amount / 10000).toLocaleString()}万円`
@@ -21,57 +24,42 @@ export default function PlayerBudgetOverview() {
   const projectedProgress = targetAmount ? Math.round((projectedAmount / targetAmount) * 100) : 0
 
   return (
-    <div className="h-full bg-white flex flex-col">
-      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-semibold text-gray-900">予算・実績</h2>
-          <p className="text-xs text-gray-400 mt-0.5">配分予算と現在見込み</p>
-        </div>
+    <StandardWidget
+      title="予算・実績"
+      description="配分予算と現在見込み"
+      action={
+        <Button variant="ghost" size="sm" onClick={() => navigate('/my-budget')} className="font-bold text-muted-foreground hover:text-primary transition-colors">
+          詳細
+          <ChevronRight className="ml-1 h-3.5 w-3.5" />
+        </Button>
+      }
+      items={myProjects}
+      keyExtractor={(p) => p.id}
+      maxItems={5}
+      onSeeMore={() => navigate('/my-budget')}
+      renderItem={(project) => (
         <button
           onClick={() => navigate('/my-budget')}
-          className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition-colors"
+          className="w-full px-4 py-3 text-left hover:bg-muted transition-colors group"
         >
-          開く
+          <p className="text-sm font-bold text-foreground truncate group-hover:text-primary transition-colors">{project.name}</p>
+          <p className="mt-0.5 text-[10px] font-bold text-muted-foreground uppercase tracking-tight">{formatAmount(project.amount)}</p>
         </button>
-      </div>
-
-      <div className="grid grid-cols-3 gap-2 p-4 border-b border-gray-100">
-        <div className="rounded-lg bg-gray-50 px-3 py-2">
-          <p className="text-[11px] text-gray-400">配分予算</p>
-          <p className="text-sm font-bold text-gray-900">{formatAmount(targetAmount)}</p>
+      )}
+    >
+      <div className="p-4 border-b border-border/50">
+        <div className="flex items-center justify-between text-[11px] font-bold text-muted-foreground mb-1.5 uppercase tracking-tight">
+          <span>進捗状況</span>
+          <span>{projectedProgress}%</span>
         </div>
-        <div className="rounded-lg bg-gray-50 px-3 py-2">
-          <p className="text-[11px] text-gray-400">成約実績</p>
-          <p className="text-sm font-bold text-gray-900">{formatAmount(closedAmount)}</p>
-        </div>
-        <div className="rounded-lg bg-blue-50 px-3 py-2">
-          <p className="text-[11px] text-blue-600">見込み</p>
-          <p className="text-sm font-bold text-blue-700">{projectedProgress}%</p>
-        </div>
-      </div>
-
-      <div className="p-4">
-        <div className="flex items-center justify-between text-xs text-gray-400">
-          <span>{formatAmount(projectedAmount)}</span>
-          <span>{formatAmount(targetAmount)}</span>
-        </div>
-        <div className="mt-2 h-2 rounded-full bg-gray-100 overflow-hidden">
+        <div className="h-2 rounded-full bg-muted overflow-hidden">
           <div className="h-full rounded-full bg-blue-600" style={{ width: `${Math.min(projectedProgress, 100)}%` }} />
         </div>
+        <div className="mt-2 flex items-center justify-between text-[10px] font-bold text-muted-foreground">
+          <span>{formatAmount(projectedAmount)} 見込み</span>
+          <span>目標 {formatAmount(targetAmount)}</span>
+        </div>
       </div>
-
-      <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
-        {myProjects.slice(0, 5).map((project) => (
-          <button
-            key={project.id}
-            onClick={() => navigate('/my-budget')}
-            className="w-full px-4 py-3 text-left hover:bg-gray-50"
-          >
-            <p className="text-sm font-medium text-gray-900 truncate">{project.name}</p>
-            <p className="mt-0.5 text-xs text-gray-400">{formatAmount(project.amount)}</p>
-          </button>
-        ))}
-      </div>
-    </div>
+    </StandardWidget>
   )
 }

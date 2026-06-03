@@ -1,6 +1,7 @@
 export type Role = 'player' | 'manager' | 'dual'
 export type ActiveMode = 'player' | 'manager'
 export type CustomerRank = 'A' | 'B' | 'C'
+export type CustomerStatus = 'lead' | 'proposing' | 'negotiating' | 'active' | 'dormant'
 export type ProjectStatus = 'lead' | 'proposing' | 'negotiating' | 'closed'
 export type TaskType = 'individual' | 'team'
 
@@ -26,12 +27,16 @@ export interface Profile {
 
 export interface Customer {
   id: string
+  company_code?: string
   name: string
-  industry: string
+  industry: string[]
+  business_number?: string
   rank: CustomerRank
+  status?: CustomerStatus
   is_pinned: boolean
   last_accessed_at: string
   created_by: string
+  email?: string
   address?: string
   phone?: string
   website?: string
@@ -55,7 +60,9 @@ export interface Project {
   source?: 'recording' | 'manual'
   labels?: string[]
   next_action_date?: string
+  next_action?: string
   note?: string
+  note_use_for_ai?: boolean
 }
 
 export interface ActivityContentJson {
@@ -79,8 +86,10 @@ export interface Activity {
 export interface Task {
   id: string
   customer_id: string
+  project_id?: string | null
   user_id: string
   title: string
+  summary?: string
   due_date: string
   is_completed: boolean
   progress_percent?: number
@@ -130,3 +139,24 @@ export interface DashboardCardDef {
   unit: string
   color: string
 }
+
+export interface ProjectDocument {
+  id: string
+  project_id: string
+  name: string
+  file_size: number
+  uploaded_at: string
+  uploaded_by: string // Profile ID of the uploader
+  file_type: string
+  use_for_ai?: boolean
+}
+
+export interface ProjectMemo {
+  id: string
+  project_id: string
+  content: string
+  created_at: string
+  created_by: string
+  use_for_ai?: boolean
+}
+

@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { useDataStore } from "../../context/DataStoreContext";
 import { cn } from "@/lib/utils";
 import type { CustomerRank, CustomerStatus } from "@/types";
+import type { CustomerContact } from "@/types";
 
 export interface CustomerDialogValues {
   name: string;
@@ -39,6 +40,7 @@ export interface CustomerDialogValues {
   acquisition_source?: string;
   note?: string;
   milestones?: string[];
+  contact_persons?: CustomerContact[];
 }
 
 export interface CustomerDialogFormProps {
@@ -73,6 +75,10 @@ export default function CustomerDialogForm({
     acquisition_source: initialValues?.acquisition_source ?? "",
     note: initialValues?.note ?? "",
     milestones: initialValues?.milestones ?? [],
+    contact_persons:
+      initialValues?.contact_persons && initialValues.contact_persons.length > 0
+        ? initialValues.contact_persons
+        : [{ name: "", department: "", email: "" }],
   });
 
   // ポップオーバーの開閉管理
@@ -88,6 +94,39 @@ export default function CustomerDialogForm({
 
   const updateValue = <K extends keyof typeof values>(key: K, value: typeof values[K]) => {
     setValues((current) => ({ ...current, [key]: value }));
+  };
+
+  const updateContactPerson = (
+    index: number,
+    key: keyof CustomerContact,
+    value: string,
+  ) => {
+    setValues((current) => ({
+      ...current,
+      contact_persons: current.contact_persons.map((contact, contactIndex) =>
+        contactIndex === index ? { ...contact, [key]: value } : contact,
+      ),
+    }));
+  };
+
+  const addContactPerson = () => {
+    setValues((current) => ({
+      ...current,
+      contact_persons: [
+        ...current.contact_persons,
+        { name: "", department: "", email: "" },
+      ],
+    }));
+  };
+
+  const removeContactPerson = (index: number) => {
+    setValues((current) => ({
+      ...current,
+      contact_persons:
+        current.contact_persons.length > 1
+          ? current.contact_persons.filter((_, contactIndex) => contactIndex !== index)
+          : [{ name: "", department: "", email: "" }],
+    }));
   };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -127,6 +166,13 @@ export default function CustomerDialogForm({
       acquisition_source: values.acquisition_source.trim() || undefined,
       note: values.note.trim() || undefined,
       milestones: [],
+      contact_persons: values.contact_persons
+        .map((contact) => ({
+          name: contact.name.trim(),
+          department: contact.department?.trim() || undefined,
+          email: contact.email?.trim() || undefined,
+        }))
+        .filter((contact) => contact.name || contact.department || contact.email),
     });
   };
 
@@ -757,32 +803,73 @@ export default function CustomerDialogForm({
                 />
               </div>
             </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="employee_count" className="text-xs font-bold text-foreground/90">
-                従業員数
-              </label>
-              <input
-                id="employee_count"
-                type="number"
-                min="0"
-                value={values.employee_count}
-                onChange={(e) => updateValue("employee_count", e.target.value)}
-                placeholder="例: 150"
-                className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-all shadow-2xs"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="acquisition_source" className="text-xs font-bold text-foreground/90">
-                流入・獲得経路
-              </label>
-              <input
-                id="acquisition_source"
-                type="text"
-                value={values.acquisition_source}
-                onChange={(e) => updateValue("acquisition_source", e.target.value)}
-                placeholder="例: Web問合せ、展示会など"
-                className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-all shadow-2xs"
-              />
+            <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-background/70 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <label className="text-xs font-bold text-foreground/90">
+                  先方担当者
+                </label>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="h-8 gap-1.5 px-2.5 text-xs"
+                  onClick={addContactPerson}
+                >
+                  <Plus className="size-3.5" />
+                  追加
+                </Button>
+              </div>
+              <div className="flex flex-col gap-3">
+                {values.contact_persons.map((contact, index) => (
+                  <div
+                    key={index}
+                    className="rounded-lg border border-border/50 bg-muted/20 p-3"
+                  >
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-bold text-muted-foreground">
+                        担当者 {index + 1}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeContactPerson(index)}
+                        className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                        aria-label="先方担当者を削除"
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      <input
+                        type="text"
+                        value={contact.name}
+                        onChange={(event) =>
+                          updateContactPerson(index, "name", event.target.value)
+                        }
+                        placeholder="氏名"
+                        className="h-9 rounded-lg border border-input bg-background px-3 text-xs font-medium text-foreground placeholder:text-muted-foreground/50 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20"
+                      />
+                      <input
+                        type="text"
+                        value={contact.department ?? ""}
+                        onChange={(event) =>
+                          updateContactPerson(index, "department", event.target.value)
+                        }
+                        placeholder="部署・役職"
+                        className="h-9 rounded-lg border border-input bg-background px-3 text-xs font-medium text-foreground placeholder:text-muted-foreground/50 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20"
+                      />
+                      <input
+                        type="email"
+                        value={contact.email ?? ""}
+                        onChange={(event) =>
+                          updateContactPerson(index, "email", event.target.value)
+                        }
+                        placeholder="メール"
+                        className="h-9 rounded-lg border border-input bg-background px-3 text-xs font-medium text-foreground placeholder:text-muted-foreground/50 outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -817,6 +904,35 @@ export default function CustomerDialogForm({
                   value={values.phone}
                   onChange={(e) => updateValue("phone", e.target.value)}
                   placeholder="例: 03-0000-0000"
+                  className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-all shadow-2xs"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="employee_count" className="text-xs font-bold text-foreground/90">
+                  従業員数
+                </label>
+                <input
+                  id="employee_count"
+                  type="number"
+                  min="0"
+                  value={values.employee_count}
+                  onChange={(e) => updateValue("employee_count", e.target.value)}
+                  placeholder="例: 150"
+                  className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-all shadow-2xs"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="acquisition_source" className="text-xs font-bold text-foreground/90">
+                  流入・獲得経路
+                </label>
+                <input
+                  id="acquisition_source"
+                  type="text"
+                  value={values.acquisition_source}
+                  onChange={(e) => updateValue("acquisition_source", e.target.value)}
+                  placeholder="例: Web問合せ、展示会など"
                   className="w-full h-10 rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 transition-all shadow-2xs"
                 />
               </div>

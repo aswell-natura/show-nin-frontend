@@ -1,11 +1,8 @@
 import {
-  AlertCircle,
   Bot,
   Building,
-  CalendarDays,
   Check,
   ChevronLeft,
-  ExternalLink,
   FileText,
   ListChecks,
   Pencil,
@@ -20,7 +17,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DatePicker } from "@/components/ui/date-picker";
 import {
   Dialog,
   DialogContent,
@@ -86,17 +82,17 @@ const settingSections = [
       },
     ],
   },
-  {
-    title: "補助機能",
-    cards: [
-      {
-        title: "カレンダー連携",
-        description: "外部カレンダーとの連携状態を管理します。",
-        icon: CalendarDays,
-        path: "/settings/calendar-integration",
-      },
-    ],
-  },
+  // {
+  //   title: "補助機能",
+  //   cards: [
+  //     {
+  //       title: "カレンダー連携",
+  //       description: "外部カレンダーとの連携状態を管理します。",
+  //       icon: CalendarDays,
+  //       path: "/settings/calendar-integration",
+  //     },
+  //   ],
+  // },
   {
     title: "オプション",
     cards: [
@@ -160,6 +156,7 @@ interface DocumentTemplate {
   title: string;
   type: string;
   description: string;
+  applyByDefault: boolean;
   promptStructure: string;
 }
 
@@ -171,6 +168,7 @@ const initialDocumentTemplates: DocumentTemplate[] = [
     title: "標準見積書テンプレート",
     type: "見積書",
     description: "案件金額、内訳、支払条件を整理して見積書を作成します。",
+    applyByDefault: true,
     promptStructure:
       "顧客名、案件名、提供範囲、金額、支払条件、備考を含め、読みやすい見積書形式で構成してください。",
   },
@@ -179,6 +177,7 @@ const initialDocumentTemplates: DocumentTemplate[] = [
     title: "業務委託契約書テンプレート",
     type: "契約書",
     description: "業務範囲、契約期間、報酬、秘密保持を含む契約書の雛形です。",
+    applyByDefault: false,
     promptStructure:
       "契約当事者、業務内容、契約期間、報酬、検収、秘密保持、解除条項を章立てで構成してください。",
   },
@@ -187,6 +186,7 @@ const initialDocumentTemplates: DocumentTemplate[] = [
     title: "商談議事録テンプレート",
     type: "議事録",
     description: "商談内容から決定事項と次回アクションを整理します。",
+    applyByDefault: false,
     promptStructure:
       "参加者、議題、要点、決定事項、懸念点、ネクストアクション、期限を一覧化してください。",
   },
@@ -340,7 +340,7 @@ function AiAssistantTable() {
             新規作成
           </Button>
         </div>
-        <DataTable>
+        <DataTable minWidth="min-w-[960px]">
           <TableHeader className="bg-muted/40">
             <TableRow>
               <TableHead className="w-12"><Checkbox aria-label="すべて選択" /></TableHead>
@@ -354,11 +354,11 @@ function AiAssistantTable() {
           <TableBody>
             {assistants.map((assistant) => (
               <TableRow key={assistant.id}>
-                <TableCell><Checkbox aria-label={`${assistant.name}を選択`} /></TableCell>
-                <TableCell>{assistant.isDefault ? <DefaultMark /> : <span className="text-muted-foreground">-</span>}</TableCell>
-                <TableCell className="font-medium text-foreground">{assistant.name}</TableCell>
-                <TableCell className="text-muted-foreground">{assistant.summary}</TableCell>
-                <TableCell className="text-right font-medium">{assistant.intervalSeconds}秒</TableCell>
+                <TableCell className="whitespace-nowrap"><Checkbox aria-label={`${assistant.name}を選択`} /></TableCell>
+                <TableCell className="whitespace-nowrap">{assistant.isDefault ? <DefaultMark /> : <span className="text-muted-foreground">-</span>}</TableCell>
+                <TableCell className="whitespace-nowrap font-medium text-foreground">{assistant.name}</TableCell>
+                <TableCell className="max-w-[360px] truncate text-muted-foreground">{assistant.summary}</TableCell>
+                <TableCell className="whitespace-nowrap text-right font-medium">{assistant.intervalSeconds}秒</TableCell>
                 <TableCell className="text-right">
                   <DetailButton onClick={() => openDetail(assistant)} />
                 </TableCell>
@@ -376,27 +376,19 @@ function AiAssistantTable() {
               <DialogDescription>AIアシスタントのカラム情報を編集できます。</DialogDescription>
             </DialogHeader>
             <div className="custom-scrollbar flex-1 space-y-5 overflow-y-auto px-6 py-5">
-              <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
                 <InputField
                   label="名前"
                   value={formValues.name}
                   onChange={(value) => setFormValues((current) => ({ ...current, name: value }))}
                 />
-                <div className="rounded-lg border border-border bg-muted/20 px-3 py-2">
-                  <label className="flex h-6 items-center gap-3">
-                    <Checkbox
-                      checked={formValues.isDefault}
-                      onCheckedChange={(checked) =>
-                        setFormValues((current) => ({ ...current, isDefault: checked === true }))
-                      }
-                      aria-label="デフォルトに設定"
-                    />
-                    <span className="whitespace-nowrap text-sm font-medium text-foreground">デフォルト</span>
-                  </label>
-                  <p className="mt-1 pl-7 text-xs leading-5 text-muted-foreground">
-                    録音の初期状態として使用されます。
-                  </p>
-                </div>
+                <DefaultApplyField
+                  checked={formValues.isDefault}
+                  className="sm:justify-self-end"
+                  onCheckedChange={(checked) =>
+                    setFormValues((current) => ({ ...current, isDefault: checked }))
+                  }
+                />
               </div>
               <TextAreaField label="説明" value={formValues.summary} rows={3} onChange={(value) => setFormValues((current) => ({ ...current, summary: value }))} />
               <TextAreaField label="プロンプト" value={formValues.prompt} rows={6} onChange={(value) => setFormValues((current) => ({ ...current, prompt: value }))} />
@@ -417,6 +409,7 @@ function DocumentTemplateTable() {
     title: "",
     type: templateTypeOptions[0],
     description: "",
+    applyByDefault: false,
     promptStructure: "",
   });
 
@@ -426,6 +419,7 @@ function DocumentTemplateTable() {
       title: "",
       type: templateTypeOptions[0],
       description: "",
+      applyByDefault: false,
       promptStructure: "",
     });
     setIsDialogOpen(true);
@@ -437,6 +431,7 @@ function DocumentTemplateTable() {
       title: template.title,
       type: template.type,
       description: template.description,
+      applyByDefault: template.applyByDefault,
       promptStructure: template.promptStructure,
     });
     setIsDialogOpen(true);
@@ -452,10 +447,16 @@ function DocumentTemplateTable() {
     setTemplates((current) =>
       selectedTemplate
         ? current.map((template) =>
-            template.id === selectedTemplate.id ? { ...template, ...formValues } : template,
+            template.id === selectedTemplate.id
+              ? { ...template, ...formValues }
+              : formValues.applyByDefault
+                ? { ...template, applyByDefault: false }
+                : template,
           )
         : [
-            ...current,
+            ...current.map((template) =>
+              formValues.applyByDefault ? { ...template, applyByDefault: false } : template,
+            ),
             {
               id: `document-template-${Date.now()}`,
               ...formValues,
@@ -475,7 +476,7 @@ function DocumentTemplateTable() {
             新規作成
           </Button>
         </div>
-        <DataTable>
+        <DataTable minWidth="min-w-[820px]">
           <TableHeader className="bg-muted/40">
             <TableRow>
               <TableHead className="w-72">タイトル</TableHead>
@@ -487,9 +488,9 @@ function DocumentTemplateTable() {
           <TableBody>
             {templates.map((template) => (
               <TableRow key={template.id}>
-                <TableCell className="font-medium text-foreground">{template.title}</TableCell>
-                <TableCell>{template.type}</TableCell>
-                <TableCell className="text-muted-foreground">{template.description}</TableCell>
+                <TableCell className="whitespace-nowrap font-medium text-foreground">{template.title}</TableCell>
+                <TableCell className="whitespace-nowrap">{template.type}</TableCell>
+                <TableCell className="max-w-[360px] truncate text-muted-foreground">{template.description}</TableCell>
                 <TableCell className="text-right"><DetailButton onClick={() => openDetail(template)} /></TableCell>
               </TableRow>
             ))}
@@ -505,7 +506,16 @@ function DocumentTemplateTable() {
               <DialogDescription>テンプレートの内容と生成時の構成を編集できます。</DialogDescription>
             </DialogHeader>
             <div className="custom-scrollbar flex-1 space-y-5 overflow-y-auto px-6 py-5">
-              <InputField label="タイトル" value={formValues.title} onChange={(value) => setFormValues((current) => ({ ...current, title: value }))} />
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
+                <InputField label="タイトル" value={formValues.title} onChange={(value) => setFormValues((current) => ({ ...current, title: value }))} />
+                <DefaultApplyField
+                  checked={formValues.applyByDefault}
+                  className="sm:justify-self-end"
+                  onCheckedChange={(checked) =>
+                    setFormValues((current) => ({ ...current, applyByDefault: checked }))
+                  }
+                />
+              </div>
               <SelectField label="種類" value={formValues.type} options={templateTypeOptions} onChange={(value) => setFormValues((current) => ({ ...current, type: value }))} />
               <TextAreaField label="説明" value={formValues.description} rows={3} onChange={(value) => setFormValues((current) => ({ ...current, description: value }))} />
               <TextAreaField label="プロンプト / 構成" value={formValues.promptStructure} rows={7} onChange={(value) => setFormValues((current) => ({ ...current, promptStructure: value }))} />
@@ -629,7 +639,7 @@ function CheckTemplateTable() {
             新規作成
           </Button>
         </div>
-        <DataTable>
+        <DataTable minWidth="min-w-[820px]">
           <TableHeader className="bg-muted/40">
             <TableRow>
               <TableHead className="w-72">タイトル</TableHead>
@@ -645,10 +655,10 @@ function CheckTemplateTable() {
                 className="cursor-pointer"
                 onClick={() => openDetail(template)}
               >
-                <TableCell className="font-medium text-foreground">{template.title}</TableCell>
-                <TableCell className="text-muted-foreground">{template.description}</TableCell>
-                <TableCell className="text-right">{template.itemCount}件</TableCell>
-                <TableCell className="text-right">{template.intervalSeconds}秒</TableCell>
+                <TableCell className="whitespace-nowrap font-medium text-foreground">{template.title}</TableCell>
+                <TableCell className="max-w-[360px] truncate text-muted-foreground">{template.description}</TableCell>
+                <TableCell className="whitespace-nowrap text-right">{template.itemCount}件</TableCell>
+                <TableCell className="whitespace-nowrap text-right">{template.intervalSeconds}秒</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -663,8 +673,20 @@ function CheckTemplateTable() {
               <DialogDescription>チェックテンプレートの実行条件とプロンプトを編集できます。</DialogDescription>
             </DialogHeader>
             <div className="custom-scrollbar flex-1 space-y-5 overflow-y-auto px-6 py-5">
-              <InputField label="タイトル" value={formValues.title} onChange={(value) => setFormValues((current) => ({ ...current, title: value }))} />
-              <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
+                <InputField label="タイトル" value={formValues.title} onChange={(value) => setFormValues((current) => ({ ...current, title: value }))} />
+                <DefaultApplyField
+                  checked={formValues.applyByDefault}
+                  className="sm:justify-self-end"
+                  onCheckedChange={(checked) =>
+                    setFormValues((current) => ({
+                      ...current,
+                      applyByDefault: checked,
+                    }))
+                  }
+                />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
                 <label className="block">
                   <span className="mb-2 block text-sm font-medium text-foreground">実行間隔</span>
                   <input
@@ -679,19 +701,6 @@ function CheckTemplateTable() {
                     }
                     className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-all focus:border-ring focus:ring-2 focus:ring-ring/20"
                   />
-                </label>
-                <label className="flex h-10 items-center gap-3 rounded-lg border border-border bg-muted/20 px-3">
-                  <Checkbox
-                    checked={formValues.applyByDefault}
-                    onCheckedChange={(checked) =>
-                      setFormValues((current) => ({
-                        ...current,
-                        applyByDefault: checked === true,
-                      }))
-                    }
-                    aria-label="デフォルトで適用"
-                  />
-                  <span className="whitespace-nowrap text-sm font-medium text-foreground">デフォルトで適用</span>
                 </label>
               </div>
               <TextAreaField label="プロンプト" value={formValues.prompt} rows={7} onChange={(value) => setFormValues((current) => ({ ...current, prompt: value }))} />
@@ -785,10 +794,18 @@ function PageHeader({
   );
 }
 
-function DataTable({ children }: { children: React.ReactNode }) {
+function DataTable({
+  children,
+  minWidth = "min-w-[720px]",
+}: {
+  children: React.ReactNode;
+  minWidth?: string;
+}) {
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
-      <Table>{children}</Table>
+      <div className="custom-horizontal-scrollbar overflow-x-auto">
+        <Table className={minWidth}>{children}</Table>
+      </div>
     </div>
   );
 }
@@ -807,6 +824,34 @@ function DetailButton({ onClick }: { onClick: () => void }) {
       <Pencil className="h-3.5 w-3.5" />
       詳細
     </Button>
+  );
+}
+
+function DefaultApplyField({
+  checked,
+  onCheckedChange,
+  className = "",
+}: {
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  className?: string;
+}) {
+  return (
+    <div className={`rounded-lg border border-border bg-muted/20 px-3 py-2 ${className}`}>
+      <label className="flex h-6 items-center justify-end gap-3">
+        <Checkbox
+          checked={checked}
+          onCheckedChange={(value) => onCheckedChange(value === true)}
+          aria-label="デフォルトで適用"
+        />
+        <span className="whitespace-nowrap text-sm font-medium text-foreground">
+          デフォルトで適用
+        </span>
+      </label>
+      <p className="mt-1 pl-7 text-xs leading-5 text-muted-foreground">
+        録音の初期状態に使用されます。
+      </p>
+    </div>
   );
 }
 
@@ -974,8 +1019,8 @@ function CalendarIntegrationPage() {
     date.setDate(date.getDate() + 30);
     return formatDateValue(date);
   })();
-  const [startDate, setStartDate] = useState(initialStartDate);
-  const [endDate, setEndDate] = useState(initialEndDate);
+  const startDate = initialStartDate;
+  const endDate = initialEndDate;
 
   const providers = [
     {
@@ -999,98 +1044,140 @@ function CalendarIntegrationPage() {
         description="外部カレンダーの予定をSHOW-NINへインポートします。"
         showBackButton
       />
-
       <div className="flex-1 overflow-y-auto bg-muted/30 p-4 md:p-6">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-          <section>
-            <h2 className="text-lg font-bold tracking-tight text-foreground">
-              外部カレンダー連携
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Outlook/Googleカレンダーの予定をSHOW-NINにインポート
-            </p>
-          </section>
-
           <section className="grid gap-4 lg:grid-cols-2">
             {providers.map((provider) => {
               const ProviderLogo = provider.Logo;
 
               return (
-                <div
-                  key={provider.name}
-                  className="rounded-xl border border-border bg-card p-5 shadow-sm"
-                >
+                <div key={provider.name} className="rounded-xl border border-border bg-card p-5 shadow-sm">
                   <div className="flex items-center gap-4">
-                    <span
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-background ring-1 ring-border"
-                    >
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-background ring-1 ring-border">
                       <ProviderLogo className="h-6 w-6" />
                     </span>
                     <div className="min-w-0">
-                      <h3 className="truncate text-base font-bold text-foreground">
-                        {provider.name}
-                      </h3>
-                      <p className="mt-0.5 text-sm text-muted-foreground">
-                        {provider.status}
-                      </p>
+                      <h2 className="truncate text-base font-bold text-foreground">{provider.name}</h2>
+                      <p className="mt-0.5 text-sm text-muted-foreground">{provider.status}</p>
                     </div>
                   </div>
-
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="mt-5 w-full gap-2"
-                  >
-                    <ExternalLink className="h-4 w-4" />
+                  <Button type="button" variant="secondary" className="mt-5 w-full">
                     {provider.actionLabel}
                   </Button>
                 </div>
               );
             })}
           </section>
-
           <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
             <h2 className="text-sm font-bold text-foreground">取得期間</h2>
-            <div className="mt-5 grid gap-4 sm:grid-cols-[minmax(0,240px)_minmax(0,240px)]">
-              <div className="grid gap-2 sm:grid-cols-[auto_1fr] sm:items-center">
-                <span className="text-sm font-medium text-muted-foreground">開始:</span>
-                <DatePicker
-                  value={startDate}
-                  onChange={setStartDate}
-                  clearable={false}
-                  buttonClassName="rounded-lg"
-                />
-              </div>
-              <div className="grid gap-2 sm:grid-cols-[auto_1fr] sm:items-center">
-                <span className="text-sm font-medium text-muted-foreground">終了:</span>
-                <DatePicker
-                  value={endDate}
-                  onChange={setEndDate}
-                  clearable={false}
-                  buttonClassName="rounded-lg"
-                />
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
-            <div className="flex gap-3 text-amber-700 dark:text-amber-400">
-              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-              <div>
-                <h2 className="text-sm font-bold">外部カレンダー連携について</h2>
-                <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6">
-                  <li>OAuth認証にはGoogle Cloud Console / Azure AD でのアプリ登録が必要です</li>
-                  <li>インポートは単方向（外部-&gt;SHOW-NIN）です</li>
-                  <li>同じイベントを複数回インポートすると重複が発生します</li>
-                  <li>本番環境ではトークンは安全に管理されます</li>
-                </ul>
-              </div>
-            </div>
+            <p className="mt-3 text-sm text-muted-foreground">
+              {startDate} から {endDate} まで
+            </p>
           </section>
         </div>
       </div>
     </div>
   );
+
+  // return (
+  //   <div className="flex h-full flex-col overflow-hidden bg-background">
+  //     <PageHeader
+  //       title="カレンダー連携"
+  //       description="外部カレンダーの予定をSHOW-NINへインポートします。"
+  //       showBackButton
+  //     />
+
+  //     <div className="flex-1 overflow-y-auto bg-muted/30 p-4 md:p-6">
+  //       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+  //         <section>
+  //           <h2 className="text-lg font-bold tracking-tight text-foreground">
+  //             外部カレンダー連携
+  //           </h2>
+  //           <p className="mt-1 text-sm text-muted-foreground">
+  //             Outlook/Googleカレンダーの予定をSHOW-NINにインポート
+  //           </p>
+  //         </section>
+
+  //         <section className="grid gap-4 lg:grid-cols-2">
+  //           {providers.map((provider) => {
+  //             const ProviderLogo = provider.Logo;
+
+  //             return (
+  //               <div
+  //                 key={provider.name}
+  //                 className="rounded-xl border border-border bg-card p-5 shadow-sm"
+  //               >
+  //                 <div className="flex items-center gap-4">
+  //                   <span
+  //                     className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-background ring-1 ring-border"
+  //                   >
+  //                     <ProviderLogo className="h-6 w-6" />
+  //                   </span>
+  //                   <div className="min-w-0">
+  //                     <h3 className="truncate text-base font-bold text-foreground">
+  //                       {provider.name}
+  //                     </h3>
+  //                     <p className="mt-0.5 text-sm text-muted-foreground">
+  //                       {provider.status}
+  //                     </p>
+  //                   </div>
+  //                 </div>
+
+  //                 <Button
+  //                   type="button"
+  //                   variant="secondary"
+  //                   className="mt-5 w-full gap-2"
+  //                 >
+  //                   <ExternalLink className="h-4 w-4" />
+  //                   {provider.actionLabel}
+  //                 </Button>
+  //               </div>
+  //             );
+  //           })}
+  //         </section>
+
+  //         <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
+  //           <h2 className="text-sm font-bold text-foreground">取得期間</h2>
+  //           <div className="mt-5 grid gap-4 sm:grid-cols-[minmax(0,240px)_minmax(0,240px)]">
+  //             <div className="grid gap-2 sm:grid-cols-[auto_1fr] sm:items-center">
+  //               <span className="text-sm font-medium text-muted-foreground">開始:</span>
+  //               <DatePicker
+  //                 value={startDate}
+  //                 onChange={setStartDate}
+  //                 clearable={false}
+  //                 buttonClassName="rounded-lg"
+  //               />
+  //             </div>
+  //             <div className="grid gap-2 sm:grid-cols-[auto_1fr] sm:items-center">
+  //               <span className="text-sm font-medium text-muted-foreground">終了:</span>
+  //               <DatePicker
+  //                 value={endDate}
+  //                 onChange={setEndDate}
+  //                 clearable={false}
+  //                 buttonClassName="rounded-lg"
+  //               />
+  //             </div>
+  //           </div>
+  //         </section>
+
+  //         <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
+  //           <div className="flex gap-3 text-amber-700 dark:text-amber-400">
+  //             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+  //             <div>
+  //               <h2 className="text-sm font-bold">外部カレンダー連携について</h2>
+  //               <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6">
+  //                 <li>OAuth認証にはGoogle Cloud Console / Azure AD でのアプリ登録が必要です</li>
+  //                 <li>インポートは単方向（外部-&gt;SHOW-NIN）です</li>
+  //                 <li>同じイベントを複数回インポートすると重複が発生します</li>
+  //                 <li>本番環境ではトークンは安全に管理されます</li>
+  //               </ul>
+  //             </div>
+  //           </div>
+  //         </section>
+  //       </div>
+  //     </div>
+  //   </div>
+  // );
 }
 
 function FeatureSelectionPage() {
